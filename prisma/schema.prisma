@@ -1,0 +1,74 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model AdminUser {
+  id           String      @id @default(cuid())
+  employeeId   String      @unique
+  fullName     String
+  email        String      @unique
+  passwordHash String
+  role         String      @default("TRAINER") // "TRAINER" | "ADMIN" | "SUPER_ADMIN"
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  verifications TraineeProgress[]
+}
+
+model Trainee {
+  id              String      @id @default(cuid())
+  traineeCode     String      @unique // e.g. "TBG-2024-001"
+  fullName        String
+  email           String
+  restaurantBrand String      // e.g. "TGI Fridays", "Italianni's", "Texas Roadhouse"
+  branchLocation  String      // e.g. "Bonifacio High Street", "Greenbelt"
+  cohortBatch     String      // e.g. "Cohort-2024-Q4"
+  hireDate        DateTime
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  progressRecords TraineeProgress[]
+
+  @@index([traineeCode, email])
+  @@index([restaurantBrand, branchLocation, cohortBatch])
+}
+
+model MilestoneDefinition {
+  id          String          @id @default(cuid())
+  path        String          // "ONBOARDING" | "COMMUNICATION" | "TECHNICAL" | "CULTURE" | "LEADERSHIP"
+  orderIndex  Int             // Linear sequence 1..N
+  code        String          @unique // e.g. "ONB-01", "COMM-02"
+  title       String
+  description String
+  createdAt   DateTime        @default(now())
+
+  progressRecords TraineeProgress[]
+}
+
+model TraineeProgress {
+  id             String            @id @default(cuid())
+  traineeId      String
+  milestoneId    String
+  status         String            @default("IN_PROGRESS") // "LOCKED" | "IN_PROGRESS" | "READY_FOR_REVIEW" | "VERIFIED"
+  traineeNote    String?           // Reflection submitted when marking Ready for Review
+  requestedAt    DateTime?
+  
+  verifiedBy     String?           // AdminUser ID
+  verifiedAt     DateTime?
+  trainerNote    String?
+  
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  trainee        Trainee           @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  milestone      MilestoneDefinition @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  verifier       AdminUser?        @relation(fields: [verifiedBy], references: [id])
+
+  @@unique([traineeId, milestoneId])
+  @@index([status])
+}

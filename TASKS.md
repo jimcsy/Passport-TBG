@@ -12,7 +12,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
     - Brand Gold: `#C29B38`
     - Canvas: `#FAF8F4`
     - Card: `#FFFFFF`
-- [ ] **Task 1.2: Setup Prisma with SQLite & Migrations** ([#2](https://github.com/jimcsy/Passport-TBG/issues/2))
+- [x] **Task 1.2: Setup Prisma with SQLite & Migrations** ([#2](https://github.com/jimcsy/Passport-TBG/issues/2))
   - Install `@prisma/client` and `prisma`.
   - Implement domain models (`AdminUser`, `Trainee`, `MilestoneDefinition`, `TraineeProgress`).
   - Run initial migration and generate Prisma Client.
