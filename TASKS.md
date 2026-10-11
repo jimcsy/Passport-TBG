@@ -5,7 +5,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 ---
 
 ## Milestone 1: Project Scaffolding & Design System Foundations
-- [ ] **Task 1.1: Initialize Next.js 14+ App with TypeScript & Tailwind CSS** ([#1](https://github.com/jimcsy/Passport-TBG/issues/1))
+- [x] **Task 1.1: Initialize Next.js 14+ App with TypeScript & Tailwind CSS** ([#1](https://github.com/jimcsy/Passport-TBG/issues/1))
   - Setup Next.js App Router, TypeScript, Tailwind CSS, Lucide Icons.
   - Configure BEAT Brand Colors in `tailwind.config.ts`:
     - Brand Maroon: `#5C1D24`
