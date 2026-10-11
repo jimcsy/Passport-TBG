@@ -52,9 +52,9 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 ---
 
 ## Milestone 4: BEAT Admin / Trainer Portal (`/admin`)
-- [ ] **Task 4.1: Admin Login Screen (`/admin/login`)** ([#8](https://github.com/jimcsy/Passport-TBG/issues/8))
+- [x] **Task 4.1: Admin Login Screen (`/admin/login`)** ([#8](https://github.com/jimcsy/Passport-TBG/issues/8))
   - Secured Employee ID + Password form with BEAT Maroon branding.
-- [ ] **Task 4.2: Admin Layout & Navigation** ([#8](https://github.com/jimcsy/Passport-TBG/issues/8))
+- [x] **Task 4.2: Admin Layout & Navigation** ([#8](https://github.com/jimcsy/Passport-TBG/issues/8))
   - Persistent Maroon sidebar with navigation: Dashboard, Review Queue, Trainees, Batch Updates.
   - Trainer profile badge & logout action.
 - [ ] **Task 4.3: Review Queue View (`/admin/queue`)** ([#9](https://github.com/jimcsy/Passport-TBG/issues/9))
