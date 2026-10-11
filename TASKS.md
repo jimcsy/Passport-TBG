@@ -35,7 +35,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 ---
 
 ## Milestone 3: Trainee Portal (`/`)
-- [ ] **Task 3.1: Passwordless Lookup Landing Page (`/`)** ([#5](https://github.com/jimcsy/Passport-TBG/issues/5))
+- [x] **Task 3.1: Passwordless Lookup Landing Page (`/`)** ([#5](https://github.com/jimcsy/Passport-TBG/issues/5))
   - Clean branded hero with BEAT logo and "Growth Passport" branding.
   - Simple form: Trainee Code + Email input.
   - Server action to verify credentials and redirect to `/passport`.
