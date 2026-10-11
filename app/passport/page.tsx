@@ -1,11 +1,21 @@
 import { getTraineeSession, clearTraineeSession } from "@/lib/auth/session";
+import { getTraineePassportData } from "@/lib/db/repositories/trainee";
+import { PassportCover } from "@/components/passport/PassportCover";
+import { PathTabs } from "@/components/passport/PathTabs";
 import { redirect } from "next/navigation";
-import { BookOpen, LogOut, Award } from "lucide-react";
+import { BookOpen, LogOut, ShieldCheck, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export default async function PassportPage() {
   const session = await getTraineeSession();
 
   if (!session) {
+    redirect("/");
+  }
+
+  const data = await getTraineePassportData(session.id);
+
+  if (!data) {
     redirect("/");
   }
 
@@ -17,60 +27,67 @@ export default async function PassportPage() {
 
   return (
     <main className="min-h-screen bg-beat-canvas p-4 sm:p-8">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Navigation Bar */}
-        <header className="flex items-center justify-between bg-beat-card p-4 sm:p-6 rounded-2xl shadow-sm border border-beat-border">
+      <div className="max-w-5xl mx-auto space-y-8">
+        {/* Top Navbar */}
+        <header className="flex items-center justify-between bg-beat-card p-4 sm:p-5 rounded-2xl shadow-sm border border-beat-border">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold shadow">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold shadow-md ring-2 ring-beat-gold/20">
               <BookOpen className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-lg font-extrabold text-beat-maroon leading-tight">
-                Growth Passport
-              </h1>
-              <p className="text-xs font-semibold text-beat-gold uppercase tracking-wider">
-                The Bistro Group • BEAT
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-base sm:text-lg text-beat-maroon leading-tight">
+                  Growth Passport
+                </span>
+                <span className="passport-stamp px-2 py-0.5 text-[9px] border-beat-gold text-beat-gold hidden sm:inline-flex">
+                  Digital Mirror
+                </span>
+              </div>
+              <p className="text-[11px] font-semibold text-beat-gold uppercase tracking-wider">
+                The Bistro Group • BEAT Program
               </p>
             </div>
           </div>
 
-          <form action={handleLogout}>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-beat-border bg-beat-canvas px-3 py-1.5 text-xs font-bold text-beat-maroon hover:border-beat-gold hover:text-beat-gold transition-colors cursor-pointer"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              <span>Exit Passport</span>
-            </button>
-          </form>
+          <div className="flex items-center gap-2">
+            <form action={handleLogout}>
+              <button
+                type="submit"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:border-beat-gold hover:text-beat-gold transition-all cursor-pointer shadow-sm"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Exit Passport</span>
+              </button>
+            </form>
+          </div>
         </header>
 
-        {/* Welcome Card */}
-        <div className="bg-beat-card p-6 sm:p-8 rounded-2xl shadow-sm border border-beat-border">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-beat-border">
-            <div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-beat-canvas px-2.5 py-0.5 text-xs font-bold text-beat-gold border border-beat-gold/30">
-                <Award className="h-3 w-3" />
-                Active Trainee Passport
-              </span>
-              <h2 className="mt-2 text-2xl font-extrabold text-beat-maroon">
-                {session.fullName}
-              </h2>
-              <p className="text-xs text-beat-muted mt-0.5">
-                Code: <span className="font-mono font-bold text-beat-maroon">{session.traineeCode}</span> • {session.restaurantBrand} ({session.branchLocation})
-              </p>
-            </div>
-            <div className="passport-stamp px-4 py-2 text-xs">
-              BEAT Passport Active
-            </div>
+        {/* Passport Cover Card */}
+        <PassportCover trainee={data.trainee} stats={data.stats} />
+
+        {/* 5 Development Paths Navigator */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-lg font-black text-beat-maroon tracking-tight">
+              Development Paths
+            </h2>
+            <span className="text-xs font-semibold text-beat-muted">
+              5 Uniform Training Tracks
+            </span>
           </div>
 
-          <div className="mt-6 text-sm text-beat-muted">
-            <p>
-              Your digital mirror has been verified! Full passport paths, interactive stamps, and milestone reviews are being prepared in Milestone 3.2.
-            </p>
-          </div>
+          <PathTabs paths={data.paths} />
         </div>
+
+        {/* Footer */}
+        <footer className="pt-8 pb-12 text-center text-xs text-beat-muted space-y-2 border-t border-beat-border/80">
+          <p className="font-medium">
+            The Bistro Group &copy; 2024 • BEAT Program Digital Growth Passport
+          </p>
+          <p className="text-[11px]">
+            TGI Fridays • Italianni&#39;s • Texas Roadhouse • Denny&#39;s • Buffalo Wild Wings • Bulgogi Brothers
+          </p>
+        </footer>
       </div>
     </main>
   );

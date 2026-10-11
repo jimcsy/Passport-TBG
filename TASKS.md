@@ -39,7 +39,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
   - Clean branded hero with BEAT logo and "Growth Passport" branding.
   - Simple form: Trainee Code + Email input.
   - Server action to verify credentials and redirect to `/passport`.
-- [ ] **Task 3.2: Digital Passport Dashboard (`/passport`)** ([#6](https://github.com/jimcsy/Passport-TBG/issues/6))
+- [x] **Task 3.2: Digital Passport Dashboard (`/passport`)** ([#6](https://github.com/jimcsy/Passport-TBG/issues/6))
   - Passport Cover component: Trainee name, brand (e.g. TGI Fridays), branch, hire date, and overall completion ring.
   - 5 Development Path tabs/sections with progress indicators.
   - Milestone cards displaying status (`LOCKED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `VERIFIED`).
