@@ -57,7 +57,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 - [x] **Task 4.2: Admin Layout & Navigation** ([#8](https://github.com/jimcsy/Passport-TBG/issues/8))
   - Persistent Maroon sidebar with navigation: Dashboard, Review Queue, Trainees, Batch Updates.
   - Trainer profile badge & logout action.
-- [ ] **Task 4.3: Review Queue View (`/admin/queue`)** ([#9](https://github.com/jimcsy/Passport-TBG/issues/9))
+- [x] **Task 4.3: Review Queue View (`/admin/queue`)** ([#9](https://github.com/jimcsy/Passport-TBG/issues/9))
   - List of all milestones flagged `READY_FOR_REVIEW`.
   - Trainee info, path, milestone title, trainee reflection note, and submission timestamp.
   - 1-Click "Verify & Stamp" action.
