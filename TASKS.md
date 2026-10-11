@@ -72,10 +72,10 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 ---
 
 ## Milestone 5: Verification & End-to-End Polish
-- [ ] **Task 5.1: End-to-End Walkthrough Verification** ([#12](https://github.com/jimcsy/Passport-TBG/issues/12))
+- [x] **Task 5.1: End-to-End Walkthrough Verification** ([#12](https://github.com/jimcsy/Passport-TBG/issues/12))
   - Trainee logs in $\to$ marks milestone Ready for Review.
   - Admin logs in $\to$ sees item in Review Queue $\to$ clicks 1-Click Verify.
   - Trainee refreshes $\to$ sees official Gold Seal stamp with Trainer ID.
   - Trainer performs batch sign-off on cohort.
-- [ ] **Task 5.2: Supabase Preparedness Check** ([#12](https://github.com/jimcsy/Passport-TBG/issues/12))
+- [x] **Task 5.2: Supabase Preparedness Check** ([#12](https://github.com/jimcsy/Passport-TBG/issues/12))
   - Validate that all database queries are isolated in `lib/db/` so swapping SQLite to Supabase PostgreSQL is zero-friction.
