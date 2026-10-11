@@ -44,7 +44,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
   - 5 Development Path tabs/sections with progress indicators.
   - Milestone cards displaying status (`LOCKED`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `VERIFIED`).
   - Verified gold stamp visual badge with trainer sign-off metadata.
-- [ ] **Task 3.3: "Ready for Review" Action & Modal** ([#7](https://github.com/jimcsy/Passport-TBG/issues/7))
+- [x] **Task 3.3: "Ready for Review" Action & Modal** ([#7](https://github.com/jimcsy/Passport-TBG/issues/7))
   - Trainee click to mark milestone as ready for review.
   - Optional reflection note submission.
   - Real-time UI update reflecting pending status.

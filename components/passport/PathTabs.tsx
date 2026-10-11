@@ -2,16 +2,17 @@
 
 import { useState } from "react";
 import { MilestoneCard } from "./MilestoneCard";
+import { ReadyForReviewModal } from "./ReadyForReviewModal";
 import type { PathProgressSummary, EnrichedMilestone } from "@/lib/db/repositories/trainee";
-import { CheckCircle2, ChevronRight, Award } from "lucide-react";
+import { CheckCircle2, Award } from "lucide-react";
 
 interface PathTabsProps {
   paths: PathProgressSummary[];
-  onRequestReview?: (milestone: EnrichedMilestone) => void;
 }
 
-export function PathTabs({ paths, onRequestReview }: PathTabsProps) {
+export function PathTabs({ paths }: PathTabsProps) {
   const [activePathKey, setActivePathKey] = useState<string>(paths[0]?.path || "");
+  const [selectedMilestone, setSelectedMilestone] = useState<EnrichedMilestone | null>(null);
 
   const activePath = paths.find((p) => p.path === activePathKey) || paths[0];
 
@@ -108,12 +109,18 @@ export function PathTabs({ paths, onRequestReview }: PathTabsProps) {
               <MilestoneCard
                 key={milestone.id}
                 milestone={milestone}
-                onRequestReview={onRequestReview}
+                onRequestReview={(m) => setSelectedMilestone(m)}
               />
             ))}
           </div>
         </div>
       )}
+
+      {/* Ready for Review Modal */}
+      <ReadyForReviewModal
+        milestone={selectedMilestone}
+        onClose={() => setSelectedMilestone(null)}
+      />
     </div>
   );
 }
