@@ -24,11 +24,11 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 ---
 
 ## Milestone 2: Authentication & Session Layer
-- [ ] **Task 2.1: Lightweight Encrypted Cookie Session Utility** ([#4](https://github.com/jimcsy/Passport-TBG/issues/4))
+- [x] **Task 2.1: Lightweight Encrypted Cookie Session Utility** ([#4](https://github.com/jimcsy/Passport-TBG/issues/4))
   - Create `lib/auth/session.ts` using `jose` and `bcryptjs`.
   - Handle admin session tokens (role, employeeId, name).
   - Handle trainee lookup session tokens (traineeCode, email, traineeId).
-- [ ] **Task 2.2: Route Protection & Middleware** ([#4](https://github.com/jimcsy/Passport-TBG/issues/4))
+- [x] **Task 2.2: Route Protection & Middleware** ([#4](https://github.com/jimcsy/Passport-TBG/issues/4))
   - Protect `/admin/*` routes to require valid admin session (redirect to `/admin/login`).
   - Protect `/passport` to require valid trainee lookup session (redirect to `/`).
 
