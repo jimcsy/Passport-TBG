@@ -64,7 +64,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
 - [x] **Task 4.4: Trainee Directory & Individual Passport View (`/admin/trainees`)** ([#10](https://github.com/jimcsy/Passport-TBG/issues/10))
   - Filterable table by Restaurant Brand, Branch Location, and Cohort.
   - Trainee detail page (`/admin/trainees/[id]`): Full view of trainee passport with 1-click toggles to verify any milestone.
-- [ ] **Task 4.5: Batch Attendance & Bulk Sign-Off Tool (`/admin/batch`)** ([#11](https://github.com/jimcsy/Passport-TBG/issues/11))
+- [x] **Task 4.5: Batch Attendance & Bulk Sign-Off Tool (`/admin/batch`)** ([#11](https://github.com/jimcsy/Passport-TBG/issues/11))
   - Multi-filter selectors (Brand, Branch, Cohort).
   - Multi-select trainee checkbox list.
   - Milestone picker with bulk "Sign Off (N trainees)" button.

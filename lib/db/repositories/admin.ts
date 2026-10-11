@@ -160,3 +160,49 @@ export async function getTraineeDirectory(filters?: {
     };
   });
 }
+
+export interface BatchToolData {
+  trainees: {
+    id: string;
+    traineeCode: string;
+    fullName: string;
+    restaurantBrand: string;
+    branchLocation: string;
+    cohortBatch: string;
+  }[];
+  milestones: {
+    id: string;
+    code: string;
+    title: string;
+    path: string;
+    orderIndex: number;
+  }[];
+}
+
+export async function getBatchToolData(): Promise<BatchToolData> {
+  const [trainees, milestones] = await Promise.all([
+    prisma.trainee.findMany({
+      select: {
+        id: true,
+        traineeCode: true,
+        fullName: true,
+        restaurantBrand: true,
+        branchLocation: true,
+        cohortBatch: true,
+      },
+      orderBy: { fullName: "asc" },
+    }),
+    prisma.milestoneDefinition.findMany({
+      select: {
+        id: true,
+        code: true,
+        title: true,
+        path: true,
+        orderIndex: true,
+      },
+      orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+    }),
+  ]);
+
+  return { trainees, milestones };
+}
