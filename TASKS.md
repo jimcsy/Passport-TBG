@@ -16,7 +16,7 @@ This roadmap breaks down the construction of the Growth Passport portal into ato
   - Install `@prisma/client` and `prisma`.
   - Implement domain models (`AdminUser`, `Trainee`, `MilestoneDefinition`, `TraineeProgress`).
   - Run initial migration and generate Prisma Client.
-- [ ] **Task 1.3: Minimal Seed Script** ([#3](https://github.com/jimcsy/Passport-TBG/issues/3))
+- [x] **Task 1.3: Minimal Seed Script** ([#3](https://github.com/jimcsy/Passport-TBG/issues/3))
   - Seed 1 Admin Trainer (`EMP-1001` / `password123`).
   - Seed 1 Trainee (`TBG-2024-001`, `trainee@bistro.com.ph`).
   - Seed the standard 20 milestones across the 5 development paths.
