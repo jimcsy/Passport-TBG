@@ -119,6 +119,17 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
 4. All application code, server actions, and repositories remain 100% unchanged.
 # Trainee dashboard and digital booklet
 
+All authenticated trainee screens share `app/passport/layout.tsx` and
+`components/trainee/TraineeNavigation.tsx`: a white header, Dashboard / My passport
+links with a gold active underline, trainee identity, and a separate Sign out
+action with a pending state. On smaller screens the links sit beneath the brand
+and account actions. Module pages keep Dashboard active as their parent section.
+The brand links home to the dashboard, and a keyboard skip link targets the main
+content. Navigation follows the current GOV.UK service-navigation guidance:
+https://design-system.service.gov.uk/patterns/navigate-a-service/
+The shared header and right-side account utilities also draw on Carbon's UI shell:
+https://www.carbondesignsystem.com/building-blocks/core/components/ui-shell-header/guidelines
+
 The authenticated `/passport` route renders `components/trainee/TraineeDashboard.tsx`
 with live repository data. Track selection filters the learning cards. The detailed
 milestone list has been removed from the dashboard; cards link to authenticated
@@ -131,11 +142,19 @@ screen, which uses the portal's maroon, gold, warm canvas, and white card theme.
 turns, arrow keys, track shortcuts, spread selection, and reduced motion support.
 A "Back to dashboard" link returns to the operational view. On narrow screens,
 the two-page spread scrolls horizontally.
-Below the reader, `StampDetailCallout.tsx` provides a sticky detail panel for every
+Below the reader, `StampDetailCallout.tsx` provides an inline detail panel for every
 stamp state. Hover, keyboard focus, and tap update the preview, verification
 status, trainer approval, and trainee reflection. The selection remains visible
-until another stamp is inspected or the spread changes. Empty reflections use
-the portal's existing reflection prompt. The named reference images were not
+until another stamp is inspected or the spread changes. The panel stays in normal
+page flow so it cannot cover the reader controls. Incomplete, unlocked milestones
+include an optional reflection field and a Submit for review action. Drafts are
+kept per milestone while browsing. Submission uses the existing server action to
+set `READY_FOR_REVIEW` and put the milestone in `/admin/queue`, matching the
+notification workflow in `architecture.md`; it does not send email or push alerts.
+Queued, verified, and locked milestones show their current state and cannot be
+resubmitted. Server-side guards preserve existing trainer approvals and prevent
+duplicate queue entries. Empty reflections use the portal's existing reflection
+prompt. The named reference images were not
 supplied with this change, so their exact placeholder wording is unverified.
 `lib/passport/book.ts` allocates exactly 32 pages: cover, holder profile, then one
 introduction and five milestone pages for each of the five paths. This is a
@@ -153,3 +172,5 @@ sync is not implemented.
 Validation: `npm run build`, `npx tsc --noEmit`, and
 `npx tsx scripts/test_passport_book.ts`. The pagination test uses fixtures and does
 not modify trainee records.
+`npx tsx scripts/test_review_submission.ts` verifies submission and state guards
+against a disposable SQLite database, without changing application records.

@@ -1,15 +1,54 @@
-import { Award, Check, Clock, MessageSquareText, Stamp } from "lucide-react";
+"use client";
+
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Award, Check, Clock, Loader2, MessageSquareText, Send, Stamp } from "lucide-react";
 import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
+import { submitMilestoneForReview } from "@/lib/actions/progress";
 
 const reflectionPlaceholder = "Share what you learned during your shift, feedback from your store buddy, or practice notes...";
 
-export function StampDetailCallout({ milestone, id }: { milestone: EnrichedMilestone | null; id: string }) {
+export function StampDetailCallout({ milestone, id, onSubmittingChange, onQueued }: { milestone: EnrichedMilestone | null; id: string; onSubmittingChange: (pending: boolean) => void; onQueued: (milestoneId: string, note: string) => void }) {
+  const router = useRouter();
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  const [feedback, setFeedback] = useState<{ id: string; message: string; error: boolean } | null>(null);
   const verified = milestone?.status === "VERIFIED";
   const inReview = milestone?.status === "READY_FOR_REVIEW";
+  const locked = milestone?.status === "LOCKED";
+  const canSubmit = milestone?.status === "IN_PROGRESS";
+  const note = milestone ? drafts[milestone.id] ?? milestone.traineeNote ?? "" : "";
   const status = verified ? "Verified & Stamped" : inReview ? "In Review" : "Incomplete";
 
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!milestone || !canSubmit || submitting.current) return;
+    const submittedId = milestone.id;
+    submitting.current = true;
+    setPending(true);
+    onSubmittingChange(true);
+    setFeedback(null);
+    try {
+      const result = await submitMilestoneForReview(submittedId, note);
+      if (result.success) {
+        onQueued(submittedId, note.trim());
+        setFeedback({ id: submittedId, message: "Submitted for review. Your milestone and reflection are now in the trainer’s Review Queue.", error: false });
+      } else {
+        setFeedback({ id: submittedId, message: result.error || "Could not submit your review request. Please try again.", error: true });
+      }
+      router.refresh();
+    } catch {
+      setFeedback({ id: submittedId, message: "Could not submit your review request. Please try again.", error: true });
+    } finally {
+      submitting.current = false;
+      setPending(false);
+      onSubmittingChange(false);
+    }
+  }
+
   return (
-    <section id={id} aria-label="Stamp details" className="sticky bottom-4 z-20 max-h-[45dvh] overflow-y-auto rounded-2xl border border-beat-gold/40 bg-white p-5 font-sans text-beat-maroon shadow-lg shadow-beat-maroon/10 sm:p-6">
+    <section id={id} aria-label="Stamp details" aria-busy={pending} className="rounded-2xl border border-beat-gold/30 bg-white p-5 font-sans text-beat-maroon shadow-sm sm:p-6">
       {!milestone ? (
         <div className="flex items-center gap-4 py-2">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-beat-gold/50 bg-beat-canvas"><Stamp className="h-7 w-7 text-beat-gold" /></div>
@@ -34,11 +73,19 @@ export function StampDetailCallout({ milestone, id }: { milestone: EnrichedMiles
               </dl>
             ) : <p className="mt-4 text-xs text-beat-maroon/70">{inReview ? "Awaiting your trainer’s verification and stamp." : "Trainer approval will appear here once this milestone is verified."}</p>}
           </div>
-          <div className="min-w-0 rounded-xl border border-beat-gold/20 bg-beat-canvas p-4 sm:col-start-2 lg:col-start-auto">
+          <form onSubmit={submit} className="min-w-0 rounded-xl border border-beat-gold/20 bg-beat-canvas p-4 sm:col-start-2 lg:col-start-auto">
             <h3 className="flex items-center gap-2 text-xs font-bold"><MessageSquareText className="h-4 w-4 shrink-0 text-beat-gold" />Trainee Reflection Note</h3>
-            <p className={`mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed ${milestone.traineeNote?.trim() ? "text-beat-maroon" : "italic text-beat-maroon/60"}`}>{milestone.traineeNote?.trim() || reflectionPlaceholder}</p>
-            {!milestone.traineeNote?.trim() && <p className="mt-3 text-[10px] text-beat-maroon/60">No reflection submitted yet.</p>}
-          </div>
+            {canSubmit ? <>
+              <label htmlFor={`${id}-reflection`} className="mt-3 block text-[11px] text-beat-maroon/70">Add a reflection for your trainer (optional)</label>
+              <textarea id={`${id}-reflection`} rows={4} value={note} disabled={pending} onChange={event => setDrafts(previous => ({ ...previous, [milestone.id]: event.target.value }))} placeholder={reflectionPlaceholder} aria-describedby={`${id}-review-help`} className="mt-2 w-full resize-y rounded-lg border border-beat-gold/30 bg-white p-3 text-xs leading-relaxed text-beat-maroon placeholder:text-beat-maroon/50 disabled:opacity-60" />
+            </> : <p className={`mt-3 whitespace-pre-wrap break-words text-xs leading-relaxed ${milestone.traineeNote?.trim() ? "text-beat-maroon" : "italic text-beat-maroon/60"}`}>{milestone.traineeNote?.trim() || "No reflection submitted."}</p>}
+            <p id={`${id}-review-help`} className="mt-3 text-[11px] leading-relaxed text-beat-maroon/70">{verified ? "This milestone has already been approved by your trainer." : inReview ? "Your trainer can review your submission in the Review Queue." : locked ? "Ask your trainer to unlock this milestone before submitting." : "Submitting sends this milestone and your note to the trainer’s Review Queue."}</p>
+            <button type="submit" disabled={!canSubmit || pending} className={`mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold disabled:cursor-default ${canSubmit ? "bg-beat-maroon text-white hover:bg-beat-maroon/90 disabled:opacity-60" : "border border-beat-gold/25 bg-white text-beat-maroon/60"}`}>
+              {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-beat-gold" /> : verified ? <Check aria-hidden="true" className="h-4 w-4 text-beat-gold" /> : inReview ? <Clock aria-hidden="true" className="h-4 w-4 text-beat-gold" /> : <Send aria-hidden="true" className="h-4 w-4 text-beat-gold" />}
+              {pending ? "Submitting…" : verified ? "Verified & Stamped" : inReview ? "Awaiting trainer review" : locked ? "Milestone locked" : "Submit for review"}
+            </button>
+            {feedback?.id === milestone.id && <p role={feedback.error ? "alert" : "status"} className="mt-3 rounded-lg border border-beat-gold/30 bg-white p-3 text-xs leading-relaxed">{feedback.message}</p>}
+          </form>
         </div>
       )}
     </section>

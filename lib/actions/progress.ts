@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "../db/prisma";
 import { getTraineeSession, getAdminSession } from "../auth/session";
 import { MilestoneStatus } from "../types/models";
+import { queueMilestoneForReview } from "../db/repositories/progress";
 
 export interface ActionResult {
   success: boolean;
@@ -24,36 +25,12 @@ export async function submitMilestoneForReview(
   }
 
   try {
-    const milestone = await prisma.milestoneDefinition.findUnique({
-      where: { id: milestoneId },
-    });
-
-    if (!milestone) {
-      return { success: false, error: "Milestone not found." };
-    }
-
-    await prisma.traineeProgress.upsert({
-      where: {
-        traineeId_milestoneId: {
-          traineeId: traineeSession.id,
-          milestoneId: milestone.id,
-        },
-      },
-      update: {
-        status: MilestoneStatus.READY_FOR_REVIEW,
-        traineeNote: traineeNote.trim() || null,
-        requestedAt: new Date(),
-      },
-      create: {
-        traineeId: traineeSession.id,
-        milestoneId: milestone.id,
-        status: MilestoneStatus.READY_FOR_REVIEW,
-        traineeNote: traineeNote.trim() || null,
-        requestedAt: new Date(),
-      },
-    });
+    const result = await queueMilestoneForReview(traineeSession.id, milestoneId, traineeNote);
+    if (!result.success) return result;
 
     revalidatePath("/passport");
+    revalidatePath("/passport/booklet");
+    revalidatePath(`/passport/modules/${milestoneId}`);
     revalidatePath("/admin/queue");
     revalidatePath(`/admin/trainees/${traineeSession.id}`);
 

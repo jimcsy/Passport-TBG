@@ -14,9 +14,9 @@ export default async function ModulePage({ params }: { params: { id: string } })
   const milestone = path?.milestones.find(m => m.id === params.id);
   if (!milestone) notFound();
 
-  return <main className="min-h-screen bg-beat-canvas p-4 sm:p-8"><div className="mx-auto max-w-3xl space-y-6">
-    <Link href="/passport" className="inline-flex items-center gap-2 text-sm font-bold text-beat-maroon"><ArrowLeft className="h-4 w-4 text-beat-gold" />Back to dashboard</Link>
+  return <div className="mx-auto max-w-3xl space-y-6">
+    <Link href="/passport" className="inline-flex min-h-8 items-center gap-2 text-xs font-medium text-beat-maroon/70 hover:text-beat-maroon hover:underline hover:decoration-beat-gold hover:underline-offset-4"><ArrowLeft aria-hidden="true" className="h-4 w-4" />Back to dashboard</Link>
     <header><p className="text-xs font-bold uppercase tracking-widest text-beat-maroon/60">{path?.title}</p><h1 className="mt-2 text-3xl font-bold text-beat-maroon">Module details</h1><p className="mt-2 text-sm text-beat-maroon/70">Review your milestone and send your reflection to your trainer.</p></header>
     <ModuleDetails milestone={milestone} />
-  </div></main>;
+  </div>;
 }
