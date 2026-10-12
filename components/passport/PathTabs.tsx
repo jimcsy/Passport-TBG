@@ -8,18 +8,19 @@ import { CheckCircle2, Award } from "lucide-react";
 
 interface PathTabsProps {
   paths: PathProgressSummary[];
+  activePathKey?: string;
 }
 
-export function PathTabs({ paths }: PathTabsProps) {
+export function PathTabs({ paths, activePathKey: controlledPath }: PathTabsProps) {
   const [activePathKey, setActivePathKey] = useState<string>(paths[0]?.path || "");
   const [selectedMilestone, setSelectedMilestone] = useState<EnrichedMilestone | null>(null);
 
-  const activePath = paths.find((p) => p.path === activePathKey) || paths[0];
+  const activePath = paths.find((p) => p.path === (controlledPath ?? activePathKey)) || paths[0];
 
   return (
     <div className="space-y-6">
       {/* Horizontal Path Selector */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+      {!controlledPath && <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
         {paths.map((p) => {
           const isActive = p.path === activePathKey;
           const isComplete = p.verified === p.total && p.total > 0;
@@ -63,11 +64,11 @@ export function PathTabs({ paths }: PathTabsProps) {
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {/* Active Path Header & Milestone List */}
       {activePath && (
-        <div className="rounded-3xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
+        <div id="active-path-panel" role={controlledPath ? "tabpanel" : undefined} aria-labelledby={controlledPath ? `path-tab-${controlledPath}` : undefined} className="rounded-3xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
             <div>
               <div className="flex items-center gap-2">

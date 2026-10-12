@@ -18,12 +18,6 @@ interface PassportCoverProps {
 }
 
 export function PassportCover({ trainee, stats }: PassportCoverProps) {
-  const formattedHireDate = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date(trainee.hireDate));
-
   // Circular progress calculation
   const radius = 38;
   const circumference = 2 * Math.PI * radius;
@@ -51,9 +45,9 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
                   {trainee.traineeCode}
                 </span>
               </div>
-              <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-beat-maroon tracking-tight">
+              <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-beat-maroon tracking-tight">
                 {trainee.fullName}
-              </h1>
+              </h2>
             </div>
           </div>
 
@@ -78,7 +72,7 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
             <div className="flex items-center gap-2 rounded-xl bg-beat-canvas p-2.5 border border-beat-border">
               <Calendar className="h-4 w-4 text-beat-gold shrink-0" />
               <div>
-                <p className="text-[10px] uppercase font-bold text-beat-maroon/70">Batch & Hire</p>
+                <p className="text-[10px] uppercase font-bold text-beat-maroon/70">Batch</p>
                 <p className="font-semibold text-beat-maroon">{trainee.cohortBatch}</p>
               </div>
             </div>
@@ -88,7 +82,7 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
         {/* Right: Circular Progress Ring & Summary */}
         <div className="flex items-center gap-6 sm:justify-end border-t md:border-t-0 md:border-l border-beat-border pt-4 md:pt-0 md:pl-8">
           <div className="relative flex items-center justify-center">
-            <svg className="h-28 w-28 -rotate-90 transform" viewBox="0 0 96 96">
+            <svg role="img" aria-label={`${stats.overallPercent}% of milestones verified`} className="h-28 w-28 -rotate-90 transform" viewBox="0 0 96 96">
               {/* Background circle */}
               <circle
                 cx="48"
@@ -123,14 +117,14 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
 
           <div className="space-y-2 text-xs">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <CheckCircle2 className="h-4 w-4 text-beat-gold" />
               <span className="font-semibold text-beat-maroon">
                 {stats.verifiedCount} / {stats.totalMilestones}
               </span>
               <span className="text-beat-muted">Verified</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-600" />
+              <Clock className="h-4 w-4 text-beat-gold" />
               <span className="font-semibold text-beat-maroon">
                 {stats.readyForReviewCount}
               </span>

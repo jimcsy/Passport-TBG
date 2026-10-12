@@ -1,3 +1,4 @@
+
 # Architecture Specification: The Bistro Group "Growth Passport"
 
 ## 1. System Overview & Architecture Goals

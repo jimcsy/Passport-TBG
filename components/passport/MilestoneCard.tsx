@@ -22,12 +22,12 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
     : null;
 
   return (
-    <div
+    <div id={`milestone-${milestone.id}`} tabIndex={-1}
       className={`relative overflow-hidden rounded-2xl p-5 transition-all border ${
         isVerified
           ? "bg-white border-beat-gold/40 shadow-sm ring-1 ring-beat-gold/20"
           : isReadyForReview
-          ? "bg-amber-50/40 border-amber-200"
+          ? "bg-beat-gold/5 border-beat-gold/30"
           : isLocked
           ? "bg-beat-canvas/50 border-beat-border/60 opacity-60"
           : "bg-white border-beat-border hover:border-beat-gold/50 shadow-sm"
@@ -42,7 +42,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
                 isVerified
                   ? "bg-beat-gold/15 text-beat-maroon"
                   : isReadyForReview
-                  ? "bg-amber-100 text-amber-900"
+                  ? "bg-beat-gold/15 text-beat-maroon"
                   : "bg-beat-canvas text-beat-muted border border-beat-border"
               }`}
             >
@@ -51,14 +51,14 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
 
             {/* Status Pill */}
             {isVerified && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-beat-maroon/5 px-2 py-0.5 text-[10px] font-bold text-beat-maroon border border-beat-gold/30">
+                <CheckCircle2 className="h-3 w-3 text-beat-gold" />
                 Verified & Stamped
               </span>
             )}
             {isReadyForReview && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-300">
-                <Clock className="h-3 w-3 text-amber-600" />
+              <span className="inline-flex items-center gap-1 rounded-full bg-beat-gold/15 px-2 py-0.5 text-[10px] font-bold text-beat-maroon border border-beat-gold/40">
+                <Clock className="h-3 w-3 text-beat-gold" />
                 Awaiting Verification
               </span>
             )}
@@ -68,7 +68,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
               </span>
             )}
             {isLocked && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500 border border-gray-200">
+              <span className="inline-flex items-center gap-1 rounded-full bg-beat-canvas px-2 py-0.5 text-[10px] font-bold text-beat-maroon/60 border border-beat-gold/20">
                 <Lock className="h-3 w-3" />
                 Locked
               </span>
@@ -118,7 +118,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
           )}
 
           {isReadyForReview && (
-            <div className="text-xs text-amber-700 flex items-center gap-1 font-semibold">
+            <div className="text-xs text-beat-maroon flex items-center gap-1 font-semibold">
               <Clock className="h-3.5 w-3.5 animate-pulse" />
               <span>In Trainer Queue</span>
             </div>

@@ -42,7 +42,7 @@ export function ReadyForReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-beat-maroon/60 backdrop-blur-xs animate-in fade-in">
       <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-beat-border animate-in zoom-in-95">
         {/* Close Button */}
         <button
@@ -56,7 +56,7 @@ export function ReadyForReviewModal({
 
         {isSuccess ? (
           <div className="py-8 flex flex-col items-center text-center space-y-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-beat-gold/15 text-beat-gold">
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h3 className="text-xl font-extrabold text-beat-maroon">
@@ -87,8 +87,8 @@ export function ReadyForReviewModal({
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200">
-                <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <div className="flex items-start gap-2 rounded-xl bg-beat-maroon/5 p-3 text-xs text-beat-maroon border border-beat-maroon/30">
+                <AlertCircle className="h-4 w-4 shrink-0 text-beat-maroon mt-0.5" />
                 <p>{error}</p>
               </div>
             )}

@@ -117,3 +117,39 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
    npm run db:seed
    ```
 4. All application code, server actions, and repositories remain 100% unchanged.
+# Trainee dashboard and digital booklet
+
+The authenticated `/passport` route renders `components/trainee/TraineeDashboard.tsx`
+with live repository data. Track selection filters the learning cards. The detailed
+milestone list has been removed from the dashboard; cards link to authenticated
+`/passport/modules/[id]` screens for module details and trainer review requests.
+Use "View all modules" to access every module in the selected track.
+
+The "View passport" action navigates to the authenticated `/passport/booklet`
+screen, which uses the portal's maroon, gold, warm canvas, and white card theme.
+`components/passport/PassportBook.tsx` renders an inline reader with CSS 3D page
+turns, arrow keys, track shortcuts, spread selection, and reduced motion support.
+A "Back to dashboard" link returns to the operational view. On narrow screens,
+the two-page spread scrolls horizontally.
+Below the reader, `StampDetailCallout.tsx` provides a sticky detail panel for every
+stamp state. Hover, keyboard focus, and tap update the preview, verification
+status, trainer approval, and trainee reflection. The selection remains visible
+until another stamp is inspected or the spread changes. Empty reflections use
+the portal's existing reflection prompt. The named reference images were not
+supplied with this change, so their exact placeholder wording is unverified.
+`lib/passport/book.ts` allocates exactly 32 pages: cover, holder profile, then one
+introduction and five milestone pages for each of the five paths. This is a
+provisional allocation based on the supplied wireframe; a full physical booklet
+specification was not supplied. Milestones are sorted and distributed without
+omission, including when a track has more than five milestones.
+
+Verified stamps display the recorded trainer name, employee ID, approval date in
+Asia/Manila, and trainer note. The signature area represents digital approval
+attribution; the current database does not store handwritten signature images.
+LinkedIn Learning cards are upcoming integrations. Supply the dashboard's optional
+`courses` prop with real `href` values to enable course links; course completion
+sync is not implemented.
+
+Validation: `npm run build`, `npx tsc --noEmit`, and
+`npx tsx scripts/test_passport_book.ts`. The pagination test uses fixtures and does
+not modify trainee records.

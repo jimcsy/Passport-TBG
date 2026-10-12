@@ -1,10 +1,8 @@
 import { getTraineeSession, clearTraineeSession } from "@/lib/auth/session";
 import { getTraineePassportData } from "@/lib/db/repositories/trainee";
-import { PassportCover } from "@/components/passport/PassportCover";
-import { PathTabs } from "@/components/passport/PathTabs";
+import { TraineeDashboard } from "@/components/trainee/TraineeDashboard";
 import { redirect } from "next/navigation";
-import { BookOpen, LogOut, ShieldCheck, Sparkles } from "lucide-react";
-import Link from "next/link";
+import { BookOpen, LogOut } from "lucide-react";
 
 export default async function PassportPage() {
   const session = await getTraineeSession();
@@ -27,7 +25,7 @@ export default async function PassportPage() {
 
   return (
     <main className="min-h-screen bg-beat-canvas p-4 sm:p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Top Navbar */}
         <header className="flex items-center justify-between bg-beat-card p-4 sm:p-5 rounded-2xl shadow-sm border border-beat-border">
           <div className="flex items-center gap-3">
@@ -62,27 +60,12 @@ export default async function PassportPage() {
           </div>
         </header>
 
-        {/* Passport Cover Card */}
-        <PassportCover trainee={data.trainee} stats={data.stats} />
-
-        {/* 5 Development Paths Navigator */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-lg font-black text-beat-maroon tracking-tight">
-              Development Paths
-            </h2>
-            <span className="text-xs font-semibold text-beat-muted">
-              5 Uniform Training Tracks
-            </span>
-          </div>
-
-          <PathTabs paths={data.paths} />
-        </div>
+        <TraineeDashboard data={data} />
 
         {/* Footer */}
         <footer className="pt-8 pb-12 text-center text-xs text-beat-muted space-y-2 border-t border-beat-border/80">
           <p className="font-medium">
-            The Bistro Group &copy; 2024 • BEAT Program Digital Growth Passport
+            The Bistro Group • BEAT Program Digital Growth Passport
           </p>
           <p className="text-[11px]">
             TGI Fridays • Italianni&#39;s • Texas Roadhouse • Denny&#39;s • Buffalo Wild Wings • Bulgogi Brothers
