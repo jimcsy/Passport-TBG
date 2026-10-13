@@ -7,13 +7,13 @@ export default async function PassportPage() {
   const session = await getTraineeSession();
 
   if (!session) {
-    redirect("/");
+    redirect("/trainee");
   }
 
   const data = await getTraineePassportData(session.id);
 
   if (!data) {
-    redirect("/");
+    redirect("/trainee");
   }
 
   return (

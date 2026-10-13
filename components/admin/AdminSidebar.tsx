@@ -9,7 +9,6 @@ import {
   LogOut,
   ShieldCheck,
   Award,
-  ExternalLink,
 } from "lucide-react";
 import { logoutAdmin } from "@/lib/auth/actions";
 
@@ -24,19 +23,19 @@ interface AdminSidebarProps {
 const NAV_ITEMS = [
   {
     name: "Review Queue",
-    href: "/admin/queue",
+    href: "/trainer/queue",
     icon: Inbox,
     description: "Pending verification submissions",
   },
   {
     name: "Trainee Directory",
-    href: "/admin/trainees",
+    href: "/trainer/trainees",
     icon: Users,
     description: "Employee progress & passports",
   },
   {
     name: "Batch Sign-Off",
-    href: "/admin/batch",
+    href: "/trainer/batch",
     icon: CheckSquare,
     description: "Cohort attendance & sign-off",
   },
@@ -47,7 +46,7 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
 
   const handleLogout = async () => {
     await logoutAdmin();
-    window.location.href = "/admin/login";
+    window.location.href = "/trainer/login";
   };
 
   return (
@@ -61,7 +60,7 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
             </div>
             <div>
               <h1 className="font-extrabold text-base tracking-tight leading-tight">
-                BEAT Admin
+                Trainer workspace
               </h1>
               <p className="text-[11px] font-semibold text-beat-gold uppercase tracking-wider">
                 The Bistro Group
@@ -112,14 +111,6 @@ export function AdminSidebar({ admin }: AdminSidebarProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/"
-            target="_blank"
-            className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-white/10 px-3 py-2 text-[11px] font-semibold text-white/80 hover:bg-white/15 hover:text-white transition-colors"
-          >
-            <span>Trainee View</span>
-            <ExternalLink className="h-3 w-3" />
-          </Link>
 
           <button
             type="button"

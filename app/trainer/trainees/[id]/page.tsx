@@ -27,7 +27,7 @@ export default async function TraineeDetailPage({
       {/* Top Breadcrumbs */}
       <div className="flex items-center justify-between pb-3 border-b border-beat-border">
         <Link
-          href="/admin/trainees"
+          href="/trainer/trainees"
           className="inline-flex items-center gap-1.5 text-xs font-bold text-beat-maroon hover:text-beat-gold transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

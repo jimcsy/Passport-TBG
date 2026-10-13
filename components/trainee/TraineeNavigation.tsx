@@ -23,12 +23,12 @@ function SignOutButton() {
 
 export function TraineeNavigation({ fullName, traineeCode, signOut }: TraineeNavigationProps) {
   const pathname = usePathname();
-  const inBooklet = pathname === "/passport/booklet";
-  const inModule = pathname.startsWith("/passport/modules/");
+  const inBooklet = pathname === "/trainee/dashboard/booklet";
+  const inModule = pathname.startsWith("/trainee/dashboard/modules/");
   const initials = fullName.trim().split(/\s+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("");
   const links = [
-    { href: "/passport", label: "Dashboard", icon: LayoutDashboard, active: !inBooklet },
-    { href: "/passport/booklet", label: "My passport", icon: BookOpen, active: inBooklet },
+    { href: "/trainee/dashboard", label: "Dashboard", icon: LayoutDashboard, active: !inBooklet },
+    { href: "/trainee/dashboard/booklet", label: "My passport", icon: BookOpen, active: inBooklet },
   ];
 
   return (
@@ -36,7 +36,7 @@ export function TraineeNavigation({ fullName, traineeCode, signOut }: TraineeNav
       <a href="#trainee-main" className="sr-only fixed left-4 top-4 z-50 rounded-md bg-beat-maroon px-4 py-3 font-semibold text-white focus:not-sr-only">Skip to content</a>
       <header className="border-b border-beat-gold/25 bg-white font-sans">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 px-4 sm:gap-x-6 sm:px-8 xl:px-0">
-          <Link href="/passport" aria-label="Growth Passport dashboard" className="my-4 flex shrink-0 items-center gap-3 rounded-sm">
+          <Link href="/trainee/dashboard" aria-label="Growth Passport dashboard" className="my-4 flex shrink-0 items-center gap-3 rounded-sm">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold"><BookOpen aria-hidden="true" className="h-5 w-5" /></span>
             <span><span className="block text-sm font-bold tracking-tight text-beat-maroon sm:text-base">Growth Passport</span><span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[.1em] text-beat-maroon/60 sm:text-[10px]">The Bistro Group · BEAT</span></span>
           </Link>

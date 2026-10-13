@@ -40,7 +40,7 @@ export function TraineeLookupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div className="flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-800 border border-red-200 animate-in fade-in">
+        <div role="alert" className="flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-800 border border-red-200 animate-in fade-in">
           <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
           <p className="font-medium leading-relaxed">{error}</p>
         </div>
@@ -76,6 +76,7 @@ export function TraineeLookupForm() {
         <input
           id="email"
           name="email"
+          autoComplete="email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -110,6 +111,7 @@ export function TraineeLookupForm() {
         <button
           type="button"
           onClick={handleQuickFill}
+          disabled={isPending}
           className="inline-flex items-center gap-1.5 text-xs text-beat-gold hover:text-beat-gold-dark font-medium transition-colors cursor-pointer"
         >
           <Sparkles className="h-3 w-3" />

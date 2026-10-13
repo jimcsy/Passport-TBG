@@ -28,11 +28,11 @@ export async function submitMilestoneForReview(
     const result = await queueMilestoneForReview(traineeSession.id, milestoneId, traineeNote);
     if (!result.success) return result;
 
-    revalidatePath("/passport");
-    revalidatePath("/passport/booklet");
-    revalidatePath(`/passport/modules/${milestoneId}`);
-    revalidatePath("/admin/queue");
-    revalidatePath(`/admin/trainees/${traineeSession.id}`);
+    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainee/dashboard/booklet");
+    revalidatePath(`/trainee/dashboard/modules/${milestoneId}`);
+    revalidatePath("/trainer/queue");
+    revalidatePath(`/trainer/trainees/${traineeSession.id}`);
 
     return { success: true };
   } catch (error) {
@@ -79,10 +79,10 @@ export async function verifyMilestone(
       },
     });
 
-    revalidatePath("/passport");
-    revalidatePath("/admin/queue");
-    revalidatePath(`/admin/trainees/${traineeId}`);
-    revalidatePath("/admin/trainees");
+    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainer/queue");
+    revalidatePath(`/trainer/trainees/${traineeId}`);
+    revalidatePath("/trainer/trainees");
 
     return { success: true };
   } catch (error) {
@@ -139,10 +139,10 @@ export async function bulkVerifyMilestones(
       )
     );
 
-    revalidatePath("/passport");
-    revalidatePath("/admin/queue");
-    revalidatePath("/admin/trainees");
-    revalidatePath("/admin/batch");
+    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainer/queue");
+    revalidatePath("/trainer/trainees");
+    revalidatePath("/trainer/batch");
 
     return { success: true };
   } catch (error) {

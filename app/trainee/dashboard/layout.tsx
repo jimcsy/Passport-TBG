@@ -4,12 +4,12 @@ import { TraineeNavigation } from "@/components/trainee/TraineeNavigation";
 
 export default async function TraineeLayout({ children }: { children: React.ReactNode }) {
   const session = await getTraineeSession();
-  if (!session) redirect("/");
+  if (!session) redirect("/trainee");
 
   async function signOut() {
     "use server";
     await clearTraineeSession();
-    redirect("/");
+    redirect("/trainee");
   }
 
   return (

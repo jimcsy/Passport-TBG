@@ -51,7 +51,7 @@ export async function loginAdmin(
       role: admin.role,
     });
 
-    return { success: true, redirectTo: "/admin/queue" };
+    return { success: true, redirectTo: "/trainer/queue" };
   } catch (error) {
     console.error("Admin login error:", error);
     return { success: false, error: "An unexpected error occurred. Please try again." };
@@ -94,7 +94,7 @@ export async function lookupTrainee(
       cohortBatch: trainee.cohortBatch,
     });
 
-    return { success: true, redirectTo: "/passport" };
+    return { success: true, redirectTo: "/trainee/dashboard" };
   } catch (error) {
     console.error("Trainee lookup error:", error);
     return { success: false, error: "An unexpected error occurred. Please try again." };

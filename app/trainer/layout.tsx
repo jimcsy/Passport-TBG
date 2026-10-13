@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getAdminSession } from "@/lib/auth/session";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 
@@ -10,6 +12,7 @@ export default async function AdminLayout({
 
   // If unauthenticated (e.g. login page), render child directly without sidebar
   if (!session) {
+    if (headers().get("x-portal-path") !== "/trainer/login") redirect("/trainer/login");
     return <>{children}</>;
   }
 

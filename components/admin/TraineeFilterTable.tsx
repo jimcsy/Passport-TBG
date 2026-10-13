@@ -247,7 +247,7 @@ export function TraineeFilterTable({ trainees }: TraineeFilterTableProps) {
                     {/* Action */}
                     <td className="py-4 px-5 text-right">
                       <Link
-                        href={`/admin/trainees/${t.id}`}
+                        href={`/trainer/trainees/${t.id}`}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon border border-beat-border hover:border-beat-gold hover:bg-beat-gold/10 transition-colors"
                       >
                         <span>View Passport</span>

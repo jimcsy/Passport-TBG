@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { cookies } from "next/headers";
+import { isTrainerPayload, isTraineePayload } from "./session-validation";
 
 const SECRET_KEY = process.env.SESSION_SECRET || "beat-growth-passport-super-secret-key-change-in-production-2024";
 const encodedKey = new TextEncoder().encode(SECRET_KEY);
@@ -54,7 +55,7 @@ export async function decryptSession<T>(token: string): Promise<T | null> {
 // Admin Session Helpers (Server Actions & Route Handlers)
 // -------------------------------------------------------------
 export async function setAdminSession(payload: AdminSessionPayload) {
-  const token = await encryptSession(payload, ADMIN_EXPIRES_IN);
+  const token = await encryptSession({ ...payload, portal: "trainer" }, ADMIN_EXPIRES_IN);
   const cookieStore = cookies();
   cookieStore.set(ADMIN_COOKIE_NAME, token, {
     httpOnly: true,
@@ -70,7 +71,8 @@ export async function getAdminSession(): Promise<AdminSessionPayload | null> {
   const cookieStore = cookies();
   const token = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   if (!token) return null;
-  return decryptSession<AdminSessionPayload>(token);
+  const payload = await decryptSession<AdminSessionPayload>(token);
+  return payload && isTrainerPayload(payload) ? payload : null;
 }
 
 export async function clearAdminSession() {
@@ -82,7 +84,7 @@ export async function clearAdminSession() {
 // Trainee Session Helpers (Server Actions & Route Handlers)
 // -------------------------------------------------------------
 export async function setTraineeSession(payload: TraineeSessionPayload) {
-  const token = await encryptSession(payload, TRAINEE_EXPIRES_IN);
+  const token = await encryptSession({ ...payload, portal: "trainee" }, TRAINEE_EXPIRES_IN);
   const cookieStore = cookies();
   cookieStore.set(TRAINEE_COOKIE_NAME, token, {
     httpOnly: true,
@@ -98,7 +100,8 @@ export async function getTraineeSession(): Promise<TraineeSessionPayload | null>
   const cookieStore = cookies();
   const token = cookieStore.get(TRAINEE_COOKIE_NAME)?.value;
   if (!token) return null;
-  return decryptSession<TraineeSessionPayload>(token);
+  const payload = await decryptSession<TraineeSessionPayload>(token);
+  return payload && isTraineePayload(payload) ? payload : null;
 }
 
 export async function clearTraineeSession() {

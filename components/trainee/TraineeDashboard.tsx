@@ -33,7 +33,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-widest text-beat-maroon/60">My learning journey</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-beat-maroon">Your next chapter starts here.</h1><p className="mt-2 text-sm text-beat-maroon/70">Build your skills. Earn your stamps. Grow with Bistro.</p></div>
-        <Link href="/passport/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-lg shadow-beat-maroon/10 hover:bg-beat-maroon/90"><BookOpen className="h-5 w-5 text-beat-gold" />View passport<ArrowUpRight className="h-4 w-4 text-beat-gold" /></Link>
+        <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-lg shadow-beat-maroon/10 hover:bg-beat-maroon/90"><BookOpen className="h-5 w-5 text-beat-gold" />View passport<ArrowUpRight className="h-4 w-4 text-beat-gold" /></Link>
       </div>
       <PassportCover trainee={data.trainee} stats={data.stats} />
       <section aria-labelledby="paths-title" className="space-y-4">
@@ -70,7 +70,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
             return <article key={m.id} className="flex flex-col rounded-2xl border border-beat-gold/20 bg-white p-5">
               <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold tracking-wide text-beat-maroon/60">{m.code}</span><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${completed ? "bg-beat-maroon text-beat-gold" : "bg-beat-gold/15 text-beat-maroon"}`}>{completed ? <CheckCircle2 className="h-3 w-3" /> : review ? <Clock className="h-3 w-3" /> : null}{status}</span></div>
               <h3 className="mt-4 font-bold text-beat-maroon">{m.title}</h3><p className="mt-2 flex-1 text-xs leading-relaxed text-beat-maroon/70">{m.description}</p>
-              <Link href={`/passport/modules/${m.id}`} className="mt-5 inline-flex items-center gap-1 self-start text-xs font-bold text-beat-maroon underline decoration-beat-gold decoration-2 underline-offset-4">{completed ? "View approval" : review ? "View review status" : locked ? "View requirements" : "Continue module"}<ArrowUpRight className="h-3 w-3 text-beat-gold" /></Link>
+              <Link href={`/trainee/dashboard/modules/${m.id}`} className="mt-5 inline-flex items-center gap-1 self-start text-xs font-bold text-beat-maroon underline decoration-beat-gold decoration-2 underline-offset-4">{completed ? "View approval" : review ? "View review status" : locked ? "View requirements" : "Continue module"}<ArrowUpRight className="h-3 w-3 text-beat-gold" /></Link>
             </article>;
           })}
           {!learning.length && <p className="rounded-xl border border-dashed border-beat-gold/40 p-5 text-sm text-beat-maroon">Modules will appear here when this path is configured.</p>}
