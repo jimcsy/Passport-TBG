@@ -1,6 +1,7 @@
 import { getTraineeDirectory } from "@/lib/db/repositories/admin";
 import { TraineeFilterTable } from "@/components/admin/TraineeFilterTable";
-import { Users, Award } from "lucide-react";
+import Link from "next/link";
+import { Users, UserPlus } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +26,15 @@ export default async function TraineesDirectoryPage() {
           </p>
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+        <Link href="/trainer/trainees/new" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-4 py-3 text-sm font-bold text-white hover:bg-beat-maroon-light"><UserPlus className="h-4 w-4 text-beat-gold" />Register trainee</Link>
         <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs text-xs">
           <Users className="h-4 w-4 text-beat-gold" />
           <span className="font-extrabold text-beat-maroon">
             {trainees.length}
           </span>
           <span className="text-beat-muted">Total Trainees</span>
+        </div>
         </div>
       </div>
 

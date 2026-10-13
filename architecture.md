@@ -295,3 +295,9 @@ When ready to graduate from local SQLite to Supabase:
 - `/` redirects to `/trainee`. Legacy `/admin/*` and `/passport/*` links redirect to their new equivalents.
 - Both portals share session infrastructure, with separate HTTP-only cookies and signed portal claims. Middleware and server actions validate the intended portal; trainer sessions also require an allowed trainer/admin role. Existing sessions must sign in again after this change.
 - Trainee code plus email remains the prototype access method; it is not company SSO or password authentication.
+
+## Individual trainee registration
+
+Trainers register trainees from `/trainer/trainees/new`, linked from the directory. A trainer session is required by both the page and server action. Required fields are trainee code, full name, email, restaurant brand, branch, cohort, and hire date. Codes are normalized to uppercase and emails to lowercase. The unique trainee code prevents duplicate registrations.
+
+Registration creates the trainee and all configured milestone progress records in one transaction, initially `IN_PROGRESS` with no approvals. The confirmation shows the trainee portal link and login details; invitation emails are not sent. Shared validation and creation logic live in `lib/trainee-registration.ts` and `lib/db/repositories/registration.ts` for reuse by a future CSV import. CSV upload, preview, and bulk registration are deferred.
