@@ -8,6 +8,7 @@ import {
   savePlanVersion,
   publishPlanVersion,
   archiveTrainingPlan,
+  getLibraryMilestones,
 } from "@/lib/db/repositories/plans";
 import type { SavePlanVersionInput, PublishPlanVersionInput } from "@/lib/validations/plans";
 
@@ -107,3 +108,20 @@ export async function archivePlanAction(planId: string): Promise<PlanActionResul
     return { success: false, error: "Failed to archive plan." };
   }
 }
+
+/**
+ * Returns standard master milestones catalog.
+ */
+export async function getLibraryMilestonesAction(pathFilter?: string): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session", data: [] };
+
+  try {
+    const milestones = await getLibraryMilestones(pathFilter);
+    return { success: true, data: milestones };
+  } catch (error) {
+    console.error("Error fetching library milestones:", error);
+    return { success: false, error: "Failed to fetch library milestones.", data: [] };
+  }
+}
+

@@ -15,6 +15,8 @@ import {
   Node,
   BackgroundVariant,
   Panel,
+  ReactFlowProvider,
+  useReactFlow,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -27,6 +29,7 @@ import {
   ShieldCheck,
   BookOpen,
   Award,
+  AlertTriangle,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { DevelopmentPath } from "@/lib/types/models";
@@ -34,6 +37,7 @@ import { savePlanVersionAction } from "@/lib/actions/plans";
 import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
 import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
+import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
 
 // Initial 5 Development Path Hubs definition
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
@@ -44,7 +48,7 @@ const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x:
   { id: "root-LEADERSHIP", path: DevelopmentPath.LEADERSHIP, title: "Leadership Skills", x: 1280, y: 0 },
 ];
 
-interface PlanCanvasBuilderProps {
+export interface PlanCanvasBuilderProps {
   plan: {
     id: string;
     title: string;
@@ -75,11 +79,29 @@ interface PlanCanvasBuilderProps {
       edgeType: string;
     }>;
   };
+  libraryMilestones?: LibraryMilestone[];
 }
 
-export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderProps) {
+export function PlanCanvasBuilder(props: PlanCanvasBuilderProps) {
+  return (
+    <ReactFlowProvider>
+      <PlanCanvasBuilderInner {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }: PlanCanvasBuilderProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [warningToast, setWarningToast] = useState<string | null>(null);
+
+  const { screenToFlowPosition } = useReactFlow();
+
+  const showWarning = (msg: string) => {
+    setWarningToast(msg);
+    setTimeout(() => setWarningToast(null), 3500);
+  };
 
   // Compute counts per path for initial display
   const initialCounts = useMemo(() => {
@@ -152,6 +174,75 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Placed competency codes to disable re-adding duplicates
+  const placedCodes = useMemo(() => {
+    const codes = new Set<string>();
+    nodes.forEach((n) => {
+      if (n.type === "milestone" && n.data?.code) {
+        codes.add(n.data.code as string);
+      }
+    });
+    return codes;
+  }, [nodes]);
+
+  // Drag and drop handlers from Milestone Library Drawer
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      const rawData = event.dataTransfer.getData("application/reactflow");
+      if (!rawData) return;
+
+      try {
+        const milestone: LibraryMilestone = JSON.parse(rawData);
+
+        // Check if duplicate
+        if (placedCodes.has(milestone.code)) {
+          showWarning(`Competency "${milestone.code}" is already placed on the canvas.`);
+          return;
+        }
+
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+
+        const newNodeId = `node-lib-${milestone.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
+        const newNode: Node = {
+          id: newNodeId,
+          type: "milestone",
+          position,
+          data: {
+            code: milestone.code,
+            title: milestone.title,
+            description: milestone.description,
+            path: milestone.path as DevelopmentPath,
+            orderIndex: milestone.orderIndex || nodes.length + 1,
+            isCustom: false,
+            libraryMilestoneId: milestone.id,
+          },
+        };
+
+        const newEdge: Edge = {
+          id: `edge-${Date.now()}`,
+          source: `root-${milestone.path}`,
+          target: newNodeId,
+          type: "beatEdge",
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+        setEdges((eds) => [...eds, newEdge]);
+      } catch (err) {
+        console.error("Failed to parse dropped milestone:", err);
+      }
+    },
+    [screenToFlowPosition, placedCodes, nodes.length, setNodes, setEdges]
+  );
 
   // Callbacks for node/edge actions
   const handleDeleteNode = useCallback(
@@ -379,6 +470,28 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
 
           <button
             type="button"
+            onClick={() => setIsLibraryOpen((v) => !v)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
+              isLibraryOpen
+                ? "bg-beat-gold text-white border-beat-gold shadow-sm"
+                : "bg-beat-canvas border-beat-border text-beat-maroon hover:bg-beat-gold/20"
+            }`}
+          >
+            <BookOpen className="h-3.5 w-3.5 text-beat-gold" />
+            <span>Milestone Library</span>
+            {libraryMilestones.length > 0 && (
+              <span
+                className={`ml-0.5 rounded-full px-1.5 py-0.2 font-mono text-[10px] ${
+                  isLibraryOpen ? "bg-white/20 text-white" : "bg-beat-maroon/10 text-beat-maroon"
+                }`}
+              >
+                {libraryMilestones.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={onLayout}
             className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-gold/20 transition-colors shadow-2xs cursor-pointer"
           >
@@ -399,7 +512,19 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
       </header>
 
       {/* Main Canvas Viewport */}
-      <div className="flex-1 w-full h-full beat-canvas relative">
+      <div
+        className="flex-1 w-full h-full beat-canvas relative"
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        {/* Warning Toast */}
+        {warningToast && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl border border-amber-500 animate-in fade-in slide-in-from-top-2">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
+            <span>{warningToast}</span>
+          </div>
+        )}
+
         <ReactFlow
           nodes={augmentedNodes}
           edges={augmentedEdges}
@@ -426,6 +551,14 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
             💡 Two-tier hierarchy: connect Path Root Hubs to child milestones in the same category
           </Panel>
         </ReactFlow>
+
+        {/* Milestone Library Slide-Over Drawer */}
+        <MilestoneLibraryDrawer
+          isOpen={isLibraryOpen}
+          onClose={() => setIsLibraryOpen(false)}
+          milestones={libraryMilestones}
+          placedCodes={placedCodes}
+        />
       </div>
     </div>
   );

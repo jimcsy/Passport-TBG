@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getTrainingPlanById } from "@/lib/db/repositories/plans";
+import { getTrainingPlanById, getLibraryMilestones } from "@/lib/db/repositories/plans";
 import { PlanCanvasBuilder } from "@/components/canvas/PlanCanvasBuilder";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,10 @@ interface BuilderPageProps {
 }
 
 export default async function PlanBuilderPage({ params }: BuilderPageProps) {
-  const plan = await getTrainingPlanById(params.id);
+  const [plan, libraryMilestones] = await Promise.all([
+    getTrainingPlanById(params.id),
+    getLibraryMilestones(),
+  ]);
 
   if (!plan) {
     notFound();
@@ -58,6 +61,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
             edgeType: e.edgeType,
           })),
         }}
+        libraryMilestones={libraryMilestones}
       />
     </div>
   );
