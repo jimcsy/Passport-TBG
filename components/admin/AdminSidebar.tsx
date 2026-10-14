@@ -9,6 +9,7 @@ import {
   LogOut,
   ShieldCheck,
   Award,
+  GitBranch,
 } from "lucide-react";
 import { logoutAdmin } from "@/lib/auth/actions";
 
@@ -26,6 +27,12 @@ const NAV_ITEMS = [
     href: "/trainer/queue",
     icon: Inbox,
     description: "Pending verification submissions",
+  },
+  {
+    name: "Training Plans",
+    href: "/trainer/plans",
+    icon: GitBranch,
+    description: "Role-based path builder & plans",
   },
   {
     name: "Trainee Directory",
