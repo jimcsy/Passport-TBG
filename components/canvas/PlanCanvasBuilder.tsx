@@ -14,8 +14,6 @@ import {
   Edge,
   Node,
   BackgroundVariant,
-  Handle,
-  Position,
   Panel,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -31,71 +29,20 @@ import {
   Award,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
-import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
+import { DevelopmentPath } from "@/lib/types/models";
 import { savePlanVersionAction } from "@/lib/actions/plans";
+import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
+import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
+import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 
 // Initial 5 Development Path Hubs definition
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
-  { id: "root-ONBOARDING", path: DevelopmentPath.ONBOARDING, title: "1. Onboarding", x: 0, y: 0 },
-  { id: "root-COMMUNICATION", path: DevelopmentPath.COMMUNICATION, title: "2. Communication", x: 280, y: 0 },
-  { id: "root-TECHNICAL", path: DevelopmentPath.TECHNICAL, title: "3. Technical Skills", x: 560, y: 0 },
-  { id: "root-CULTURE", path: DevelopmentPath.CULTURE, title: "4. Culture & Values", x: 840, y: 0 },
-  { id: "root-LEADERSHIP", path: DevelopmentPath.LEADERSHIP, title: "5. Leadership Skills", x: 1120, y: 0 },
+  { id: "root-ONBOARDING", path: DevelopmentPath.ONBOARDING, title: "Onboarding", x: 0, y: 0 },
+  { id: "root-COMMUNICATION", path: DevelopmentPath.COMMUNICATION, title: "Communication Skills", x: 320, y: 0 },
+  { id: "root-TECHNICAL", path: DevelopmentPath.TECHNICAL, title: "Technical Skills", x: 640, y: 0 },
+  { id: "root-CULTURE", path: DevelopmentPath.CULTURE, title: "Personal Effectiveness", x: 960, y: 0 },
+  { id: "root-LEADERSHIP", path: DevelopmentPath.LEADERSHIP, title: "Leadership Skills", x: 1280, y: 0 },
 ];
-
-// Custom Path Root Node Component
-function PathRootNode({ data }: { data: { title: string; path: DevelopmentPath } }) {
-  return (
-    <div className="w-64 rounded-2xl bg-beat-maroon text-beat-gold p-4 shadow-lg border-2 border-beat-gold select-none">
-      <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-beat-gold/20 text-beat-gold">
-          <BookOpen className="h-4 w-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[9px] uppercase tracking-widest text-beat-gold/80 font-bold">
-            Development Path
-          </p>
-          <h4 className="font-bold text-sm text-white truncate">{data.title}</h4>
-        </div>
-      </div>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-beat-gold !w-3 !h-3 !border-2 !border-white"
-      />
-    </div>
-  );
-}
-
-// Custom Milestone Node Component
-function MilestoneNode({ data }: { data: { code: string; title: string; description: string; path: DevelopmentPath } }) {
-  return (
-    <div className="w-56 rounded-2xl bg-white text-beat-maroon p-3.5 shadow-md border-l-4 border-l-beat-gold border border-beat-border hover:shadow-lg transition-shadow select-none">
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="!bg-beat-gold !w-2.5 !h-2.5 !border-2 !border-white"
-      />
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
-          {data.code}
-        </span>
-        <span className="text-[9px] uppercase font-bold text-beat-gold tracking-wider">
-          {data.path.substring(0, 4)}
-        </span>
-      </div>
-      <h5 className="font-bold text-xs leading-tight line-clamp-1">{data.title}</h5>
-      <p className="text-[11px] text-beat-muted line-clamp-2 mt-1 leading-snug">
-        {data.description}
-      </p>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="!bg-beat-maroon !w-2.5 !h-2.5 !border-2 !border-white"
-      />
-    </div>
-  );
-}
 
 interface PlanCanvasBuilderProps {
   plan: {
@@ -131,6 +78,18 @@ interface PlanCanvasBuilderProps {
 }
 
 export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Compute counts per path for initial display
+  const initialCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    initialVersion.nodes.forEach((n) => {
+      counts[n.path] = (counts[n.path] || 0) + 1;
+    });
+    return counts;
+  }, [initialVersion.nodes]);
+
   // Build initial React Flow nodes from existing nodes or default path hubs
   const initialNodes: Node[] = useMemo(() => {
     // 1. Path root hubs
@@ -138,7 +97,11 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
       id: root.id,
       type: "pathRoot",
       position: { x: root.x, y: root.y },
-      data: { title: root.title, path: root.path },
+      data: {
+        title: root.title,
+        path: root.path,
+        childCount: initialCounts[root.path] || 0,
+      },
       deletable: false,
     }));
 
@@ -146,7 +109,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
     const milestoneNodes: Node[] = initialVersion.nodes.map((n) => ({
       id: n.id,
       type: "milestone",
-      position: { x: n.posX || 0, y: n.posY || 150 },
+      position: { x: n.posX || 0, y: n.posY || 180 },
       data: {
         code: n.code,
         title: n.title,
@@ -159,19 +122,17 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
     }));
 
     return [...rootNodes, ...milestoneNodes];
-  }, [initialVersion.nodes]);
+  }, [initialVersion.nodes, initialCounts]);
 
   // Build initial edges
   const initialEdges: Edge[] = useMemo(() => {
-    // Map edges from DB
     const dbEdges: Edge[] = initialVersion.edges.map((e) => ({
       id: e.id,
       source: e.sourceNodeId,
       target: e.targetNodeId,
-      style: { stroke: "#C29B38", strokeWidth: 2.5 },
+      type: "beatEdge",
     }));
 
-    // If milestone nodes have no edges connecting them to their path root, create default edges
     const connectedTargets = new Set(initialVersion.edges.map((e) => e.targetNodeId));
     const autoEdges: Edge[] = [];
 
@@ -181,7 +142,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
           id: `edge-root-${n.id}`,
           source: `root-${n.path}`,
           target: n.id,
-          style: { stroke: "#C29B38", strokeWidth: 2.5 },
+          type: "beatEdge",
         });
       }
     });
@@ -191,9 +152,36 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
+  // Callbacks for node/edge actions
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    },
+    [setNodes, setEdges]
+  );
+
+  const handleDeleteEdge = useCallback(
+    (edgeId: string) => {
+      setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+    },
+    [setEdges]
+  );
+
+  // Recalculate child milestone counts on path hubs
+  const nodeCountMap = useMemo(() => {
+    const counts: Record<string, number> = {};
+    nodes.forEach((n) => {
+      if (n.type === "milestone" && n.data?.path) {
+        const path = n.data.path as string;
+        counts[path] = (counts[path] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [nodes]);
+
+  // Custom Node and Edge Types
   const nodeTypes = useMemo(
     () => ({
       pathRoot: PathRootNode,
@@ -202,13 +190,54 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
     []
   );
 
+  const edgeTypes = useMemo(
+    () => ({
+      beatEdge: BeatEdge,
+    }),
+    []
+  );
+
+  // Two-tier connection validation rules:
+  // 1. Hubs cannot be targets (incoming connections forbidden on hubs)
+  // 2. Hub can only connect to milestones of the SAME path category
+  // 3. Milestones cannot connect across different paths
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      const source = connection.source;
+      const target = connection.target;
+      if (!source || !target) return false;
+      if (source === target) return false;
+
+      // Hubs cannot be target of any edge
+      if (target.startsWith("root-")) return false;
+
+      // If source is a root hub, check path matching
+      if (source.startsWith("root-")) {
+        const targetNode = nodes.find((n) => n.id === target);
+        if (!targetNode) return false;
+        const hubPath = source.replace("root-", "");
+        return targetNode.data.path === hubPath;
+      }
+
+      // If milestone to milestone connection, ensure same path
+      const sourceNode = nodes.find((n) => n.id === source);
+      const targetNode = nodes.find((n) => n.id === target);
+      if (sourceNode && targetNode) {
+        return sourceNode.data.path === targetNode.data.path;
+      }
+
+      return false;
+    },
+    [nodes]
+  );
+
   const onConnect = useCallback(
     (params: Connection) =>
       setEdges((eds) =>
         addEdge(
           {
             ...params,
-            style: { stroke: "#C29B38", strokeWidth: 2.5 },
+            type: "beatEdge",
           },
           eds
         )
@@ -216,19 +245,62 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
     [setEdges]
   );
 
+  // Inject action callbacks into nodes data
+  const augmentedNodes = useMemo(() => {
+    return nodes.map((node) => {
+      if (node.type === "pathRoot") {
+        const pathKey = node.data.path as string;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            childCount: nodeCountMap[pathKey] || 0,
+            onAddMilestone: () => {
+              // Handled by modal trigger in Issue 2.4
+              console.log(`Add milestone to path: ${pathKey}`);
+            },
+          },
+        };
+      }
+      if (node.type === "milestone") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            onDelete: handleDeleteNode,
+            onEdit: (id: string) => {
+              console.log(`Edit milestone: ${id}`);
+            },
+          },
+        };
+      }
+      return node;
+    });
+  }, [nodes, nodeCountMap, handleDeleteNode]);
+
+  // Inject delete callback into edges
+  const augmentedEdges = useMemo(() => {
+    return edges.map((edge) => ({
+      ...edge,
+      data: {
+        ...edge.data,
+        onDeleteEdge: handleDeleteEdge,
+      },
+    }));
+  }, [edges, handleDeleteEdge]);
+
   // Auto-layout action using Dagre
   const onLayout = useCallback(() => {
-    const layouted = getLayoutedElements(nodes, edges, { direction: "TB" });
+    const layouted = getLayoutedElements(augmentedNodes, augmentedEdges, { direction: "TB" });
     setNodes([...layouted.nodes]);
     setEdges([...layouted.edges]);
-  }, [nodes, edges, setNodes, setEdges]);
+  }, [augmentedNodes, augmentedEdges, setNodes, setEdges]);
 
   // Save current canvas state as a draft version
   const onSaveDraft = async () => {
     setIsSaving(true);
     setSaveMessage(null);
 
-    // Filter out root hubs when persisting nodes
     const persistentNodes = nodes
       .filter((n) => n.type === "milestone")
       .map((n, index) => ({
@@ -252,7 +324,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
 
     const res = await savePlanVersionAction({
       planId: plan.id,
-      publishedById: "", // populated by server session
+      publishedById: "",
       status: "DRAFT",
       changelog: `Saved canvas draft for version ${initialVersion.versionNumber}`,
       nodes: persistentNodes,
@@ -261,7 +333,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
 
     setIsSaving(false);
     if (res.success) {
-      setSaveMessage("Canvas draft saved successfully!");
+      setSaveMessage("Draft saved successfully!");
       setTimeout(() => setSaveMessage(null), 3000);
     } else {
       setSaveMessage(res.error || "Failed to save draft.");
@@ -292,7 +364,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
               </span>
             </div>
             <p className="text-[11px] text-beat-muted">
-              Drag, connect, and position training milestones across the 5 BEAT development paths.
+              Interactive two-tier path tree. Hover over nodes to edit or delete; hover over connectors to disconnect.
             </p>
           </div>
         </div>
@@ -329,12 +401,14 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
       {/* Main Canvas Viewport */}
       <div className="flex-1 w-full h-full beat-canvas relative">
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
+          nodes={augmentedNodes}
+          edges={augmentedEdges}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          isValidConnection={isValidConnection}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.2}
@@ -349,7 +423,7 @@ export function PlanCanvasBuilder({ plan, initialVersion }: PlanCanvasBuilderPro
             maskColor="rgba(250, 248, 244, 0.7)"
           />
           <Panel position="bottom-center" className="bg-white/90 backdrop-blur-xs px-4 py-1.5 rounded-full border border-beat-gold/30 text-[11px] font-semibold text-beat-maroon shadow-xs">
-            💡 Drag connectors between hubs and milestones to configure the path hierarchy
+            💡 Two-tier hierarchy: connect Path Root Hubs to child milestones in the same category
           </Panel>
         </ReactFlow>
       </div>
