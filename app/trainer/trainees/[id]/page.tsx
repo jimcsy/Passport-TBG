@@ -42,7 +42,7 @@ export default async function TraineeDetailPage({
       </div>
 
       {/* Trainee Passport Cover */}
-      <PassportCover trainee={data.trainee} stats={data.stats} />
+      <PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} />
 
       {/* 5 Paths with Trainer Approval Controls */}
       <div className="space-y-3">

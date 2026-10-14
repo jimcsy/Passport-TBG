@@ -89,6 +89,7 @@ export async function lookupTrainee(
       traineeCode: trainee.traineeCode,
       fullName: trainee.fullName,
       email: trainee.email,
+      jobRole: trainee.jobRole,
       restaurantBrand: trainee.restaurantBrand,
       branchLocation: trainee.branchLocation,
       cohortBatch: trainee.cohortBatch,

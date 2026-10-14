@@ -11,7 +11,9 @@ export default async function ModulePage({ params }: { params: { id: string } })
   const data = await getTraineePassportData(session.id);
   if (!data) redirect("/trainee");
   const path = data.paths.find(track => track.milestones.some(m => m.id === params.id));
-  const milestone = path?.milestones.find(m => m.id === params.id);
+  const milestone =
+    path?.milestones.find(m => m.id === params.id) ||
+    data.archivedMilestones?.find(m => m.id === params.id);
   if (!milestone) notFound();
 
   return <div className="mx-auto max-w-3xl space-y-6">

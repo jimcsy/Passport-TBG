@@ -16,6 +16,8 @@ export interface EnrichedMilestone {
   trainerName?: string | null;
   trainerEmployeeId?: string | null;
   trainerNote?: string | null;
+  isArchived?: boolean;
+  libraryMilestoneId?: string | null;
 }
 
 export interface PathProgressSummary {
@@ -29,17 +31,30 @@ export interface PathProgressSummary {
   milestones: EnrichedMilestone[];
 }
 
+export type DynamicPathProgressSummary = PathProgressSummary;
+
+export interface PlanMetadata {
+  id: string;
+  title: string;
+  versionNumber: number;
+  roleIdentifier: string;
+  restaurantBrand: string | null;
+  assignedAt: Date;
+}
+
 export interface TraineePassportViewData {
   trainee: {
     id: string;
     traineeCode: string;
     fullName: string;
     email: string;
+    jobRole: string | null;
     restaurantBrand: string;
     branchLocation: string;
     cohortBatch: string;
     hireDate: Date;
   };
+  plan: PlanMetadata | null;
   stats: {
     totalMilestones: number;
     verifiedCount: number;
@@ -47,6 +62,7 @@ export interface TraineePassportViewData {
     overallPercent: number;
   };
   paths: PathProgressSummary[];
+  archivedMilestones: EnrichedMilestone[];
 }
 
 export async function getTraineePassportData(
@@ -55,6 +71,21 @@ export async function getTraineePassportData(
   const trainee = await prisma.trainee.findUnique({
     where: { id: traineeId },
     include: {
+      planAssignments: {
+        where: { status: "ACTIVE" },
+        orderBy: { assignedAt: "desc" },
+        take: 1,
+        include: {
+          planVersion: {
+            include: {
+              plan: true,
+              nodes: {
+                orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+              },
+            },
+          },
+        },
+      },
       progressRecords: {
         include: {
           planNode: true,
@@ -71,15 +102,76 @@ export async function getTraineePassportData(
 
   if (!trainee) return null;
 
-  const milestoneDefs = await prisma.milestoneDefinition.findMany({
-    orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
-  });
+  type ActiveAssignmentWithPlan = NonNullable<typeof trainee>["planAssignments"][number];
+  let activeAssignment: ActiveAssignmentWithPlan | null = trainee.planAssignments[0] || null;
 
-  const progressMap = new Map(
-    trainee.progressRecords.map((p) => [
-      p.planNode?.libraryMilestoneId || p.planNodeId,
-      p,
-    ])
+  // Fallback resilience: If no active assignment, auto-link to published default or role-matched plan
+  if (!activeAssignment) {
+    const fallbackPlan = await prisma.trainingPlan.findFirst({
+      where: {
+        OR: [
+          trainee.jobRole
+            ? { roleIdentifier: trainee.jobRole.toUpperCase(), status: "PUBLISHED" }
+            : {},
+          { isDefault: true, status: "PUBLISHED" },
+          { status: "PUBLISHED" },
+        ],
+      },
+      include: {
+        versions: {
+          where: { status: "PUBLISHED" },
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          include: {
+            plan: true,
+            nodes: {
+              orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+            },
+          },
+        },
+      },
+    });
+
+    if (fallbackPlan?.versions[0]) {
+      const assignedById =
+        fallbackPlan.versions[0].publishedById || fallbackPlan.createdById;
+
+      activeAssignment = await prisma.traineePlanAssignment.create({
+        data: {
+          traineeId: trainee.id,
+          planVersionId: fallbackPlan.versions[0].id,
+          assignedById,
+          status: "ACTIVE",
+        },
+        include: {
+          planVersion: {
+            include: {
+              plan: true,
+              nodes: {
+                orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+
+  // Separate active progress from archived progress
+  const activeRecords = trainee.progressRecords.filter((p) => !p.isArchived);
+  const archivedRecords = trainee.progressRecords.filter((p) => p.isArchived);
+
+  // Fast lookups for active trainee progress
+  const activeProgressByNodeId = new Map(activeRecords.map((p) => [p.planNodeId, p]));
+  const activeProgressByLibId = new Map(
+    activeRecords
+      .filter((p) => p.planNode?.libraryMilestoneId)
+      .map((p) => [p.planNode.libraryMilestoneId!, p])
+  );
+  const activeProgressByCode = new Map(
+    activeRecords
+      .filter((p) => p.planNode?.code)
+      .map((p) => [p.planNode.code, p])
   );
 
   const pathKeys = [
@@ -93,34 +185,42 @@ export async function getTraineePassportData(
   let totalVerified = 0;
   let totalReadyForReview = 0;
 
+  const activeNodes = activeAssignment?.planVersion?.nodes || [];
+
   const paths: PathProgressSummary[] = pathKeys.map((pathKey) => {
     const meta = DEVELOPMENT_PATHS[pathKey];
-    const pathMilestones = milestoneDefs
-      .filter((m) => m.path === pathKey)
-      .map((m): EnrichedMilestone => {
-        const prog = progressMap.get(m.id);
-        const status = (prog?.status as MilestoneStatus) || MilestoneStatus.IN_PROGRESS;
+    const pathNodes = activeNodes.filter((node) => node.path === pathKey);
 
-        if (status === MilestoneStatus.VERIFIED) totalVerified++;
-        if (status === MilestoneStatus.READY_FOR_REVIEW) totalReadyForReview++;
+    const pathMilestones: EnrichedMilestone[] = pathNodes.map((node) => {
+      const prog =
+        activeProgressByNodeId.get(node.id) ||
+        (node.libraryMilestoneId ? activeProgressByLibId.get(node.libraryMilestoneId) : undefined) ||
+        activeProgressByCode.get(node.code);
 
-        return {
-          id: m.id,
-          code: m.code,
-          title: m.title,
-          description: m.description,
-          path: pathKey,
-          orderIndex: m.orderIndex,
-          status,
-          progressId: prog?.id,
-          traineeNote: prog?.traineeNote,
-          requestedAt: prog?.requestedAt,
-          verifiedAt: prog?.verifiedAt,
-          trainerName: prog?.verifier?.fullName,
-          trainerEmployeeId: prog?.verifier?.employeeId,
-          trainerNote: prog?.trainerNote,
-        };
-      });
+      const status = (prog?.status as MilestoneStatus) || MilestoneStatus.IN_PROGRESS;
+
+      if (status === MilestoneStatus.VERIFIED) totalVerified++;
+      if (status === MilestoneStatus.READY_FOR_REVIEW) totalReadyForReview++;
+
+      return {
+        id: node.id,
+        code: node.code,
+        title: node.title,
+        description: node.description,
+        path: pathKey,
+        orderIndex: node.orderIndex,
+        status,
+        progressId: prog?.id,
+        traineeNote: prog?.traineeNote,
+        requestedAt: prog?.requestedAt,
+        verifiedAt: prog?.verifiedAt,
+        trainerName: prog?.verifier?.fullName,
+        trainerEmployeeId: prog?.verifier?.employeeId,
+        trainerNote: prog?.trainerNote,
+        isArchived: false,
+        libraryMilestoneId: node.libraryMilestoneId,
+      };
+    });
 
     const verifiedInPath = pathMilestones.filter(
       (m) => m.status === MilestoneStatus.VERIFIED
@@ -140,9 +240,40 @@ export async function getTraineePassportData(
     };
   });
 
-  const totalMilestones = milestoneDefs.length;
+  // Map archived competencies
+  const archivedMilestones: EnrichedMilestone[] = archivedRecords.map((prog) => ({
+    id: prog.planNode.id,
+    code: prog.planNode.code,
+    title: prog.planNode.title,
+    description: prog.planNode.description,
+    path: prog.planNode.path as DevelopmentPath,
+    orderIndex: prog.planNode.orderIndex,
+    status: prog.status as MilestoneStatus,
+    progressId: prog.id,
+    traineeNote: prog.traineeNote,
+    requestedAt: prog.requestedAt,
+    verifiedAt: prog.verifiedAt,
+    trainerName: prog.verifier?.fullName,
+    trainerEmployeeId: prog.verifier?.employeeId,
+    trainerNote: prog.trainerNote,
+    isArchived: true,
+    libraryMilestoneId: prog.planNode.libraryMilestoneId,
+  }));
+
+  const totalMilestones = activeNodes.length;
   const overallPercent =
     totalMilestones > 0 ? Math.round((totalVerified / totalMilestones) * 100) : 0;
+
+  const planMetadata: PlanMetadata | null = activeAssignment
+    ? {
+        id: activeAssignment.planVersion.plan.id,
+        title: activeAssignment.planVersion.plan.title,
+        versionNumber: activeAssignment.planVersion.versionNumber,
+        roleIdentifier: activeAssignment.planVersion.plan.roleIdentifier,
+        restaurantBrand: activeAssignment.planVersion.plan.restaurantBrand,
+        assignedAt: activeAssignment.assignedAt,
+      }
+    : null;
 
   return {
     trainee: {
@@ -150,11 +281,13 @@ export async function getTraineePassportData(
       traineeCode: trainee.traineeCode,
       fullName: trainee.fullName,
       email: trainee.email,
+      jobRole: trainee.jobRole,
       restaurantBrand: trainee.restaurantBrand,
       branchLocation: trainee.branchLocation,
       cohortBatch: trainee.cohortBatch,
       hireDate: trainee.hireDate,
     },
+    plan: planMetadata,
     stats: {
       totalMilestones,
       verifiedCount: totalVerified,
@@ -162,5 +295,9 @@ export async function getTraineePassportData(
       overallPercent,
     },
     paths,
+    archivedMilestones,
   };
 }
+
+export const getTraineePassportViewData = getTraineePassportData;
+

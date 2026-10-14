@@ -21,6 +21,7 @@ export interface TraineeSessionPayload extends JWTPayload {
   traineeCode: string;
   fullName: string;
   email: string;
+  jobRole?: string | null;
   restaurantBrand: string;
   branchLocation: string;
   cohortBatch: string;

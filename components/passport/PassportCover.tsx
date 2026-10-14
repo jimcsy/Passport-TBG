@@ -1,14 +1,17 @@
-import { BookOpen, Calendar, MapPin, Building2, Award, CheckCircle2, Clock } from "lucide-react";
+import { BookOpen, Calendar, MapPin, Building2, Award, CheckCircle2, Clock, Sparkles, GitBranch } from "lucide-react";
+import type { PlanMetadata } from "@/lib/db/repositories/trainee";
 
 interface PassportCoverProps {
   trainee: {
     traineeCode: string;
     fullName: string;
+    jobRole?: string | null;
     restaurantBrand: string;
     branchLocation: string;
     cohortBatch: string;
     hireDate: Date;
   };
+  plan?: PlanMetadata | null;
   stats: {
     totalMilestones: number;
     verifiedCount: number;
@@ -17,7 +20,7 @@ interface PassportCoverProps {
   };
 }
 
-export function PassportCover({ trainee, stats }: PassportCoverProps) {
+export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
   // Circular progress calculation
   const radius = 38;
   const circumference = 2 * Math.PI * radius;
@@ -36,7 +39,7 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
               <BookOpen className="h-7 w-7" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-beat-canvas px-2.5 py-0.5 text-[11px] font-bold text-beat-maroon border border-beat-border">
                   <Award className="h-3 w-3 text-beat-gold" />
                   BEAT Trainee
@@ -44,6 +47,12 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
                 <span className="font-mono text-xs font-bold text-beat-gold bg-beat-maroon/5 px-2 py-0.5 rounded-md border border-beat-border">
                   {trainee.traineeCode}
                 </span>
+                {trainee.jobRole && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-beat-gold/15 px-2.5 py-0.5 text-[11px] font-extrabold text-beat-maroon border border-beat-gold/40">
+                    <Sparkles className="h-3 w-3 text-beat-gold" />
+                    {trainee.jobRole}
+                  </span>
+                )}
               </div>
               <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-beat-maroon tracking-tight">
                 {trainee.fullName}
@@ -131,9 +140,16 @@ export function PassportCover({ trainee, stats }: PassportCoverProps) {
               <span className="text-beat-muted">In Review</span>
             </div>
             <div className="pt-1">
-              <span className="passport-stamp px-2.5 py-0.5 text-[9px] text-beat-gold border-beat-gold">
-                Growth Passport
-              </span>
+              {plan ? (
+                <span className="passport-stamp px-2.5 py-0.5 text-[9px] text-beat-gold border-beat-gold inline-flex items-center gap-1 font-mono">
+                  <GitBranch className="h-2.5 w-2.5" />
+                  {plan.title} · v{plan.versionNumber}
+                </span>
+              ) : (
+                <span className="passport-stamp px-2.5 py-0.5 text-[9px] text-beat-gold border-beat-gold">
+                  Growth Passport
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, CheckCircle2, Clock, GraduationCap } from "lucide-react";
+import { ArrowUpRight, BookOpen, CheckCircle2, Clock, GraduationCap, GitBranch, AlertCircle, Archive } from "lucide-react";
 import type { TraineePassportViewData } from "@/lib/db/repositories/trainee";
 import { PassportCover } from "@/components/passport/PassportCover";
 
@@ -32,10 +32,59 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div><p className="text-xs font-bold uppercase tracking-widest text-beat-maroon/60">My learning journey</p><h1 className="mt-2 text-3xl font-bold tracking-tight text-beat-maroon">Your next chapter starts here.</h1><p className="mt-2 text-sm text-beat-maroon/70">Build your skills. Earn your stamps. Grow with Bistro.</p></div>
-        <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-lg shadow-beat-maroon/10 hover:bg-beat-maroon/90"><BookOpen className="h-5 w-5 text-beat-gold" />View passport<ArrowUpRight className="h-4 w-4 text-beat-gold" /></Link>
+        <div>
+          <p className="text-xs font-bold uppercase tracking-widest text-beat-maroon/60">My learning journey</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-beat-maroon">Your next chapter starts here.</h1>
+          <p className="mt-2 text-sm text-beat-maroon/70">Build your skills. Earn your stamps. Grow with Bistro.</p>
+        </div>
+        <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-lg shadow-beat-maroon/10 hover:bg-beat-maroon/90">
+          <BookOpen className="h-5 w-5 text-beat-gold" />
+          View passport
+          <ArrowUpRight className="h-4 w-4 text-beat-gold" />
+        </Link>
       </div>
-      <PassportCover trainee={data.trainee} stats={data.stats} />
+
+      <PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} />
+
+      {/* Plan Metadata Bar or Empty State */}
+      {data.plan ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-beat-card p-4 border border-beat-border shadow-xs text-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold">
+              <GitBranch className="h-3.5 w-3.5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-beat-maroon">{data.plan.title}</span>
+                <span className="font-mono text-[10px] font-bold bg-beat-maroon/10 text-beat-maroon px-2 py-0.5 rounded-full">
+                  v{data.plan.versionNumber} · {data.plan.roleIdentifier}
+                </span>
+              </div>
+              <p className="text-[11px] text-beat-muted">
+                Role-specific BEAT curriculum · {data.stats.totalMilestones} required competencies
+              </p>
+            </div>
+          </div>
+
+          {data.archivedMilestones?.length > 0 && (
+            <div className="flex items-center gap-1.5 text-[11px] text-beat-gold font-bold bg-beat-gold/10 px-3 py-1.5 rounded-xl border border-beat-gold/30">
+              <Archive className="h-3.5 w-3.5" />
+              <span>{data.archivedMilestones.length} preserved endorsements</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-200 text-amber-900 text-xs">
+          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-bold">No Training Plan Assigned Yet</p>
+            <p className="mt-0.5 text-amber-800 text-[11px]">
+              Your store trainer will assign a customized BEAT training plan for your role shortly. Once assigned, your competencies and passport will reflect your tailored milestones.
+            </p>
+          </div>
+        </div>
+      )}
+
       <section aria-labelledby="paths-title" className="space-y-4">
         <div className="flex items-center justify-between gap-3"><h2 id="paths-title" className="text-xl font-bold text-beat-maroon">Development Paths</h2><span className="text-xs text-beat-maroon/60">5 paths · One growth journey</span></div>
         <div role="tablist" aria-label="Development paths" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
