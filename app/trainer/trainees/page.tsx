@@ -2,11 +2,41 @@ import { getTraineeDirectory } from "@/lib/db/repositories/admin";
 import { TraineeFilterTable } from "@/components/admin/TraineeFilterTable";
 import Link from "next/link";
 import { Users, UserPlus } from "lucide-react";
+import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function TraineesDirectoryPage() {
-  const trainees = await getTraineeDirectory();
+  const [trainees, publishedPlans] = await Promise.all([
+    getTraineeDirectory(),
+    prisma.trainingPlan.findMany({
+      where: { status: "PUBLISHED" },
+      include: {
+        versions: {
+          where: { status: "PUBLISHED" },
+          orderBy: { versionNumber: "desc" },
+          take: 1,
+          include: {
+            _count: { select: { nodes: true } },
+          },
+        },
+      },
+      orderBy: { title: "asc" },
+    }),
+  ]);
+
+  const availablePlans = publishedPlans
+    .filter((p) => p.versions[0])
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      roleIdentifier: p.roleIdentifier,
+      restaurantBrand: p.restaurantBrand,
+      isDefault: p.isDefault,
+      latestVersionId: p.versions[0].id,
+      versionNumber: p.versions[0].versionNumber,
+      milestoneCount: p.versions[0]._count.nodes,
+    }));
 
   return (
     <div className="space-y-6">
@@ -27,19 +57,25 @@ export default async function TraineesDirectoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-        <Link href="/trainer/trainees/new" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-4 py-3 text-sm font-bold text-white hover:bg-beat-maroon-light"><UserPlus className="h-4 w-4 text-beat-gold" />Register trainee</Link>
-        <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs text-xs">
-          <Users className="h-4 w-4 text-beat-gold" />
-          <span className="font-extrabold text-beat-maroon">
-            {trainees.length}
-          </span>
-          <span className="text-beat-muted">Total Trainees</span>
-        </div>
+          <Link
+            href="/trainer/trainees/new"
+            className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-4 py-3 text-sm font-bold text-white hover:bg-beat-maroon-light shadow-sm"
+          >
+            <UserPlus className="h-4 w-4 text-beat-gold" />
+            Register Trainee
+          </Link>
+          <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs text-xs">
+            <Users className="h-4 w-4 text-beat-gold" />
+            <span className="font-extrabold text-beat-maroon">
+              {trainees.length}
+            </span>
+            <span className="text-beat-muted">Total Trainees</span>
+          </div>
         </div>
       </div>
 
       {/* Directory Filter Table */}
-      <TraineeFilterTable trainees={trainees} />
+      <TraineeFilterTable trainees={trainees} availablePlans={availablePlans} />
     </div>
   );
 }

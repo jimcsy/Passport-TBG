@@ -6,21 +6,64 @@ export type RegistrationResult =
   | { success: true; trainee: { id: string; traineeCode: string; fullName: string; email: string } }
   | { success: false; error: string; errors?: RegistrationErrors };
 
-export async function createRegisteredTrainee(input: RegistrationInput, db: PrismaClient = prisma): Promise<RegistrationResult> {
+export async function createRegisteredTrainee(
+  input: RegistrationInput,
+  db: PrismaClient = prisma,
+  assignedById?: string
+): Promise<RegistrationResult> {
   const { values, errors, valid } = validateRegistration(input);
   if (!valid) return { success: false as const, errors, error: "Please check the highlighted fields." };
   try {
-    const trainee = await db.$transaction(async tx => {
-      let nodes = await tx.planNode.findMany({
-        where: {
-          planVersion: {
-            plan: { isDefault: true },
+    const trainee = await db.$transaction(async (tx) => {
+      let targetPlanVersionId = values.planVersionId;
+      let nodes: Array<{ id: string; planVersionId: string }> = [];
+
+      if (targetPlanVersionId) {
+        nodes = await tx.planNode.findMany({
+          where: { planVersionId: targetPlanVersionId },
+          select: { id: true, planVersionId: true },
+        });
+      }
+
+      // If no nodes found via specific version ID, try matching jobRole to a published plan
+      if (!nodes.length && values.jobRole) {
+        const rolePlan = await tx.trainingPlan.findFirst({
+          where: {
+            roleIdentifier: values.jobRole.toUpperCase().replace(/\s+/g, "_"),
             status: "PUBLISHED",
           },
-        },
-        select: { id: true, planVersionId: true },
-      });
+          include: {
+            versions: {
+              where: { status: "PUBLISHED" },
+              orderBy: { versionNumber: "desc" },
+              take: 1,
+            },
+          },
+        });
 
+        if (rolePlan?.versions[0]) {
+          targetPlanVersionId = rolePlan.versions[0].id;
+          nodes = await tx.planNode.findMany({
+            where: { planVersionId: targetPlanVersionId },
+            select: { id: true, planVersionId: true },
+          });
+        }
+      }
+
+      // Fallback to default published plan
+      if (!nodes.length) {
+        nodes = await tx.planNode.findMany({
+          where: {
+            planVersion: {
+              plan: { isDefault: true },
+              status: "PUBLISHED",
+            },
+          },
+          select: { id: true, planVersionId: true },
+        });
+      }
+
+      // Fallback to any published plan
       if (!nodes.length) {
         nodes = await tx.planNode.findMany({
           where: { planVersion: { status: "PUBLISHED" } },
@@ -30,22 +73,32 @@ export async function createRegisteredTrainee(input: RegistrationInput, db: Pris
 
       if (!nodes.length) throw new Error("NO_MILESTONES");
 
-      const planVersionId = nodes[0].planVersionId;
-      const defaultAdmin = await tx.adminUser.findFirst({ select: { id: true } });
+      const planVersionId = targetPlanVersionId || nodes[0].planVersionId;
+      const admin = assignedById
+        ? { id: assignedById }
+        : await tx.adminUser.findFirst({ select: { id: true } });
 
       return tx.trainee.create({
         data: {
-          ...values,
+          traineeCode: values.traineeCode,
+          fullName: values.fullName,
+          email: values.email,
+          jobRole: values.jobRole || null,
+          restaurantBrand: values.restaurantBrand,
+          branchLocation: values.branchLocation,
+          cohortBatch: values.cohortBatch,
           hireDate: new Date(`${values.hireDate}T00:00:00.000Z`),
-          planAssignments: defaultAdmin ? {
-            create: {
-              planVersionId,
-              assignedById: defaultAdmin.id,
-              status: "ACTIVE",
-            },
-          } : undefined,
+          planAssignments: admin
+            ? {
+                create: {
+                  planVersionId,
+                  assignedById: admin.id,
+                  status: "ACTIVE",
+                },
+              }
+            : undefined,
           progressRecords: {
-            create: nodes.map(n => ({
+            create: nodes.map((n) => ({
               planNodeId: n.id,
               status: "IN_PROGRESS",
             })),

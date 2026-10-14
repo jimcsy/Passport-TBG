@@ -7,18 +7,31 @@ import { CheckCircle2, Loader2, UserPlus, ArrowRight } from "lucide-react";
 import { registerTrainee } from "@/lib/actions/registration";
 import type { RegistrationErrors, RegistrationField } from "@/lib/trainee-registration";
 
+export interface PlanOption {
+  id: string;
+  title: string;
+  roleIdentifier: string;
+  restaurantBrand: string | null;
+  isDefault: boolean;
+  latestVersionId: string;
+  versionNumber: number;
+  milestoneCount: number;
+}
+
 const fields: { name: RegistrationField; label: string; placeholder?: string; type?: string; maxLength?: number; hint?: string }[] = [
   { name: "fullName", label: "Full name", placeholder: "e.g. Maria Santos" },
   { name: "email", label: "Registered email", placeholder: "e.g. maria@example.com", type: "email", maxLength: 254 },
   { name: "traineeCode", label: "Trainee code", placeholder: "e.g. TBG-2026-002", maxLength: 50, hint: "Choose a unique code. The trainee uses this to open their passport." },
   { name: "hireDate", label: "Hire date", type: "date" },
+  { name: "jobRole", label: "Job role / position", placeholder: "e.g. Barista, Kitchen Staff", hint: "Assigns the appropriate BEAT competencies for this position." },
   { name: "restaurantBrand", label: "Restaurant brand", placeholder: "e.g. TGI Fridays" },
   { name: "branchLocation", label: "Branch", placeholder: "e.g. Bonifacio High Street" },
   { name: "cohortBatch", label: "Cohort / batch", placeholder: "e.g. Cohort-2026-Q4" },
 ];
 
-type Options = Record<"restaurantBrand" | "branchLocation" | "cohortBatch", string[]>;
-export function TraineeRegistrationForm({ options }: { options: Options }) {
+type Options = Record<"jobRole" | "restaurantBrand" | "branchLocation" | "cohortBatch", string[]>;
+
+export function TraineeRegistrationForm({ options, plans = [] }: { options: Options; plans?: PlanOption[] }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const [errors, setErrors] = useState<RegistrationErrors>({});
@@ -39,7 +52,7 @@ export function TraineeRegistrationForm({ options }: { options: Options }) {
   }
 
   if (created) return <section role="status" className="rounded-3xl border border-beat-border bg-white p-6 sm:p-8">
-    <CheckCircle2 className="h-10 w-10 text-emerald-600" /><h2 className="mt-4 text-xl font-bold text-beat-maroon">Trainee registered</h2><p className="mt-2 text-sm text-beat-muted">{created.fullName} now has a Growth Passport with no completed milestones.</p>
+    <CheckCircle2 className="h-10 w-10 text-emerald-600" /><h2 className="mt-4 text-xl font-bold text-beat-maroon">Trainee registered</h2><p className="mt-2 text-sm text-beat-muted">{created.fullName} now has a Growth Passport ready to begin.</p>
     <div className="my-6 rounded-2xl border border-beat-border bg-beat-canvas p-5"><p className="text-xs font-bold uppercase tracking-wider text-beat-maroon">Share these login details with the trainee</p><dl className="mt-4 space-y-3 text-sm"><div><dt className="text-beat-muted">Portal</dt><dd><Link href="/trainee" className="font-semibold text-beat-maroon underline">{typeof window !== "undefined" ? window.location.origin : ""}/trainee</Link></dd></div><div><dt className="text-beat-muted">Trainee code</dt><dd className="font-mono font-bold text-beat-maroon">{created.traineeCode}</dd></div><div><dt className="text-beat-muted">Registered email</dt><dd className="break-all font-semibold text-beat-maroon">{created.email}</dd></div></dl><p className="mt-4 text-xs text-beat-muted">No invitation email has been sent.</p></div>
     <div className="flex flex-wrap gap-3"><Link href={`/trainer/trainees/${created.id}`} className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-4 py-3 text-sm font-bold text-white">View passport<ArrowRight className="h-4 w-4" /></Link><button type="button" onClick={() => { setCreated(undefined); setErrors({}); setError(undefined); }} className="rounded-xl border border-beat-border px-4 py-3 text-sm font-semibold text-beat-maroon">Register another trainee</button><Link href="/trainer/trainees" className="px-4 py-3 text-sm font-semibold text-beat-maroon">Back to directory</Link></div>
   </section>;
@@ -58,7 +71,33 @@ export function TraineeRegistrationForm({ options }: { options: Options }) {
           {errors[field.name] && <p id={`${field.name}-error`} className="mt-2 text-xs text-red-700">{errors[field.name]}</p>}
         </div>;
       })}
+
+      {/* Plan Version Selector */}
+      {plans.length > 0 && (
+        <div className="sm:col-span-2">
+          <label htmlFor="planVersionId" className="mb-2 block text-xs font-bold text-beat-maroon">
+            Assigned Training Plan <span className="text-[11px] font-normal text-beat-muted">(Optional — auto-matches role if unselected)</span>
+          </label>
+          <select
+            id="planVersionId"
+            name="planVersionId"
+            defaultValue=""
+            className="w-full rounded-xl border border-beat-border bg-beat-canvas px-4 py-3 text-sm text-beat-maroon outline-none focus:border-beat-gold focus:ring-2 focus:ring-beat-gold/20 cursor-pointer"
+          >
+            <option value="">Auto-match plan based on Job Role / Default Plan</option>
+            {plans.map((p) => (
+              <option key={p.latestVersionId} value={p.latestVersionId}>
+                {p.title} (v{p.versionNumber} · {p.milestoneCount} milestones)
+                {p.isDefault ? " [Default]" : ""}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-beat-muted">
+            Overrides standard universal curriculum with role-specific competencies.
+          </p>
+        </div>
+      )}
     </fieldset>
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-beat-border pt-6"><span className="text-xs text-beat-muted">All fields are required.</span><div className="flex items-center gap-3">{!pending && <Link href="/trainer/trainees" className="px-3 py-3 text-sm font-semibold text-beat-muted">Cancel</Link>}<button disabled={pending} type="submit" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-3 text-sm font-bold text-white hover:bg-beat-maroon-light disabled:opacity-60">{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 text-beat-gold" />}{pending ? "Registering…" : "Register trainee"}</button></div></div>
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-beat-border pt-6"><span className="text-xs text-beat-muted">All fields with an asterisk are required.</span><div className="flex items-center gap-3">{!pending && <Link href="/trainer/trainees" className="px-3 py-3 text-sm font-semibold text-beat-muted">Cancel</Link>}<button disabled={pending} type="submit" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-3 text-sm font-bold text-white hover:bg-beat-maroon-light disabled:opacity-60">{pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4 text-beat-gold" />}{pending ? "Registering…" : "Register trainee"}</button></div></div>
   </form>;
 }

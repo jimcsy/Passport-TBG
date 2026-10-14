@@ -8,7 +8,7 @@ import { createRegisteredTrainee } from "../lib/db/repositories/registration";
 import { validateRegistration } from "../lib/trainee-registration";
 
 async function main() {
-  const input = { traineeCode: " tbg-2026-test ", fullName: " Maria Santos ", email: " MARIA@EXAMPLE.COM ", restaurantBrand: "TGI Fridays", branchLocation: "BGC", cohortBatch: "Cohort-2026-Q4", hireDate: "2026-10-13" };
+  const input = { traineeCode: " tbg-2026-test ", fullName: " Maria Santos ", email: " MARIA@EXAMPLE.COM ", jobRole: "Barista", restaurantBrand: "TGI Fridays", branchLocation: "BGC", cohortBatch: "Cohort-2026-Q4", hireDate: "2026-10-13" };
   assert.equal(validateRegistration(input).values.email, "maria@example.com");
   assert.equal(validateRegistration({ ...input, email: "invalid" }).valid, false);
   assert.equal(validateRegistration({ ...input, hireDate: "2026-02-30" }).valid, false);

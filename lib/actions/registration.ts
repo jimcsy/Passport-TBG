@@ -6,9 +6,22 @@ import { createRegisteredTrainee, type RegistrationResult } from "@/lib/db/repos
 import { REGISTRATION_FIELDS, type RegistrationInput } from "@/lib/trainee-registration";
 
 export async function registerTrainee(formData: FormData): Promise<RegistrationResult> {
-  if (!await getAdminSession()) return { success: false as const, error: "Please sign in as a trainer to register trainees." };
-  const input = Object.fromEntries(REGISTRATION_FIELDS.map(field => [field, typeof formData.get(field) === "string" ? formData.get(field) : ""])) as RegistrationInput;
-  const result = await createRegisteredTrainee(input);
+  const session = await getAdminSession();
+  if (!session) return { success: false as const, error: "Please sign in as a trainer to register trainees." };
+
+  const input = Object.fromEntries(
+    REGISTRATION_FIELDS.map((field) => [
+      field,
+      typeof formData.get(field) === "string" ? formData.get(field) : "",
+    ])
+  ) as RegistrationInput;
+
+  const planVersionId = formData.get("planVersionId");
+  if (typeof planVersionId === "string" && planVersionId.trim()) {
+    input.planVersionId = planVersionId.trim();
+  }
+
+  const result = await createRegisteredTrainee(input, undefined, session.id);
   if (result.success) {
     revalidatePath("/trainer/trainees");
     revalidatePath("/trainer/batch");

@@ -80,6 +80,7 @@ export interface TraineeDirectoryItem {
   traineeCode: string;
   fullName: string;
   email: string;
+  jobRole: string | null;
   restaurantBrand: string;
   branchLocation: string;
   cohortBatch: string;
@@ -88,6 +89,9 @@ export interface TraineeDirectoryItem {
   readyForReviewCount: number;
   totalMilestones: number;
   progressPercent: number;
+  planTitle: string | null;
+  planVersionNumber: number | null;
+  planVersionId: string | null;
 }
 
 export async function getTraineeDirectory(filters?: {
@@ -115,22 +119,29 @@ export async function getTraineeDirectory(filters?: {
     ];
   }
 
-  const [trainees, totalMilestoneCount] = await Promise.all([
-    prisma.trainee.findMany({
-      where: whereClause,
-      include: {
-        progressRecords: {
-          select: {
-            status: true,
+  const trainees = await prisma.trainee.findMany({
+    where: whereClause,
+    include: {
+      progressRecords: {
+        where: { isArchived: false },
+        select: {
+          status: true,
+        },
+      },
+      planAssignments: {
+        where: { status: "ACTIVE" },
+        take: 1,
+        include: {
+          planVersion: {
+            include: { plan: true },
           },
         },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-    }),
-    prisma.milestoneDefinition.count(),
-  ]);
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   return trainees.map((t) => {
     const verifiedCount = t.progressRecords.filter(
@@ -139,24 +150,31 @@ export async function getTraineeDirectory(filters?: {
     const readyForReviewCount = t.progressRecords.filter(
       (p) => p.status === MilestoneStatus.READY_FOR_REVIEW
     ).length;
+    const totalMilestones = t.progressRecords.length;
     const progressPercent =
-      totalMilestoneCount > 0
-        ? Math.round((verifiedCount / totalMilestoneCount) * 100)
+      totalMilestones > 0
+        ? Math.round((verifiedCount / totalMilestones) * 100)
         : 0;
+
+    const activeAssignment = t.planAssignments[0];
 
     return {
       id: t.id,
       traineeCode: t.traineeCode,
       fullName: t.fullName,
       email: t.email,
+      jobRole: t.jobRole,
       restaurantBrand: t.restaurantBrand,
       branchLocation: t.branchLocation,
       cohortBatch: t.cohortBatch,
       hireDate: t.hireDate,
       verifiedCount,
       readyForReviewCount,
-      totalMilestones: totalMilestoneCount,
+      totalMilestones,
       progressPercent,
+      planTitle: activeAssignment?.planVersion.plan.title || null,
+      planVersionNumber: activeAssignment?.planVersion.versionNumber || null,
+      planVersionId: activeAssignment?.planVersionId || null,
     };
   });
 }

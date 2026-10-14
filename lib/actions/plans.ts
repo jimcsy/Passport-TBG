@@ -10,6 +10,11 @@ import {
   archiveTrainingPlan,
   getLibraryMilestones,
 } from "@/lib/db/repositories/plans";
+import {
+  assignPlanToTrainee,
+  bulkAssignPlanToCohort,
+  changeTraineePlan,
+} from "@/lib/db/repositories/assignments";
 import type { SavePlanVersionInput, PublishPlanVersionInput } from "@/lib/validations/plans";
 import { DevelopmentPath } from "@/lib/types/models";
 
@@ -187,5 +192,77 @@ export async function publishPlanCanvasAction(input: PublishPlanCanvasInput): Pr
     return { success: false, error: "Failed to publish plan version." };
   }
 }
+
+/**
+ * Assigns a trainee to a published training plan version.
+ */
+export async function assignPlanAction(traineeId: string, planVersionId: string): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const res = await assignPlanToTrainee({
+      traineeId,
+      planVersionId,
+      assignedById: admin.id,
+    });
+
+    revalidatePath("/trainer/trainees");
+    revalidatePath(`/trainer/trainees/${traineeId}`);
+    revalidatePath("/trainee/dashboard");
+
+    return { success: true, data: res };
+  } catch (error) {
+    console.error("Error assigning plan:", error);
+    return { success: false, error: "Failed to assign training plan." };
+  }
+}
+
+/**
+ * Bulk assigns multiple trainees to a published training plan version.
+ */
+export async function bulkAssignPlanAction(traineeIds: string[], planVersionId: string): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const res = await bulkAssignPlanToCohort({
+      traineeIds,
+      planVersionId,
+      assignedById: admin.id,
+    });
+
+    revalidatePath("/trainer/trainees");
+    revalidatePath("/trainer/batch");
+    revalidatePath("/trainee/dashboard");
+
+    return { success: true, data: res };
+  } catch (error) {
+    console.error("Error bulk assigning plans:", error);
+    return { success: false, error: "Failed to bulk assign training plan." };
+  }
+}
+
+/**
+ * Changes a trainee's plan version and safely reconciles existing progress.
+ */
+export async function changeTraineePlanAction(traineeId: string, newPlanVersionId: string): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const res = await changeTraineePlan(traineeId, newPlanVersionId, admin.id);
+
+    revalidatePath("/trainer/trainees");
+    revalidatePath(`/trainer/trainees/${traineeId}`);
+    revalidatePath("/trainee/dashboard");
+
+    return { success: true, data: res };
+  } catch (error) {
+    console.error("Error changing trainee plan:", error);
+    return { success: false, error: "Failed to change trainee plan." };
+  }
+}
+
 
 
