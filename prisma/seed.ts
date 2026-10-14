@@ -99,30 +99,30 @@ const CANONICAL_MILESTONES = [
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 1,
-    code: "CULT-01",
-    title: "Living Bistro Core Values & Teamwork Spirit",
-    description: "Demonstrating passion for service, mutual respect, and collaborative store teamwork.",
+    code: "CUL-01",
+    title: "Core Bistro Values & Hospitality Heart",
+    description: "Demonstrating passion for hospitality, integrity, positive energy, and pride in craft.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 2,
-    code: "CULT-02",
-    title: "Punctuality, Grooming & Uniform Standards",
-    description: "Adherence to immaculate uniform standards, grooming policies, and shift attendance.",
+    code: "CUL-02",
+    title: "Teamwork Spirit & Cross-Station Support",
+    description: "Collaboration during peak rushes, helping bussers/runners, and team synergy.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 3,
-    code: "CULT-03",
-    title: "Stress Management & High-Pace Service Agility",
-    description: "Composure and resilience during peak rush lunch and dinner seatings.",
+    code: "CUL-03",
+    title: "Grooming, Uniform Standards & Brand Ambassadorship",
+    description: "Impeccable uniform presentation, grooming code compliance, and brand representation.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 4,
-    code: "CULT-04",
-    title: "Peer Support & Recognition Culture",
-    description: "Encouraging team members and actively celebrating store wins.",
+    code: "CUL-04",
+    title: "Peer Recognition & BEAT Spirit Champion",
+    description: "Upholding team morale, recognizing colleagues' contributions, and living the BEAT spirit.",
   },
 
   // 5. Leadership Skills
@@ -130,49 +130,104 @@ const CANONICAL_MILESTONES = [
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 1,
     code: "LEAD-01",
-    title: "Peer Mentorship & Buddy Coaching",
-    description: "Shadowing and mentoring newer team members on store standards.",
+    title: "Peer Mentorship & New Hire Buddying",
+    description: "Guiding incoming trainees through their first shifts and providing supportive feedback.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 2,
     code: "LEAD-02",
-    title: "Station Supervision & Shift Rush Support",
-    description: "Floater duties, bottleneck relief, and assisting under-pressure stations.",
+    title: "Shift Rush Coordination & Station Ownership",
+    description: "Maintaining calmness, pacing station queues, and guiding peers during sudden volume spikes.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 3,
     code: "LEAD-03",
-    title: "Daily Briefing Facilitation",
-    description: "Leading or co-leading an upbeat pre-shift motivational huddle.",
+    title: "Store Auditing & Quality Standard Enforcement",
+    description: "Conducting pre-opening audits, line-checks, sanitation verification, and safety walk-throughs.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 4,
     code: "LEAD-04",
-    title: "Growth Passport Capstone Evaluation",
-    description: "Final comprehensive evaluation with General Manager and BEAT Program Trainer.",
+    title: "Capstone Presentation & Growth Passport Defense",
+    description: "Presenting key development milestones, learnings, and personal growth goals to the general manager.",
+  },
+];
+
+// Defined Role Plan Templates
+const ROLE_TEMPLATES = [
+  {
+    planId: "plan-barista",
+    title: "Specialty Barista Training Track",
+    roleIdentifier: "BARISTA",
+    description: "Tailored path focusing on beverage station excellence, hospitality greeting, and food safety.",
+    isDefault: false,
+    milestoneCodes: [
+      "ONB-01", "ONB-02", "ONB-03", "ONB-04", // Full onboarding
+      "COMM-01", "COMM-02",                   // Guest greeting & listening
+      "TECH-01", "TECH-02", "TECH-04",        // POS, menu specs, station closing
+      "CUL-01", "CUL-03",                     // Culture & grooming
+      "LEAD-01",                              // Buddy mentorship
+    ],
+  },
+  {
+    planId: "plan-kitchen-staff",
+    title: "Culinary & Kitchen Staff Track",
+    roleIdentifier: "KITCHEN_STAFF",
+    description: "Kitchen operations focusing on recipe specifications, line checks, HACCP safety, and station closing.",
+    isDefault: false,
+    milestoneCodes: [
+      "ONB-01", "ONB-02", "ONB-03",           // Core safety & orientation
+      "COMM-04",                              // Shift handovers & briefings
+      "TECH-01", "TECH-02", "TECH-03", "TECH-04", // Full technical line skills
+      "CUL-01", "CUL-02", "CUL-03",           // Teamwork, hygiene, values
+      "LEAD-02",                              // Shift rush coordination
+    ],
+  },
+  {
+    planId: "plan-floor-server",
+    title: "Dining Floor & Guest Service Specialist",
+    roleIdentifier: "FLOOR_SERVER",
+    description: "Front-of-house excellence focusing on table service sequence, guest hospitality, and service recovery.",
+    isDefault: false,
+    milestoneCodes: [
+      "ONB-01", "ONB-02", "ONB-03", "ONB-04", // Full onboarding
+      "COMM-01", "COMM-02", "COMM-03", "COMM-04", // Full communication & LAST method
+      "TECH-01", "TECH-02", "TECH-03",        // POS, allergen guide, table sequence
+      "CUL-01", "CUL-02", "CUL-04",           // Values, cross-station help, BEAT spirit
+      "LEAD-01",                              // Peer mentorship
+    ],
+  },
+  {
+    planId: "plan-supervisor",
+    title: "Store Supervisor & Shift Leader Track",
+    roleIdentifier: "STORE_SUPERVISOR",
+    description: "Comprehensive development path spanning all 5 paths with intensive leadership, quality audits, and capstone.",
+    isDefault: false,
+    milestoneCodes: CANONICAL_MILESTONES.map((m) => m.code), // All 20 milestones
   },
 ];
 
 async function main() {
-  console.log("🌱 Seeding The Bistro Group Growth Passport Database...");
+  console.log("🌱 Seeding The Bistro Group Growth Passport Database with Role-Based Plans...");
 
   // 1. Seed Admin Trainer
-  const adminPasswordHash = await bcrypt.hash("password123", 10);
+  const passwordHash = await bcrypt.hash("password123", 10);
   const trainer = await prisma.adminUser.upsert({
     where: { employeeId: "EMP-1001" },
     update: {
-      passwordHash: adminPasswordHash,
       fullName: "Chef Marco Reyes (Master Trainer)",
       role: Role.TRAINER,
+      email: "trainer@bistro.com.ph",
+      passwordHash,
     },
     create: {
       employeeId: "EMP-1001",
       fullName: "Chef Marco Reyes (Master Trainer)",
       email: "trainer@bistro.com.ph",
-      passwordHash: adminPasswordHash,
+      passwordHash,
       role: Role.TRAINER,
     },
   });
@@ -187,6 +242,8 @@ async function main() {
       restaurantBrand: "TGI Fridays",
       branchLocation: "Bonifacio High Street",
       cohortBatch: "Cohort-2024-Q4",
+      jobRole: "Barista",
+      hireDate: new Date("2024-10-01T00:00:00Z"),
     },
     create: {
       traineeCode: "TBG-2024-001",
@@ -195,14 +252,15 @@ async function main() {
       restaurantBrand: "TGI Fridays",
       branchLocation: "Bonifacio High Street",
       cohortBatch: "Cohort-2024-Q4",
-      hireDate: new Date("2024-10-01"),
+      jobRole: "Barista",
+      hireDate: new Date("2024-10-01T00:00:00Z"),
     },
   });
-  console.log(`✓ Trainee seeded: ${trainee.fullName} (${trainee.traineeCode})`);
+  console.log(`✓ Trainee seeded: ${trainee.fullName} (${trainee.traineeCode}, Role: ${trainee.jobRole})`);
 
-  // 3. Seed Milestone Definitions
-  console.log("⏳ Seeding 20 canonical milestones across 5 paths...");
-  const milestoneMap = new Map<string, string>();
+  // 3. Seed Milestone Definitions (BEAT Standard Library)
+  console.log("⏳ Seeding 20 canonical milestones in BEAT Standard Library...");
+  const milestoneMap = new Map<string, typeof CANONICAL_MILESTONES[0] & { id: string }>();
 
   for (const m of CANONICAL_MILESTONES) {
     const record = await prisma.milestoneDefinition.upsert({
@@ -212,6 +270,7 @@ async function main() {
         description: m.description,
         path: m.path,
         orderIndex: m.orderIndex,
+        isStandard: true,
       },
       create: {
         code: m.code,
@@ -219,18 +278,198 @@ async function main() {
         description: m.description,
         path: m.path,
         orderIndex: m.orderIndex,
+        isStandard: true,
       },
     });
-    milestoneMap.set(m.code, record.id);
+    milestoneMap.set(m.code, { ...m, id: record.id });
   }
-  console.log(`✓ Seeded ${milestoneMap.size} milestones.`);
+  console.log(`✓ Seeded ${milestoneMap.size} milestones into BEAT Library.`);
 
-  // 4. Seed Trainee Progress Records
+  // 4. Seed Universal Baseline Default Plan
+  console.log("⏳ Seeding Universal Baseline Plan...");
+  const universalPlan = await prisma.trainingPlan.upsert({
+    where: { id: "universal-default-plan" },
+    update: {
+      title: "Universal BEAT Development Track",
+      roleIdentifier: "UNIVERSAL_DEFAULT",
+      isDefault: true,
+      status: "PUBLISHED",
+      createdById: trainer.id,
+    },
+    create: {
+      id: "universal-default-plan",
+      title: "Universal BEAT Development Track",
+      roleIdentifier: "UNIVERSAL_DEFAULT",
+      isDefault: true,
+      status: "PUBLISHED",
+      createdById: trainer.id,
+    },
+  });
+
+  const universalVersion = await prisma.planVersion.upsert({
+    where: {
+      planId_versionNumber: {
+        planId: universalPlan.id,
+        versionNumber: 1,
+      },
+    },
+    update: {
+      status: "PUBLISHED",
+      publishedById: trainer.id,
+    },
+    create: {
+      id: "universal-default-plan-v1",
+      planId: universalPlan.id,
+      versionNumber: 1,
+      status: "PUBLISHED",
+      publishedById: trainer.id,
+      changelog: "Universal baseline development track covering all 5 paths",
+    },
+  });
+
+  const universalNodeMap = new Map<string, string>();
+  for (const m of CANONICAL_MILESTONES) {
+    const libraryMilestone = milestoneMap.get(m.code)!;
+    const nodeId = `node_${m.code}`;
+    const node = await prisma.planNode.upsert({
+      where: { id: nodeId },
+      update: {
+        planVersionId: universalVersion.id,
+        libraryMilestoneId: libraryMilestone.id,
+        path: m.path,
+        code: m.code,
+        title: m.title,
+        description: m.description,
+        orderIndex: m.orderIndex,
+      },
+      create: {
+        id: nodeId,
+        planVersionId: universalVersion.id,
+        libraryMilestoneId: libraryMilestone.id,
+        path: m.path,
+        code: m.code,
+        title: m.title,
+        description: m.description,
+        orderIndex: m.orderIndex,
+        posX: 0,
+        posY: 0,
+        isCustom: false,
+      },
+    });
+    universalNodeMap.set(m.code, node.id);
+  }
+
+  // 5. Seed Role-Specific Training Plans (Barista, Kitchen Staff, Floor Server, Supervisor)
+  console.log("⏳ Seeding 4 Role-Specific Training Plans & Version Snapshots...");
+  const roleVersionMap = new Map<string, string>();
+
+  for (const role of ROLE_TEMPLATES) {
+    const plan = await prisma.trainingPlan.upsert({
+      where: { id: role.planId },
+      update: {
+        title: role.title,
+        roleIdentifier: role.roleIdentifier,
+        description: role.description,
+        status: "PUBLISHED",
+        createdById: trainer.id,
+      },
+      create: {
+        id: role.planId,
+        title: role.title,
+        roleIdentifier: role.roleIdentifier,
+        description: role.description,
+        isDefault: false,
+        status: "PUBLISHED",
+        createdById: trainer.id,
+      },
+    });
+
+    const version = await prisma.planVersion.upsert({
+      where: {
+        planId_versionNumber: {
+          planId: plan.id,
+          versionNumber: 1,
+        },
+      },
+      update: {
+        status: "PUBLISHED",
+        publishedById: trainer.id,
+      },
+      create: {
+        id: `${role.planId}-v1`,
+        planId: plan.id,
+        versionNumber: 1,
+        status: "PUBLISHED",
+        publishedById: trainer.id,
+        changelog: `Initial published version for ${role.title}`,
+      },
+    });
+    roleVersionMap.set(role.roleIdentifier, version.id);
+
+    // Seed nodes for this role plan
+    let orderCounter: Record<string, number> = {};
+    for (const code of role.milestoneCodes) {
+      const libraryMilestone = milestoneMap.get(code);
+      if (!libraryMilestone) continue;
+
+      orderCounter[libraryMilestone.path] = (orderCounter[libraryMilestone.path] || 0) + 1;
+      const orderIndex = orderCounter[libraryMilestone.path];
+      const nodeId = `${role.planId}-node-${code}`;
+
+      await prisma.planNode.upsert({
+        where: { id: nodeId },
+        update: {
+          planVersionId: version.id,
+          libraryMilestoneId: libraryMilestone.id,
+          path: libraryMilestone.path,
+          code: libraryMilestone.code,
+          title: libraryMilestone.title,
+          description: libraryMilestone.description,
+          orderIndex,
+        },
+        create: {
+          id: nodeId,
+          planVersionId: version.id,
+          libraryMilestoneId: libraryMilestone.id,
+          path: libraryMilestone.path,
+          code: libraryMilestone.code,
+          title: libraryMilestone.title,
+          description: libraryMilestone.description,
+          orderIndex,
+          posX: 0,
+          posY: 0,
+          isCustom: false,
+        },
+      });
+    }
+  }
+  console.log(`✓ Seeded 4 role templates (Barista, Kitchen Staff, Floor Server, Supervisor).`);
+
+  // 6. Assign Juan Dela Cruz to the Universal Default Plan
+  // (Ensuring backward compatibility with existing tests and mirrors)
+  await prisma.traineePlanAssignment.upsert({
+    where: {
+      traineeId_planVersionId: {
+        traineeId: trainee.id,
+        planVersionId: universalVersion.id,
+      },
+    },
+    update: { status: "ACTIVE" },
+    create: {
+      id: `assign_${trainee.id}`,
+      traineeId: trainee.id,
+      planVersionId: universalVersion.id,
+      assignedById: trainer.id,
+      status: "ACTIVE",
+    },
+  });
+
+  // 7. Seed Trainee Progress Records
   // - ONB-01: VERIFIED (Stamped by trainer)
   // - ONB-02: READY_FOR_REVIEW (With trainee reflection note)
   // - Others: IN_PROGRESS
   for (const m of CANONICAL_MILESTONES) {
-    const milestoneId = milestoneMap.get(m.code)!;
+    const planNodeId = universalNodeMap.get(m.code)!;
 
     let status: MilestoneStatus = MilestoneStatus.IN_PROGRESS;
     let verifiedBy: string | null = null;
@@ -251,9 +490,9 @@ async function main() {
 
     await prisma.traineeProgress.upsert({
       where: {
-        traineeId_milestoneId: {
+        traineeId_planNodeId: {
           traineeId: trainee.id,
-          milestoneId: milestoneId,
+          planNodeId,
         },
       },
       update: {
@@ -262,15 +501,17 @@ async function main() {
         verifiedAt,
         traineeNote,
         requestedAt,
+        isArchived: false,
       },
       create: {
         traineeId: trainee.id,
-        milestoneId,
+        planNodeId,
         status,
         verifiedBy,
         verifiedAt,
         traineeNote,
         requestedAt,
+        isArchived: false,
       },
     });
   }

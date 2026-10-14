@@ -57,6 +57,7 @@ export async function getTraineePassportData(
     include: {
       progressRecords: {
         include: {
+          planNode: true,
           verifier: {
             select: {
               fullName: true,
@@ -75,7 +76,10 @@ export async function getTraineePassportData(
   });
 
   const progressMap = new Map(
-    trainee.progressRecords.map((p) => [p.milestoneId, p])
+    trainee.progressRecords.map((p) => [
+      p.planNode?.libraryMilestoneId || p.planNodeId,
+      p,
+    ])
   );
 
   const pathKeys = [

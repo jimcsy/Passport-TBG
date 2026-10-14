@@ -56,11 +56,18 @@ export async function verifyMilestone(
   }
 
   try {
+    let targetNodeId = milestoneId;
+    const node = await prisma.planNode.findUnique({ where: { id: milestoneId } });
+    if (!node) {
+      const fallback = await prisma.planNode.findFirst({ where: { libraryMilestoneId: milestoneId } });
+      if (fallback) targetNodeId = fallback.id;
+    }
+
     await prisma.traineeProgress.upsert({
       where: {
-        traineeId_milestoneId: {
+        traineeId_planNodeId: {
           traineeId,
-          milestoneId,
+          planNodeId: targetNodeId,
         },
       },
       update: {
@@ -71,7 +78,7 @@ export async function verifyMilestone(
       },
       create: {
         traineeId,
-        milestoneId,
+        planNodeId: targetNodeId,
         status: MilestoneStatus.VERIFIED,
         verifiedBy: adminSession.id,
         verifiedAt: new Date(),
@@ -111,14 +118,20 @@ export async function bulkVerifyMilestones(
 
   try {
     const now = new Date();
+    let targetNodeId = milestoneId;
+    const node = await prisma.planNode.findUnique({ where: { id: milestoneId } });
+    if (!node) {
+      const fallback = await prisma.planNode.findFirst({ where: { libraryMilestoneId: milestoneId } });
+      if (fallback) targetNodeId = fallback.id;
+    }
 
     await prisma.$transaction(
       traineeIds.map((traineeId) =>
         prisma.traineeProgress.upsert({
           where: {
-            traineeId_milestoneId: {
+            traineeId_planNodeId: {
               traineeId,
-              milestoneId,
+              planNodeId: targetNodeId,
             },
           },
           update: {
@@ -129,7 +142,7 @@ export async function bulkVerifyMilestones(
           },
           create: {
             traineeId,
-            milestoneId,
+            planNodeId: targetNodeId,
             status: MilestoneStatus.VERIFIED,
             verifiedBy: adminSession.id,
             verifiedAt: now,

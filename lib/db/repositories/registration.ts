@@ -11,13 +11,45 @@ export async function createRegisteredTrainee(input: RegistrationInput, db: Pris
   if (!valid) return { success: false as const, errors, error: "Please check the highlighted fields." };
   try {
     const trainee = await db.$transaction(async tx => {
-      const milestones = await tx.milestoneDefinition.findMany({ select: { id: true } });
-      if (!milestones.length) throw new Error("NO_MILESTONES");
+      let nodes = await tx.planNode.findMany({
+        where: {
+          planVersion: {
+            plan: { isDefault: true },
+            status: "PUBLISHED",
+          },
+        },
+        select: { id: true, planVersionId: true },
+      });
+
+      if (!nodes.length) {
+        nodes = await tx.planNode.findMany({
+          where: { planVersion: { status: "PUBLISHED" } },
+          select: { id: true, planVersionId: true },
+        });
+      }
+
+      if (!nodes.length) throw new Error("NO_MILESTONES");
+
+      const planVersionId = nodes[0].planVersionId;
+      const defaultAdmin = await tx.adminUser.findFirst({ select: { id: true } });
+
       return tx.trainee.create({
         data: {
           ...values,
           hireDate: new Date(`${values.hireDate}T00:00:00.000Z`),
-          progressRecords: { create: milestones.map(m => ({ milestoneId: m.id, status: "IN_PROGRESS" })) },
+          planAssignments: defaultAdmin ? {
+            create: {
+              planVersionId,
+              assignedById: defaultAdmin.id,
+              status: "ACTIVE",
+            },
+          } : undefined,
+          progressRecords: {
+            create: nodes.map(n => ({
+              planNodeId: n.id,
+              status: "IN_PROGRESS",
+            })),
+          },
         },
         select: { id: true, traineeCode: true, fullName: true, email: true },
       });

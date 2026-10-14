@@ -19,12 +19,12 @@ async function runEndToEndVerification() {
 
   // Step 2: Trainee Self-Reports Milestone "COMM-01" as READY_FOR_REVIEW
   console.log("\n2️⃣  Simulating Trainee marking milestone COMM-01 'Ready for Review'...");
-  const milestoneComm01 = await prisma.milestoneDefinition.findUnique({
+  const nodeComm01 = await prisma.planNode.findFirst({
     where: { code: "COMM-01" },
   });
 
-  if (!milestoneComm01) {
-    throw new Error("❌ Step 2 Failed: Milestone COMM-01 not found.");
+  if (!nodeComm01) {
+    throw new Error("❌ Step 2 Failed: Milestone node COMM-01 not found.");
   }
 
   const reflectionNote = "Completed table service greetings with 30-second standard during weekend lunch rush.";
@@ -32,9 +32,9 @@ async function runEndToEndVerification() {
 
   await prisma.traineeProgress.upsert({
     where: {
-      traineeId_milestoneId: {
+      traineeId_planNodeId: {
         traineeId: trainee.id,
-        milestoneId: milestoneComm01.id,
+        planNodeId: nodeComm01.id,
       },
     },
     update: {
@@ -46,7 +46,7 @@ async function runEndToEndVerification() {
     },
     create: {
       traineeId: trainee.id,
-      milestoneId: milestoneComm01.id,
+      planNodeId: nodeComm01.id,
       status: MilestoneStatus.READY_FOR_REVIEW,
       traineeNote: reflectionNote,
       requestedAt: submissionTime,
@@ -85,9 +85,9 @@ async function runEndToEndVerification() {
 
   await prisma.traineeProgress.update({
     where: {
-      traineeId_milestoneId: {
+      traineeId_planNodeId: {
         traineeId: trainee.id,
-        milestoneId: milestoneComm01.id,
+        planNodeId: nodeComm01.id,
       },
     },
     data: {
@@ -122,21 +122,21 @@ async function runEndToEndVerification() {
 
   // Step 6: Verify Cohort Batch Attendance Transaction
   console.log("\n6️⃣  Verifying Cohort Batch Sign-Off Transaction...");
-  const milestoneTech01 = await prisma.milestoneDefinition.findUnique({
+  const nodeTech01 = await prisma.planNode.findFirst({
     where: { code: "TECH-01" },
   });
 
-  if (!milestoneTech01) {
-    throw new Error("❌ Step 6 Failed: TECH-01 milestone not found.");
+  if (!nodeTech01) {
+    throw new Error("❌ Step 6 Failed: TECH-01 plan node not found.");
   }
 
   const batchTime = new Date();
   await prisma.$transaction([
     prisma.traineeProgress.upsert({
       where: {
-        traineeId_milestoneId: {
+        traineeId_planNodeId: {
           traineeId: trainee.id,
-          milestoneId: milestoneTech01.id,
+          planNodeId: nodeTech01.id,
         },
       },
       update: {
@@ -147,7 +147,7 @@ async function runEndToEndVerification() {
       },
       create: {
         traineeId: trainee.id,
-        milestoneId: milestoneTech01.id,
+        planNodeId: nodeTech01.id,
         status: MilestoneStatus.VERIFIED,
         verifiedBy: trainer.id,
         verifiedAt: batchTime,

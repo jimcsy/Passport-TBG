@@ -17,7 +17,10 @@ model AdminUser {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  verifications TraineeProgress[]
+  verifications     TraineeProgress[]
+  authoredPlans     TrainingPlan[]
+  publishedVersions PlanVersion[]
+  assignedTrainees  TraineePlanAssignment[]
 }
 
 model Trainee {
@@ -28,10 +31,12 @@ model Trainee {
   restaurantBrand String      // e.g. "TGI Fridays", "Italianni's", "Texas Roadhouse"
   branchLocation  String      // e.g. "Bonifacio High Street", "Greenbelt"
   cohortBatch     String      // e.g. "Cohort-2024-Q4"
+  jobRole         String?     // e.g. "Barista", "Line Cook", "Kitchen Staff"
   hireDate        DateTime
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  planAssignments TraineePlanAssignment[]
   progressRecords TraineeProgress[]
 
   @@index([traineeCode, email])
@@ -39,22 +44,114 @@ model Trainee {
 }
 
 model MilestoneDefinition {
-  id          String          @id @default(cuid())
-  path        String          // "ONBOARDING" | "COMMUNICATION" | "TECHNICAL" | "CULTURE" | "LEADERSHIP"
-  orderIndex  Int             // Linear sequence 1..N
-  code        String          @unique // e.g. "ONB-01", "COMM-02"
+  id          String      @id @default(cuid())
+  path        String      // "ONBOARDING" | "COMMUNICATION" | "TECHNICAL" | "CULTURE" | "LEADERSHIP"
+  orderIndex  Int         @default(1)
+  code        String      @unique // e.g. "ONB-01", "COMM-02"
   title       String
   description String
-  createdAt   DateTime        @default(now())
+  isStandard  Boolean     @default(true) // Standard BEAT library vs ad-hoc
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
 
-  progressRecords TraineeProgress[]
+  planNodes   PlanNode[]
+}
+
+model TrainingPlan {
+  id              String      @id @default(cuid())
+  title           String      // e.g. "Specialty Barista Training Track"
+  roleIdentifier  String      // e.g. "BARISTA", "LINE_COOK", "IT_INTERN"
+  restaurantBrand String?     // Nullable = applicable to all brands, or specific e.g. "TGI Fridays"
+  description     String?
+  isDefault       Boolean     @default(false)
+  status          String      @default("DRAFT") // "DRAFT" | "PUBLISHED" | "ARCHIVED"
+  createdById     String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  createdBy       AdminUser     @relation(fields: [createdById], references: [id])
+  versions        PlanVersion[]
+
+  @@index([roleIdentifier])
+}
+
+model PlanVersion {
+  id              String      @id @default(cuid())
+  planId          String
+  versionNumber   Int         // 1, 2, 3...
+  status          String      @default("PUBLISHED") // "DRAFT" | "PUBLISHED" | "SUPERSEDED"
+  changelog       String?
+  publishedById   String
+  publishedAt     DateTime    @default(now())
+
+  plan            TrainingPlan          @relation(fields: [planId], references: [id], onDelete: Cascade)
+  publishedBy     AdminUser             @relation(fields: [publishedById], references: [id])
+  nodes           PlanNode[]
+  edges           PlanEdge[]
+  assignments     TraineePlanAssignment[]
+
+  @@unique([planId, versionNumber])
+}
+
+model PlanNode {
+  id                  String               @id @default(cuid())
+  planVersionId       String
+  libraryMilestoneId  String?              // Null if custom-crafted on the canvas
+  path                String               // "ONBOARDING" | "COMMUNICATION" | "TECHNICAL" | "CULTURE" | "LEADERSHIP"
+  code                String               // e.g. "BAR-TECH-01"
+  title               String
+  description         String
+  orderIndex          Int                  // Sort priority within the path
+  posX                Float                // React Flow canvas coordinate X
+  posY                Float                // React Flow canvas coordinate Y
+  isCustom            Boolean              @default(false)
+  createdAt           DateTime             @default(now())
+
+  planVersion         PlanVersion          @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+  libraryMilestone    MilestoneDefinition? @relation(fields: [libraryMilestoneId], references: [id], onDelete: SetNull)
+  
+  outgoingEdges       PlanEdge[]           @relation("SourceEdges")
+  incomingEdges       PlanEdge[]           @relation("TargetEdges")
+  progressRecords     TraineeProgress[]
+
+  @@index([planVersionId, path])
+}
+
+model PlanEdge {
+  id            String      @id @default(cuid())
+  planVersionId String
+  sourceNodeId  String
+  targetNodeId  String
+  edgeType      String      @default("PARENT_CHILD") // "PARENT_CHILD" | "SEQUENCE_HINT"
+
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Cascade)
+  sourceNode    PlanNode    @relation("SourceEdges", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode    PlanNode    @relation("TargetEdges", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@unique([planVersionId, sourceNodeId, targetNodeId])
+}
+
+model TraineePlanAssignment {
+  id            String      @id @default(cuid())
+  traineeId     String
+  planVersionId String
+  assignedById  String
+  assignedAt    DateTime    @default(now())
+  status        String      @default("ACTIVE") // "ACTIVE" | "SUPERSEDED" | "ARCHIVED"
+
+  trainee       Trainee     @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id], onDelete: Restrict)
+  assignedBy    AdminUser   @relation(fields: [assignedById], references: [id])
+
+  @@unique([traineeId, planVersionId])
+  @@index([traineeId, status])
 }
 
 model TraineeProgress {
   id             String            @id @default(cuid())
   traineeId      String
-  milestoneId    String
-  status         String            @default("IN_PROGRESS") // "LOCKED" | "IN_PROGRESS" | "READY_FOR_REVIEW" | "VERIFIED"
+  planNodeId     String
+  status         String            @default("IN_PROGRESS") // "LOCKED" | "IN_PROGRESS" | "READY_FOR_REVIEW" | "VERIFIED" | "ARCHIVED"
   traineeNote    String?           // Reflection submitted when marking Ready for Review
   requestedAt    DateTime?
   
@@ -62,13 +159,17 @@ model TraineeProgress {
   verifiedAt     DateTime?
   trainerNote    String?
   
+  // Archival flags for safe reconciliation
+  isArchived     Boolean           @default(false)
+  archivedReason String?           // "REMOVED_FROM_UPDATED_PLAN"
+
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
   trainee        Trainee           @relation(fields: [traineeId], references: [id], onDelete: Cascade)
-  milestone      MilestoneDefinition @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  planNode       PlanNode          @relation(fields: [planNodeId], references: [id], onDelete: Restrict)
   verifier       AdminUser?        @relation(fields: [verifiedBy], references: [id])
 
-  @@unique([traineeId, milestoneId])
+  @@unique([traineeId, planNodeId])
   @@index([status])
 }

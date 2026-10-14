@@ -12,19 +12,24 @@ A lightweight, dual-access digital training portal for **The Bistro Group** that
    - **Self-Service Verification Requests**: Trainees mark competencies as "Ready for Review" with optional reflection notes.
    - **Verified Gold Seal Stamps**: Displays authentic gold stamps with the verifying trainer's credentials and timestamp.
 
-2. **BEAT Admin & Trainer Portal (`/admin`)**:
-   - **Secured Authentication**: Login via **Employee ID** (e.g. `EMP-1001`) and password.
-   - **Actionable Review Queue (`/admin/queue`)**: Centralized inbox of pending trainee submissions with **1-Click Verify & Stamp**.
-   - **Trainee Directory (`/admin/trainees`)**: Search and filter by Restaurant Brand, Branch Location, and Cohort Batch.
-   - **Individual Passport Inspector (`/admin/trainees/[id]`)**: Deep-dive employee passport view with individual sign-off toggles.
-   - **Cohort Batch Attendance Tool (`/admin/batch`)**: Multi-select attendees and bulk-stamp milestones in an atomic transaction.
+2. **Dynamic Role-Based Path Builder**:
+   - **Role-Tailored Plans**: Role-specific milestone requirements (e.g. Barista vs. Kitchen Staff vs. Floor Server vs. Store Supervisor) replacing hardcoded static 4/4 tracks.
+   - **Interactive Node Canvas**: Built on `@xyflow/react` drag-and-drop tree canvas with Dagre auto-layout.
+   - **Safe Reconcile Engine**: Modifying plans preserves completed/in-review milestones, soft-archives removed nodes, and seamlessly injects new nodes for active trainees.
+   - **Two-Tier Tree Architecture**: 5 core development path root hubs connecting to child milestone nodes.
 
-3. **5 Uniform Development Paths**:
+3. **5 Uniform Development Paths (BEAT Master Library)**:
    - 🔰 **Onboarding** (`ONBOARDING`): Orientation, food safety, store tour, 30-day check-in.
    - 🗣️ **Communication Skills** (`COMMUNICATION`): Guest greetings, active listening, service recovery, shift handovers.
    - 🍳 **Technical Skills** (`TECHNICAL`): POS competency, recipe specs, table service sequence, closing audits.
    - 🤝 **Personal Effectiveness & Culture** (`CULTURE`): Core Bistro values, grooming standards, composure, peer recognition.
    - 🏆 **Leadership Skills** (`LEADERSHIP`): Peer mentoring, station supervision, huddle facilitation, capstone sign-off.
+
+4. **Seeded Role Templates**:
+   - ☕ **Specialty Barista** (`BARISTA`): 12 milestones focused on beverage prep, equipment calibration, guest greeting, and hygiene.
+   - 🍳 **Culinary & Kitchen Staff** (`KITCHEN_STAFF`): 12 milestones focused on recipe execution, station closing, HACCP safety, and rush coordination.
+   - 🍽️ **Dining Floor Server** (`FLOOR_SERVER`): 14 milestones focused on table service sequence, hospitality greeting, and LAST service recovery.
+   - 🎖️ **Store Supervisor** (`STORE_SUPERVISOR`): 20 milestones covering all 5 paths with advanced leadership, auditing, and capstone presentation.
 
 ---
 

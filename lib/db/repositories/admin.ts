@@ -44,7 +44,7 @@ export async function getReviewQueueItems(): Promise<ReviewQueueItem[]> {
           cohortBatch: true,
         },
       },
-      milestone: {
+      planNode: {
         select: {
           id: true,
           code: true,
@@ -63,14 +63,14 @@ export async function getReviewQueueItems(): Promise<ReviewQueueItem[]> {
   return items.map((item) => ({
     id: item.id,
     traineeId: item.traineeId,
-    milestoneId: item.milestoneId,
+    milestoneId: item.planNode.id,
     status: item.status as MilestoneStatus,
     traineeNote: item.traineeNote,
     requestedAt: item.requestedAt,
     trainee: item.trainee,
     milestone: {
-      ...item.milestone,
-      path: item.milestone.path as DevelopmentPath,
+      ...item.planNode,
+      path: item.planNode.path as DevelopmentPath,
     },
   }));
 }

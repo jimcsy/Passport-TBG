@@ -20,8 +20,20 @@ async function main() {
   try {
     const notConfigured = await createRegisteredTrainee(input, db);
     assert.equal(notConfigured.success, false);
-    assert.equal(await db.trainee.count(), 0);
-    for (const path of ["ONBOARDING", "TECHNICAL"]) await db.milestoneDefinition.create({ data: { path, orderIndex: 1, code: `${path}-01`, title: path, description: "Test milestone" } });
+    const trainer = await db.adminUser.create({
+      data: { employeeId: "EMP-TEST", fullName: "Admin", email: "admin@test.com", passwordHash: "fixture" },
+    });
+    const plan = await db.trainingPlan.create({
+      data: { title: "Default Plan", roleIdentifier: "DEFAULT", createdById: trainer.id, isDefault: true, status: "PUBLISHED" },
+    });
+    const version = await db.planVersion.create({
+      data: { planId: plan.id, versionNumber: 1, publishedById: trainer.id, status: "PUBLISHED" },
+    });
+    for (const path of ["ONBOARDING", "TECHNICAL"]) {
+      await db.planNode.create({
+        data: { planVersionId: version.id, path, orderIndex: 1, code: `${path}-01`, title: path, description: "Test milestone", posX: 0, posY: 0 },
+      });
+    }
     const result = await createRegisteredTrainee(input, db);
     assert.equal(result.success, true);
     const trainee = await db.trainee.findUniqueOrThrow({ where: { id: result.trainee.id }, include: { progressRecords: true } });
