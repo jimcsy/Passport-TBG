@@ -279,13 +279,14 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
  * Publishes a plan version and optionally safe-reconciles enrolled active trainees.
  */
 export async function publishPlanVersion(
-  input: PublishPlanVersionInput,
-  publishedById: string
+  input: PublishPlanVersionInput & { publishedById?: string },
+  publishedByIdArg?: string
 ): Promise<{
   version: unknown;
   reconcileResult: ReconcileResult | null;
 }> {
   const validated = PublishPlanVersionSchema.parse(input);
+  const publisherId = publishedByIdArg || input.publishedById;
 
   return prisma.$transaction(async (tx) => {
     const version = await tx.planVersion.findUnique({
@@ -295,12 +296,15 @@ export async function publishPlanVersion(
 
     if (!version) throw new Error("Plan version not found.");
 
+    const effectivePublishedById =
+      publisherId || version.publishedById || version.plan.createdById;
+
     // Update version status to PUBLISHED
     const updatedVersion = await tx.planVersion.update({
       where: { id: validated.versionId },
       data: {
         status: "PUBLISHED",
-        publishedById,
+        publishedById: effectivePublishedById,
         publishedAt: new Date(),
         changelog: validated.changelog || version.changelog,
       },
@@ -333,7 +337,7 @@ export async function publishPlanVersion(
         reconcileResult = await reconcilePlanVersionSubscribers(
           previousVersion.id,
           updatedVersion.id,
-          publishedById,
+          effectivePublishedById,
           tx
         );
       }

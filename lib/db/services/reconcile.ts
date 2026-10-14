@@ -38,12 +38,19 @@ export async function reconcileTraineeToPlanVersion(
   // 2. Fetch new plan version with nodes
   const newVersion = await db.planVersion.findUnique({
     where: { id: newPlanVersionId },
-    include: { nodes: true },
+    include: { nodes: true, plan: true },
   });
 
   if (!newVersion) {
     throw new Error(`Target PlanVersion ${newPlanVersionId} not found.`);
   }
+
+  const validAssignedById =
+    assignedById ||
+    newVersion.publishedById ||
+    newVersion.plan?.createdById ||
+    activeAssignment?.assignedById ||
+    "system";
 
   const oldNodes = activeAssignment?.planVersion.nodes || [];
   const newNodes = newVersion.nodes;
@@ -113,6 +120,12 @@ export async function reconcileTraineeToPlanVersion(
             isArchived: false,
           },
         });
+
+        // Clean up old version node progress now that state is remapped to new version
+        await db.traineeProgress.delete({
+          where: { id: prog.id },
+        });
+
         preserved++;
       }
     } else {
@@ -166,13 +179,13 @@ export async function reconcileTraineeToPlanVersion(
     },
     update: {
       status: "ACTIVE",
-      assignedById,
+      assignedById: validAssignedById,
       assignedAt: new Date(),
     },
     create: {
       traineeId,
       planVersionId: newPlanVersionId,
-      assignedById,
+      assignedById: validAssignedById,
       status: "ACTIVE",
     },
   });
