@@ -11,6 +11,7 @@ import {
   getLibraryMilestones,
 } from "@/lib/db/repositories/plans";
 import type { SavePlanVersionInput, PublishPlanVersionInput } from "@/lib/validations/plans";
+import { DevelopmentPath } from "@/lib/types/models";
 
 export interface PlanActionResult {
   success: boolean;
@@ -124,4 +125,67 @@ export async function getLibraryMilestonesAction(pathFilter?: string): Promise<P
     return { success: false, error: "Failed to fetch library milestones.", data: [] };
   }
 }
+
+export interface PublishPlanCanvasInput {
+  planId: string;
+  syncTrainees: boolean;
+  changelog?: string | null;
+  nodes: Array<{
+    id?: string;
+    libraryMilestoneId?: string | null;
+    path: DevelopmentPath;
+    code: string;
+    title: string;
+    description: string;
+    orderIndex: number;
+    posX: number;
+    posY: number;
+    isCustom: boolean;
+  }>;
+  edges: Array<{
+    sourceNodeId: string;
+    targetNodeId: string;
+    edgeType: "PARENT_CHILD" | "SEQUENCE_HINT";
+  }>;
+}
+
+/**
+ * Saves current canvas state and publishes as an immutable version with safe reconciliation.
+ */
+export async function publishPlanCanvasAction(input: PublishPlanCanvasInput): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const saved = await savePlanVersion({
+      planId: input.planId,
+      publishedById: admin.id,
+      status: "DRAFT",
+      changelog: input.changelog || "Published canvas version",
+      nodes: input.nodes,
+      edges: input.edges,
+    });
+
+    const res = await publishPlanVersion(
+      {
+        versionId: saved.id,
+        syncTrainees: input.syncTrainees,
+        changelog: input.changelog,
+      },
+      admin.id
+    );
+
+    revalidatePath("/trainer/plans");
+    revalidatePath(`/trainer/plans/${input.planId}/builder`);
+    revalidatePath("/trainer/trainees");
+    revalidatePath("/trainer/queue");
+    revalidatePath("/trainee/dashboard");
+
+    return { success: true, data: res };
+  } catch (error) {
+    console.error("Error publishing canvas version:", error);
+    return { success: false, error: "Failed to publish plan version." };
+  }
+}
+
 

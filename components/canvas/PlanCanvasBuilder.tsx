@@ -32,16 +32,21 @@ import {
   AlertTriangle,
   Network,
   ListTree,
+  Send,
+  History,
+  CheckCircle2,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { DevelopmentPath } from "@/lib/types/models";
-import { savePlanVersionAction } from "@/lib/actions/plans";
+import { savePlanVersionAction, publishPlanCanvasAction } from "@/lib/actions/plans";
 import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
 import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
 import { CreateMilestoneModal, type CreateCustomMilestoneForm } from "./CreateMilestoneModal";
 import { PlanTreeView } from "./PlanTreeView";
+import { PublishPlanModal } from "./PublishPlanModal";
+import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
 
 // Initial 5 Development Path Hubs definition
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
@@ -84,6 +89,8 @@ export interface PlanCanvasBuilderProps {
     }>;
   };
   libraryMilestones?: LibraryMilestone[];
+  activeTraineeCount?: number;
+  versions?: PlanVersionSummary[];
 }
 
 export function PlanCanvasBuilder(props: PlanCanvasBuilderProps) {
@@ -94,13 +101,28 @@ export function PlanCanvasBuilder(props: PlanCanvasBuilderProps) {
   );
 }
 
-function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }: PlanCanvasBuilderProps) {
+function PlanCanvasBuilderInner({
+  plan,
+  initialVersion,
+  libraryMilestones = [],
+  activeTraineeCount = 0,
+  versions = [],
+}: PlanCanvasBuilderProps) {
+  const [currentVersion, setCurrentVersion] = useState({
+    id: initialVersion.id,
+    versionNumber: initialVersion.versionNumber,
+    status: initialVersion.status,
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Auto-detect mobile screen (< 768px) and default to structured outline view
   useEffect(() => {
@@ -253,6 +275,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
 
         setNodes((nds) => [...nds, newNode]);
         setEdges((eds) => [...eds, newEdge]);
+        setHasUnsavedChanges(true);
       } catch (err) {
         console.error("Failed to parse dropped milestone:", err);
       }
@@ -265,6 +288,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
     (nodeId: string) => {
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
       setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+      setHasUnsavedChanges(true);
     },
     [setNodes, setEdges]
   );
@@ -272,6 +296,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
       setEdges((eds) => eds.filter((e) => e.id !== edgeId));
+      setHasUnsavedChanges(true);
     },
     [setEdges]
   );
@@ -315,6 +340,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
           return n;
         })
       );
+      setHasUnsavedChanges(true);
     },
     [nodes, setNodes]
   );
@@ -382,7 +408,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
   );
 
   const onConnect = useCallback(
-    (params: Connection) =>
+    (params: Connection) => {
       setEdges((eds) =>
         addEdge(
           {
@@ -391,7 +417,9 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
           },
           eds
         )
-      ),
+      );
+      setHasUnsavedChanges(true);
+    },
     [setEdges]
   );
 
@@ -432,6 +460,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
       const layouted = getLayoutedElements(nextNodes, nextEdges, { direction: "TB" });
       setNodes(layouted.nodes);
       setEdges(layouted.edges);
+      setHasUnsavedChanges(true);
 
       setSaveMessage(`Custom milestone "${form.code}" added and canvas layout balanced.`);
       setTimeout(() => setSaveMessage(null), 3500);
@@ -487,6 +516,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
     const layouted = getLayoutedElements(augmentedNodes, augmentedEdges, { direction: "TB" });
     setNodes([...layouted.nodes]);
     setEdges([...layouted.edges]);
+    setHasUnsavedChanges(true);
   }, [augmentedNodes, augmentedEdges, setNodes, setEdges]);
 
   // Save current canvas state as a draft version
@@ -497,7 +527,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
     const persistentNodes = nodes
       .filter((n) => n.type === "milestone")
       .map((n, index) => ({
-        id: n.id.startsWith("temp-") ? undefined : n.id,
+        id: n.id.startsWith("temp-") || n.id.startsWith("node-") ? undefined : n.id,
         libraryMilestoneId: (n.data.libraryMilestoneId as string) || null,
         path: n.data.path as DevelopmentPath,
         code: n.data.code as string,
@@ -519,17 +549,88 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
       planId: plan.id,
       publishedById: "",
       status: "DRAFT",
-      changelog: `Saved canvas draft for version ${initialVersion.versionNumber}`,
+      changelog: `Saved canvas draft for version ${currentVersion.versionNumber}`,
       nodes: persistentNodes,
       edges: persistentEdges,
     });
 
     setIsSaving(false);
     if (res.success) {
+      setHasUnsavedChanges(false);
       setSaveMessage("Draft saved successfully!");
       setTimeout(() => setSaveMessage(null), 3000);
     } else {
       setSaveMessage(res.error || "Failed to save draft.");
+    }
+  };
+
+  // Publish current canvas state as immutable version with safe trainee reconcile
+  const handleConfirmPublish = async ({
+    syncTrainees,
+    changelog,
+  }: {
+    syncTrainees: boolean;
+    changelog: string;
+  }) => {
+    setIsPublishing(true);
+
+    const persistentNodes = nodes
+      .filter((n) => n.type === "milestone")
+      .map((n, index) => ({
+        id: n.id.startsWith("temp-") || n.id.startsWith("node-") ? undefined : n.id,
+        libraryMilestoneId: (n.data.libraryMilestoneId as string) || null,
+        path: n.data.path as DevelopmentPath,
+        code: n.data.code as string,
+        title: n.data.title as string,
+        description: n.data.description as string,
+        orderIndex: (n.data.orderIndex as number) || index + 1,
+        posX: Math.round(n.position.x),
+        posY: Math.round(n.position.y),
+        isCustom: (n.data.isCustom as boolean) ?? true,
+      }));
+
+    const persistentEdges = edges.map((e) => ({
+      sourceNodeId: e.source,
+      targetNodeId: e.target,
+      edgeType: "PARENT_CHILD" as const,
+    }));
+
+    const res = await publishPlanCanvasAction({
+      planId: plan.id,
+      syncTrainees,
+      changelog,
+      nodes: persistentNodes,
+      edges: persistentEdges,
+    });
+
+    setIsPublishing(false);
+
+    if (res.success) {
+      setIsPublishModalOpen(false);
+      setHasUnsavedChanges(false);
+      setCurrentVersion((v) => ({
+        ...v,
+        status: "PUBLISHED",
+      }));
+
+      const resData = res.data as {
+        reconcileResult?: {
+          migratedTraineesCount: number;
+          preservedCount: number;
+          archivedCount: number;
+          injectedCount: number;
+        } | null;
+      };
+
+      const syncResult = resData?.reconcileResult;
+      const syncInfo = syncResult
+        ? ` (${syncResult.migratedTraineesCount} trainees migrated: ${syncResult.preservedCount} preserved, ${syncResult.injectedCount} added)`
+        : "";
+
+      setSaveMessage(`Version ${currentVersion.versionNumber} published!${syncInfo}`);
+      setTimeout(() => setSaveMessage(null), 4500);
+    } else {
+      showWarning(res.error || "Failed to publish plan version.");
     }
   };
 
@@ -545,16 +646,38 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-base font-extrabold text-beat-maroon leading-tight">
                 {plan.title}
               </h2>
               <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
                 {plan.roleIdentifier}
               </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-gold/20 text-beat-maroon border border-beat-gold/30">
-                v{initialVersion.versionNumber} · {initialVersion.status}
-              </span>
+              <button
+                type="button"
+                onClick={() => setIsHistoryModalOpen(true)}
+                className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-beat-gold/20 text-beat-maroon border border-beat-gold/40 hover:bg-beat-gold/30 transition-all cursor-pointer"
+                title="View Version History"
+              >
+                <History className="h-3 w-3 text-beat-maroon" />
+                <span>v{currentVersion.versionNumber}</span>
+                <span>·</span>
+                <span
+                  className={
+                    currentVersion.status === "PUBLISHED"
+                      ? "text-emerald-700 font-extrabold"
+                      : "text-amber-800 font-extrabold"
+                  }
+                >
+                  {currentVersion.status}
+                </span>
+              </button>
+              {hasUnsavedChanges && (
+                <span className="flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Unsaved edits
+                </span>
+              )}
             </div>
             <p className="text-[11px] text-beat-muted">
               Interactive two-tier path tree. Hover over nodes to edit or delete; hover over connectors to disconnect.
@@ -636,11 +759,21 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
           <button
             type="button"
             onClick={onSaveDraft}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all disabled:opacity-50 cursor-pointer"
+            disabled={isSaving || isPublishing}
+            className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-white px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-canvas transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
           >
             <Save className="h-3.5 w-3.5 text-beat-gold" />
             <span>{isSaving ? "Saving..." : "Save Draft"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsPublishModalOpen(true)}
+            disabled={isSaving || isPublishing}
+            className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-4 py-2 text-xs font-bold text-beat-gold shadow-md hover:bg-beat-maroon-dark hover:text-white transition-all disabled:opacity-50 cursor-pointer border border-beat-gold/40"
+          >
+            <Send className="h-3.5 w-3.5 text-beat-gold" />
+            <span>Publish</span>
           </button>
         </div>
       </header>
@@ -714,6 +847,30 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
         roleIdentifier={plan.roleIdentifier}
         existingCodes={placedCodes}
         onSubmit={handleCreateCustomMilestone}
+      />
+
+      {/* Publish Plan Modal */}
+      <PublishPlanModal
+        isOpen={isPublishModalOpen}
+        onClose={() => setIsPublishModalOpen(false)}
+        planTitle={plan.title}
+        roleIdentifier={plan.roleIdentifier}
+        restaurantBrand={plan.restaurantBrand}
+        versionNumber={currentVersion.versionNumber}
+        nodeCounts={nodeCountMap}
+        totalMilestones={nodes.filter((n) => n.type === "milestone").length}
+        activeTraineeCount={activeTraineeCount}
+        isPublishing={isPublishing}
+        onConfirmPublish={handleConfirmPublish}
+      />
+
+      {/* Plan Version History Modal */}
+      <PlanVersionHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        planTitle={plan.title}
+        currentVersionNumber={currentVersion.versionNumber}
+        versions={versions}
       />
     </div>
   );

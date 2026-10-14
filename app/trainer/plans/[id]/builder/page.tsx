@@ -62,6 +62,16 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
           })),
         }}
         libraryMilestones={libraryMilestones}
+        activeTraineeCount={plan.activeAssignmentsCount || 0}
+        versions={plan.versions.map((v) => ({
+          id: v.id,
+          versionNumber: v.versionNumber,
+          status: v.status,
+          changelog: v.changelog,
+          publishedAt: v.publishedAt,
+          publishedBy: v.publishedBy,
+          _count: v._count,
+        }))}
       />
     </div>
   );
