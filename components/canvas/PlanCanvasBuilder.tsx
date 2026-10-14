@@ -38,6 +38,7 @@ import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
 import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
+import { CreateMilestoneModal, type CreateCustomMilestoneForm } from "./CreateMilestoneModal";
 
 // Initial 5 Development Path Hubs definition
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
@@ -95,6 +96,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
+  const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
 
@@ -336,19 +338,62 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
     [setEdges]
   );
 
+  // Handle custom milestone creation from modal
+  const handleCreateCustomMilestone = useCallback(
+    (form: CreateCustomMilestoneForm) => {
+      const parentHub = nodes.find((n) => n.id === `root-${form.path}`);
+      const newNodeId = `node-custom-${form.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
+
+      const newNode: Node = {
+        id: newNodeId,
+        type: "milestone",
+        position: parentHub
+          ? { x: parentHub.position.x, y: parentHub.position.y + 180 }
+          : { x: 0, y: 180 },
+        data: {
+          code: form.code,
+          title: form.title,
+          description: form.description,
+          path: form.path,
+          orderIndex: (nodeCountMap[form.path] || 0) + 1,
+          isCustom: true,
+          libraryMilestoneId: null,
+        },
+      };
+
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: `root-${form.path}`,
+        target: newNodeId,
+        type: "beatEdge",
+      };
+
+      const nextNodes = [...nodes, newNode];
+      const nextEdges = [...edges, newEdge];
+
+      // Auto-layout with Dagre to rebalance positions cleanly
+      const layouted = getLayoutedElements(nextNodes, nextEdges, { direction: "TB" });
+      setNodes(layouted.nodes);
+      setEdges(layouted.edges);
+
+      setSaveMessage(`Custom milestone "${form.code}" added and canvas layout balanced.`);
+      setTimeout(() => setSaveMessage(null), 3500);
+    },
+    [nodes, edges, nodeCountMap, setNodes, setEdges]
+  );
+
   // Inject action callbacks into nodes data
   const augmentedNodes = useMemo(() => {
     return nodes.map((node) => {
       if (node.type === "pathRoot") {
-        const pathKey = node.data.path as string;
+        const pathKey = node.data.path as DevelopmentPath;
         return {
           ...node,
           data: {
             ...node.data,
             childCount: nodeCountMap[pathKey] || 0,
-            onAddMilestone: () => {
-              // Handled by modal trigger in Issue 2.4
-              console.log(`Add milestone to path: ${pathKey}`);
+            onAddMilestone: (targetPath: DevelopmentPath) => {
+              setAddingToPath(targetPath);
             },
           },
         };
@@ -367,7 +412,7 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
       }
       return node;
     });
-  }, [nodes, nodeCountMap, handleDeleteNode]);
+  }, [nodes, nodeCountMap, handleDeleteNode, setAddingToPath]);
 
   // Inject delete callback into edges
   const augmentedEdges = useMemo(() => {
@@ -558,6 +603,16 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
           onClose={() => setIsLibraryOpen(false)}
           milestones={libraryMilestones}
           placedCodes={placedCodes}
+        />
+
+        {/* Custom Milestone Creation Modal */}
+        <CreateMilestoneModal
+          isOpen={addingToPath !== null}
+          onClose={() => setAddingToPath(null)}
+          path={addingToPath}
+          roleIdentifier={plan.roleIdentifier}
+          existingCodes={placedCodes}
+          onSubmit={handleCreateCustomMilestone}
         />
       </div>
     </div>
