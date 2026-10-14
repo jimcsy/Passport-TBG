@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ReactFlow,
@@ -30,6 +30,8 @@ import {
   BookOpen,
   Award,
   AlertTriangle,
+  Network,
+  ListTree,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { DevelopmentPath } from "@/lib/types/models";
@@ -39,6 +41,7 @@ import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
 import { CreateMilestoneModal, type CreateCustomMilestoneForm } from "./CreateMilestoneModal";
+import { PlanTreeView } from "./PlanTreeView";
 
 // Initial 5 Development Path Hubs definition
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
@@ -97,6 +100,17 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
+  const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
+
+  // Auto-detect mobile screen (< 768px) and default to structured outline view
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isMobile = window.innerWidth < 768;
+      if (isMobile) {
+        setViewMode("tree");
+      }
+    }
+  }, []);
 
   const { screenToFlowPosition } = useReactFlow();
 
@@ -260,6 +274,49 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
       setEdges((eds) => eds.filter((e) => e.id !== edgeId));
     },
     [setEdges]
+  );
+
+  // Reorder milestones within a development path in Outline View
+  const handleReorderMilestones = useCallback(
+    (path: DevelopmentPath, sourceIndex: number, targetIndex: number) => {
+      const pathMilestones = nodes
+        .filter((n) => n.type === "milestone" && n.data?.path === path)
+        .sort((a, b) => ((a.data.orderIndex as number) || 0) - ((b.data.orderIndex as number) || 0));
+
+      if (
+        sourceIndex < 0 ||
+        sourceIndex >= pathMilestones.length ||
+        targetIndex < 0 ||
+        targetIndex >= pathMilestones.length
+      ) {
+        return;
+      }
+
+      const reordered = [...pathMilestones];
+      const [moved] = reordered.splice(sourceIndex, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      const orderMap = new Map<string, number>();
+      reordered.forEach((node, index) => {
+        orderMap.set(node.id, index + 1);
+      });
+
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (orderMap.has(n.id)) {
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                orderIndex: orderMap.get(n.id),
+              },
+            };
+          }
+          return n;
+        })
+      );
+    },
+    [nodes, setNodes]
   );
 
   // Recalculate child milestone counts on path hubs
@@ -513,6 +570,36 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
             </span>
           )}
 
+          {/* View Mode Toggle (Canvas vs Outline) */}
+          <div className="flex items-center rounded-xl border border-beat-border bg-beat-canvas p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("canvas")}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "canvas"
+                  ? "bg-beat-maroon text-white shadow-xs"
+                  : "text-beat-maroon hover:text-beat-gold"
+              }`}
+              title="Interactive Canvas View"
+            >
+              <Network className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Canvas</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("tree")}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                viewMode === "tree"
+                  ? "bg-beat-maroon text-white shadow-xs"
+                  : "text-beat-maroon hover:text-beat-gold"
+              }`}
+              title="Structured Outline View"
+            >
+              <ListTree className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Outline</span>
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => setIsLibraryOpen((v) => !v)}
@@ -535,14 +622,16 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
             )}
           </button>
 
-          <button
-            type="button"
-            onClick={onLayout}
-            className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-gold/20 transition-colors shadow-2xs cursor-pointer"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-beat-gold" />
-            <span>Auto Layout</span>
-          </button>
+          {viewMode === "canvas" && (
+            <button
+              type="button"
+              onClick={onLayout}
+              className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-gold/20 transition-colors shadow-2xs cursor-pointer"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-beat-gold" />
+              <span>Auto Layout</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -556,65 +645,76 @@ function PlanCanvasBuilderInner({ plan, initialVersion, libraryMilestones = [] }
         </div>
       </header>
 
-      {/* Main Canvas Viewport */}
-      <div
-        className="flex-1 w-full h-full beat-canvas relative"
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-      >
-        {/* Warning Toast */}
-        {warningToast && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl border border-amber-500 animate-in fade-in slide-in-from-top-2">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
-            <span>{warningToast}</span>
-          </div>
-        )}
-
-        <ReactFlow
-          nodes={augmentedNodes}
-          edges={augmentedEdges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          isValidConnection={isValidConnection}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.2}
-          maxZoom={2}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#C29B38" />
-          <Controls showInteractive={false} className="!m-4" />
-          <MiniMap
-            className="!m-4"
-            nodeColor={(n) => (n.type === "pathRoot" ? "#5C1D24" : "#C29B38")}
-            maskColor="rgba(250, 248, 244, 0.7)"
+      {/* Main Viewport: Canvas vs Tree View */}
+      {viewMode === "tree" ? (
+        <div className="flex-1 w-full h-full bg-beat-canvas/30 relative overflow-y-auto">
+          <PlanTreeView
+            nodes={nodes}
+            onDeleteNode={handleDeleteNode}
+            onAddMilestone={(p) => setAddingToPath(p)}
+            onReorderMilestones={handleReorderMilestones}
           />
-          <Panel position="bottom-center" className="bg-white/90 backdrop-blur-xs px-4 py-1.5 rounded-full border border-beat-gold/30 text-[11px] font-semibold text-beat-maroon shadow-xs">
-            💡 Two-tier hierarchy: connect Path Root Hubs to child milestones in the same category
-          </Panel>
-        </ReactFlow>
+        </div>
+      ) : (
+        <div
+          className="flex-1 w-full h-full beat-canvas relative"
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
+          {/* Warning Toast */}
+          {warningToast && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl border border-amber-500 animate-in fade-in slide-in-from-top-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
+              <span>{warningToast}</span>
+            </div>
+          )}
 
-        {/* Milestone Library Slide-Over Drawer */}
-        <MilestoneLibraryDrawer
-          isOpen={isLibraryOpen}
-          onClose={() => setIsLibraryOpen(false)}
-          milestones={libraryMilestones}
-          placedCodes={placedCodes}
-        />
+          <ReactFlow
+            nodes={augmentedNodes}
+            edges={augmentedEdges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            isValidConnection={isValidConnection}
+            fitView
+            fitViewOptions={{ padding: 0.2 }}
+            minZoom={0.2}
+            maxZoom={2}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#C29B38" />
+            <Controls showInteractive={false} className="!m-4" />
+            <MiniMap
+              className="!m-4"
+              nodeColor={(n) => (n.type === "pathRoot" ? "#5C1D24" : "#C29B38")}
+              maskColor="rgba(250, 248, 244, 0.7)"
+            />
+            <Panel position="bottom-center" className="bg-white/90 backdrop-blur-xs px-4 py-1.5 rounded-full border border-beat-gold/30 text-[11px] font-semibold text-beat-maroon shadow-xs">
+              💡 Two-tier hierarchy: connect Path Root Hubs to child milestones in the same category
+            </Panel>
+          </ReactFlow>
+        </div>
+      )}
 
-        {/* Custom Milestone Creation Modal */}
-        <CreateMilestoneModal
-          isOpen={addingToPath !== null}
-          onClose={() => setAddingToPath(null)}
-          path={addingToPath}
-          roleIdentifier={plan.roleIdentifier}
-          existingCodes={placedCodes}
-          onSubmit={handleCreateCustomMilestone}
-        />
-      </div>
+      {/* Milestone Library Slide-Over Drawer */}
+      <MilestoneLibraryDrawer
+        isOpen={isLibraryOpen}
+        onClose={() => setIsLibraryOpen(false)}
+        milestones={libraryMilestones}
+        placedCodes={placedCodes}
+      />
+
+      {/* Custom Milestone Creation Modal */}
+      <CreateMilestoneModal
+        isOpen={addingToPath !== null}
+        onClose={() => setAddingToPath(null)}
+        path={addingToPath}
+        roleIdentifier={plan.roleIdentifier}
+        existingCodes={placedCodes}
+        onSubmit={handleCreateCustomMilestone}
+      />
     </div>
   );
 }
