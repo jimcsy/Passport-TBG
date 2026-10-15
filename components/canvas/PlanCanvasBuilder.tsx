@@ -40,13 +40,20 @@ import {
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { getMilestonePlacement } from "@/lib/canvas/placement";
 import { DevelopmentPath } from "@/lib/types/models";
-import { savePlanVersionAction, publishPlanCanvasAction } from "@/lib/actions/plans";
+import {
+  savePlanVersionAction,
+  publishPlanCanvasAction,
+  createCustomLibraryMilestoneAction,
+  updateCustomLibraryMilestoneAction,
+  deleteCustomLibraryMilestoneAction,
+} from "@/lib/actions/plans";
 import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
 import { PlanOverviewNode } from "./nodes/PlanOverviewNode";
 import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
 import { CreateMilestoneModal, type CreateCustomMilestoneForm } from "./CreateMilestoneModal";
+import { EditMilestoneModal, type EditableMilestoneTarget } from "./EditMilestoneModal";
 import { PlanTreeView } from "./PlanTreeView";
 import { PublishPlanModal } from "./PublishPlanModal";
 import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
@@ -112,6 +119,12 @@ function PlanCanvasBuilderInner({
   activeTraineeCount = 0,
   versions = [],
 }: PlanCanvasBuilderProps) {
+  const [availableMilestones, setAvailableMilestones] = useState<LibraryMilestone[]>(libraryMilestones);
+
+  useEffect(() => {
+    setAvailableMilestones(libraryMilestones);
+  }, [libraryMilestones]);
+
   const [currentVersion, setCurrentVersion] = useState({
     id: initialVersion.id,
     versionNumber: initialVersion.versionNumber,
@@ -127,6 +140,7 @@ function PlanCanvasBuilderInner({
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
+  const [editingMilestone, setEditingMilestone] = useState<EditableMilestoneTarget | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [focusRequest, setFocusRequest] = useState<{ ids: string[]; detail: boolean } | null>(null);
@@ -333,7 +347,7 @@ function PlanCanvasBuilderInner({
       if (!rawData) return;
       try {
         const payload = JSON.parse(rawData);
-        const milestone = libraryMilestones.find(item => item.id === payload.id);
+        const milestone = availableMilestones.find(item => item.id === payload.id) || libraryMilestones.find(item => item.id === payload.id);
         if (milestone) addLibraryMilestone(milestone);
       } catch (err) {
         console.error("Failed to parse dropped milestone:", err);
@@ -523,12 +537,162 @@ function PlanCanvasBuilderInner({
       setEdges(layouted.edges);
       setHasUnsavedChanges(true);
 
-      setSaveMessage(`Custom milestone "${form.code}" added and canvas layout balanced.`);
+      // Register in shared milestone library if requested
+      if (form.addToLibrary !== false) {
+        const newLibraryItem: LibraryMilestone = {
+          id: `custom-def-${form.code.toLowerCase()}`,
+          code: form.code,
+          title: form.title,
+          description: form.description,
+          path: form.path,
+          orderIndex: (nodeCountMap[form.path] || 0) + 1,
+          isStandard: false,
+        };
+        setAvailableMilestones((prev) => {
+          if (prev.some((m) => m.code === form.code)) return prev;
+          return [...prev, newLibraryItem];
+        });
+
+        createCustomLibraryMilestoneAction({
+          code: form.code,
+          title: form.title,
+          description: form.description,
+          path: form.path,
+        }).catch((err) => console.error("Could not persist custom milestone to library:", err));
+      }
+
+      setSaveMessage(`Custom milestone "${form.code}" added to plan and shared library.`);
       setFocusedPath(form.path);
       setFocusRequest({ ids: [newNodeId], detail: true });
       setTimeout(() => setSaveMessage(null), 3500);
     },
     [nodes, edges, nodeCountMap, setNodes, setEdges]
+  );
+
+  // Handle editing custom milestone from canvas
+  const handleEditNode = useCallback(
+    (nodeId: string) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      setEditingMilestone({
+        nodeId: node.id,
+        id: (node.data.libraryMilestoneId as string) || undefined,
+        code: node.data.code as string,
+        title: node.data.title as string,
+        description: node.data.description as string,
+        path: node.data.path as DevelopmentPath,
+      });
+    },
+    [nodes]
+  );
+
+  // Handle editing custom milestone from library drawer
+  const handleEditLibraryMilestone = useCallback(
+    (milestone: LibraryMilestone) => {
+      const canvasNode = nodes.find((n) => n.data.code === milestone.code);
+      setEditingMilestone({
+        nodeId: canvasNode?.id,
+        id: milestone.id,
+        code: milestone.code,
+        title: milestone.title,
+        description: milestone.description,
+        path: milestone.path as DevelopmentPath,
+      });
+    },
+    [nodes]
+  );
+
+  // Handle saving edited custom milestone
+  const handleSaveEditedMilestone = useCallback(
+    async (updated: EditableMilestoneTarget) => {
+      // 1. Update matching node on canvas
+      setNodes((prevNodes) =>
+        prevNodes.map((n) => {
+          const matches =
+            (updated.nodeId && n.id === updated.nodeId) ||
+            n.data.code === updated.code;
+          if (!matches) return n;
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              code: updated.code,
+              title: updated.title,
+              description: updated.description,
+              path: updated.path,
+            },
+          };
+        })
+      );
+
+      // 2. Update matching item in availableMilestones list
+      setAvailableMilestones((prev) =>
+        prev.map((m) => {
+          const matches =
+            (updated.id && m.id === updated.id) || m.code === updated.code;
+          if (!matches) return m;
+          return {
+            ...m,
+            code: updated.code,
+            title: updated.title,
+            description: updated.description,
+            path: updated.path,
+          };
+        })
+      );
+
+      setHasUnsavedChanges(true);
+
+      // 3. Persist update to database
+      try {
+        const res = await updateCustomLibraryMilestoneAction(
+          { id: updated.id, code: updated.code },
+          {
+            code: updated.code,
+            title: updated.title,
+            description: updated.description,
+            path: updated.path,
+          }
+        );
+        if (res.success) {
+          setSaveMessage(`Custom milestone "${updated.code}" updated successfully.`);
+          setTimeout(() => setSaveMessage(null), 3000);
+        }
+      } catch (err) {
+        console.error("Failed to update milestone:", err);
+      }
+    },
+    [setNodes]
+  );
+
+  // Handle deleting custom milestone from library drawer
+  const handleDeleteLibraryMilestone = useCallback(
+    async (milestone: LibraryMilestone) => {
+      const confirmed = window.confirm(
+        `Are you sure you want to delete custom competency "${milestone.code}: ${milestone.title}" from the shared library?`
+      );
+      if (!confirmed) return;
+
+      // Remove from availableMilestones in drawer
+      setAvailableMilestones((prev) =>
+        prev.filter((m) => m.code !== milestone.code && m.id !== milestone.id)
+      );
+
+      try {
+        const res = await deleteCustomLibraryMilestoneAction({
+          id: milestone.id,
+          code: milestone.code,
+        });
+        if (res.success) {
+          setSaveMessage(`Custom milestone "${milestone.code}" deleted from library.`);
+          setTimeout(() => setSaveMessage(null), 3000);
+        }
+      } catch (err) {
+        console.error("Failed to delete milestone:", err);
+      }
+    },
+    []
   );
 
   // Inject action callbacks into nodes data
@@ -552,13 +716,14 @@ function PlanCanvasBuilderInner({
           ...node,
           data: {
             ...node.data,
+            onEdit: node.data.isCustom ? () => handleEditNode(node.id) : undefined,
             onDelete: handleDeleteNode,
           },
         };
       }
       return node;
     });
-  }, [nodes, nodeCountMap, handleDeleteNode, setAddingToPath]);
+  }, [nodes, nodeCountMap, handleDeleteNode, handleEditNode, setAddingToPath]);
 
   // Inject delete callback into edges
   const augmentedEdges = useMemo(() => {
@@ -887,9 +1052,11 @@ function PlanCanvasBuilderInner({
       <MilestoneLibraryDrawer
         isOpen={isLibraryOpen}
         onClose={() => setLibraryVisible(false)}
-        milestones={libraryMilestones}
+        milestones={availableMilestones}
         placedCodes={placedCodes}
         onAddMilestone={addLibraryMilestone}
+        onEditMilestone={handleEditLibraryMilestone}
+        onDeleteMilestone={handleDeleteLibraryMilestone}
         className="flex min-h-0 max-h-[45%] w-full shrink-0 flex-col border-t border-beat-gold/25 bg-white text-beat-maroon md:max-h-none md:w-72 md:border-l md:border-t-0 lg:w-80"
       />
       {!isLibraryOpen && (
@@ -909,6 +1076,15 @@ function PlanCanvasBuilderInner({
         roleIdentifier={plan.roleIdentifier}
         existingCodes={placedCodes}
         onSubmit={handleCreateCustomMilestone}
+      />
+
+      {/* Edit Custom Milestone Modal */}
+      <EditMilestoneModal
+        isOpen={editingMilestone !== null}
+        onClose={() => setEditingMilestone(null)}
+        milestone={editingMilestone}
+        existingCodes={placedCodes}
+        onSave={handleSaveEditedMilestone}
       />
 
       {/* Publish Plan Modal */}

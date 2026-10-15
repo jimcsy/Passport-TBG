@@ -222,10 +222,34 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
 
     // Create new nodes
     for (const node of validated.nodes) {
+      let libraryMilestoneId = node.libraryMilestoneId || null;
+
+      // If it's a custom milestone, also upsert into MilestoneDefinition
+      // so it is combined into the shared library across all training tracks
+      if (node.isCustom) {
+        const customDef = await tx.milestoneDefinition.upsert({
+          where: { code: node.code },
+          update: {
+            title: node.title,
+            description: node.description,
+            path: node.path,
+          },
+          create: {
+            code: node.code,
+            title: node.title,
+            description: node.description,
+            path: node.path,
+            orderIndex: node.orderIndex,
+            isStandard: false,
+          },
+        });
+        libraryMilestoneId = customDef.id;
+      }
+
       const createdNode = await tx.planNode.create({
         data: {
           planVersionId: targetVersionId,
-          libraryMilestoneId: node.libraryMilestoneId || null,
+          libraryMilestoneId,
           path: node.path,
           code: node.code,
           title: node.title,
@@ -361,14 +385,14 @@ export async function archiveTrainingPlan(id: string) {
 }
 
 /**
- * Returns standard master milestones from the BEAT catalog.
+ * Returns standard and custom master milestones from the BEAT catalog.
  */
 export async function getLibraryMilestones(pathFilter?: string) {
-  const where: Record<string, unknown> = { isStandard: true };
+  const where: Record<string, unknown> = {};
   if (pathFilter) where.path = pathFilter;
 
   return prisma.milestoneDefinition.findMany({
     where,
-    orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+    orderBy: [{ isStandard: "desc" }, { path: "asc" }, { orderIndex: "asc" }],
   });
 }

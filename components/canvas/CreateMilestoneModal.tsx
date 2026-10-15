@@ -36,6 +36,7 @@ export const CreateCustomMilestoneSchema = z.object({
     .min(10, "Description must be at least 10 characters")
     .max(500, "Description cannot exceed 500 characters"),
   path: z.nativeEnum(DevelopmentPath),
+  addToLibrary: z.boolean().default(true),
 });
 
 export type CreateCustomMilestoneForm = z.infer<typeof CreateCustomMilestoneSchema>;
@@ -60,6 +61,7 @@ export function CreateMilestoneModal({
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [addToLibrary, setAddToLibrary] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Auto-generate sequential code when path or modal opens
@@ -98,6 +100,7 @@ export function CreateMilestoneModal({
       title: title.trim(),
       description: description.trim(),
       path,
+      addToLibrary,
     });
 
     if (!result.success) {
@@ -238,6 +241,24 @@ export function CreateMilestoneModal({
               </p>
             )}
           </div>
+
+          {/* Add to Shared Library Checkbox */}
+          <label className="flex items-start gap-2.5 rounded-xl border border-beat-border bg-beat-canvas p-3 cursor-pointer hover:border-beat-gold/40 transition-colors">
+            <input
+              type="checkbox"
+              checked={addToLibrary}
+              onChange={(e) => setAddToLibrary(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-beat-border text-beat-maroon focus:ring-beat-gold accent-beat-maroon cursor-pointer"
+            />
+            <div>
+              <span className="block text-xs font-bold text-beat-maroon">
+                Save to Shared Milestone Library
+              </span>
+              <span className="block text-[11px] text-beat-muted mt-0.5">
+                Makes this custom competency reusable across all training tracks in the organization.
+              </span>
+            </div>
+          </label>
 
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">

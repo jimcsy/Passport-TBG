@@ -131,6 +131,152 @@ export async function getLibraryMilestonesAction(pathFilter?: string): Promise<P
   }
 }
 
+/**
+ * Persists a custom milestone to the organization library for reuse across all plans.
+ */
+export async function createCustomLibraryMilestoneAction(data: {
+  code: string;
+  title: string;
+  description: string;
+  path: DevelopmentPath;
+}): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const milestone = await prisma.milestoneDefinition.upsert({
+      where: { code: data.code },
+      update: {
+        title: data.title,
+        description: data.description,
+        path: data.path,
+      },
+      create: {
+        code: data.code,
+        title: data.title,
+        description: data.description,
+        path: data.path,
+        isStandard: false,
+      },
+    });
+
+    revalidatePath("/trainer/plans");
+    return { success: true, data: milestone };
+  } catch (error) {
+    console.error("Error creating custom library milestone:", error);
+    return { success: false, error: "Failed to register custom milestone in library." };
+  }
+}
+
+/**
+ * Updates a custom milestone in the library and synchronizes any canvas nodes using it.
+ */
+export async function updateCustomLibraryMilestoneAction(
+  identifier: { id?: string; code?: string },
+  data: {
+    code: string;
+    title: string;
+    description: string;
+    path: DevelopmentPath;
+  }
+): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const where = identifier.id ? { id: identifier.id } : { code: identifier.code! };
+
+    const existing = await prisma.milestoneDefinition.findUnique({ where });
+    if (!existing) {
+      // If not yet saved in definition, create it as custom
+      const created = await prisma.milestoneDefinition.create({
+        data: {
+          code: data.code,
+          title: data.title,
+          description: data.description,
+          path: data.path,
+          isStandard: false,
+        },
+      });
+      revalidatePath("/trainer/plans");
+      return { success: true, data: created };
+    }
+
+    if (existing.isStandard) {
+      return { success: false, error: "Standard BEAT canonical milestones cannot be modified." };
+    }
+
+    const updated = await prisma.milestoneDefinition.update({
+      where: { id: existing.id },
+      data: {
+        code: data.code,
+        title: data.title,
+        description: data.description,
+        path: data.path,
+      },
+    });
+
+    // Also update any plan nodes matching this milestone definition
+    await prisma.planNode.updateMany({
+      where: {
+        OR: [
+          { libraryMilestoneId: existing.id },
+          { code: existing.code, isCustom: true },
+        ],
+      },
+      data: {
+        code: data.code,
+        title: data.title,
+        description: data.description,
+        path: data.path,
+      },
+    });
+
+    revalidatePath("/trainer/plans");
+    return { success: true, data: updated };
+  } catch (error) {
+    console.error("Error updating custom library milestone:", error);
+    return { success: false, error: "Failed to update custom milestone." };
+  }
+}
+
+/**
+ * Deletes a custom milestone from the library.
+ * Standard BEAT milestones are protected and cannot be deleted.
+ */
+export async function deleteCustomLibraryMilestoneAction(
+  identifier: { id?: string; code?: string }
+): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const where = identifier.id ? { id: identifier.id } : { code: identifier.code! };
+
+    const existing = await prisma.milestoneDefinition.findUnique({ where });
+    if (!existing) {
+      return { success: true };
+    }
+
+    if (existing.isStandard) {
+      return { success: false, error: "Standard BEAT canonical milestones cannot be deleted." };
+    }
+
+    await prisma.milestoneDefinition.delete({
+      where: { id: existing.id },
+    });
+
+    revalidatePath("/trainer/plans");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting custom library milestone:", error);
+    return { success: false, error: "Failed to delete custom milestone from library." };
+  }
+}
+
 export interface PublishPlanCanvasInput {
   planId: string;
   syncTrainees: boolean;
