@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { getAdminSession } from "@/lib/auth/session";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import { clearAdminSession, getAdminSession } from "@/lib/auth/session";
+import { AdminNavigation } from "@/components/admin/AdminNavigation";
 
 export default async function AdminLayout({
   children,
@@ -10,26 +10,32 @@ export default async function AdminLayout({
 }) {
   const session = await getAdminSession();
 
-  // If unauthenticated (e.g. login page), render child directly without sidebar
+  // Keep the unauthenticated login screen outside the workspace navigation.
   if (!session) {
     if (headers().get("x-portal-path") !== "/trainer/login") redirect("/trainer/login");
     return <>{children}</>;
   }
 
+  async function signOut() {
+    "use server";
+    await clearAdminSession();
+    redirect("/trainer/login");
+  }
+
   return (
-    <div className="flex min-h-screen flex-col md:flex-row bg-beat-canvas">
-      {/* Persistent BEAT Maroon Sidebar */}
-      <AdminSidebar
+    <div className="min-h-screen bg-beat-canvas">
+      <AdminNavigation
         admin={{
           fullName: session.fullName,
           employeeId: session.employeeId,
           role: session.role,
         }}
+        signOut={signOut}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 sm:p-8 md:p-10 overflow-y-auto">
-        <div className="max-w-6xl mx-auto space-y-6">
+      <main id="trainer-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 outline-none sm:px-8 sm:py-8 xl:px-0">
+        <div className="min-w-0 space-y-6">
           {children}
         </div>
       </main>

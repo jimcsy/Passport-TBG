@@ -124,6 +124,15 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
 4. All application code, server actions, and repositories remain 100% unchanged.
 # Trainee dashboard and digital booklet
 
+The authenticated `/trainer` workspace uses a top navbar in
+`components/admin/AdminNavigation.tsx` in place of the sidebar. Review Queue,
+Training Plans, Trainees, and Batch Sign-Off keep their existing routes, with
+parent sections highlighted on detail and builder screens. The header follows
+the trainee theme and shows trainer identity, employee ID, role, and Sign out.
+Smaller screens use a horizontally scrollable navigation row. Both portals share
+`components/navigation/SignOutButton.tsx` for pending-state feedback; trainer
+sign-out clears the admin session and returns to `/trainer/login`.
+
 All authenticated trainee screens share `app/passport/layout.tsx` and
 `components/trainee/TraineeNavigation.tsx`: a white header, Dashboard / My passport
 links with a gold active underline, trainee identity, and a separate Sign out
