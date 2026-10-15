@@ -12,6 +12,9 @@ and the next action. Use the same conventions in trainee and trainer screens.
 - Preserve the passport's circular seals and page-turn metaphor. Routine metadata, plan versions, and job roles do not need stamp borders.
 - Keep focus indicators, visible status labels, and keyboard access. Canvas actions must be reachable on keyboard focus as well as pointer hover.
 - Development-only demo credentials stay out of the production interface.
+- Use the shared `beat-control`, `beat-primary`, and `beat-segment` styles for compact builder and version controls. Primary actions use maroon; version selection uses white/canvas with explicit pressed states, rather than green/amber fills.
+- Keep version states explicit in text: Published, Draft, Read only, New, and Viewing. Use a single quiet status strip and avoid repeating the same state in banners, badges, and action buttons.
+- Version history uses a simple divided list. The active version has a gold selection edge; load and draft actions retain the same control hierarchy as the builder.
 
 References reviewed for this refinement:
 

@@ -36,6 +36,12 @@ import {
   Send,
   History,
   CheckCircle2,
+  Loader2,
+  Info,
+  Eye,
+  Lock,
+  Edit2,
+  Plus,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { getMilestonePlacement } from "@/lib/canvas/placement";
@@ -43,6 +49,7 @@ import { DevelopmentPath } from "@/lib/types/models";
 import {
   savePlanVersionAction,
   publishPlanCanvasAction,
+  createDraftVersionAction,
   createCustomLibraryMilestoneAction,
   updateCustomLibraryMilestoneAction,
   deleteCustomLibraryMilestoneAction,
@@ -57,6 +64,7 @@ import { EditMilestoneModal, type EditableMilestoneTarget } from "./EditMileston
 import { PlanTreeView } from "./PlanTreeView";
 import { PublishPlanModal } from "./PublishPlanModal";
 import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
+import { CanvasNotification, type CanvasNotice } from "./CanvasNotification";
 
 // Initial 5 Development Path Hubs definition
 const PLAN_OVERVIEW_ID = "plan-overview";
@@ -67,6 +75,106 @@ const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x:
   { id: "root-CULTURE", path: DevelopmentPath.CULTURE, title: "Personal Effectiveness", x: 960, y: 0 },
   { id: "root-LEADERSHIP", path: DevelopmentPath.LEADERSHIP, title: "Leadership Skills", x: 1280, y: 0 },
 ];
+
+function buildGraphForVersionData(
+  versionNodes: Array<{
+    id: string;
+    code: string;
+    title: string;
+    description: string;
+    path: string;
+    orderIndex: number;
+    posX?: number | null;
+    posY?: number | null;
+    isCustom?: boolean;
+    libraryMilestoneId?: string | null;
+  }>,
+  versionEdges: Array<{
+    id: string;
+    sourceNodeId: string;
+    targetNodeId: string;
+    edgeType: string;
+  }>,
+  planTitle: string,
+  roleIdentifier: string
+) {
+  const counts: Record<string, number> = {};
+  versionNodes.forEach((n) => {
+    counts[n.path] = (counts[n.path] || 0) + 1;
+  });
+
+  const rootNodes: Node[] = INITIAL_PATH_ROOTS.map((root) => ({
+    id: root.id,
+    type: "pathRoot",
+    position: { x: root.x, y: root.y },
+    data: {
+      title: root.title,
+      path: root.path,
+      childCount: counts[root.path] || 0,
+    },
+    deletable: false,
+  }));
+
+  const milestoneNodes: Node[] = versionNodes.map((n) => ({
+    id: n.id,
+    type: "milestone",
+    position: { x: n.posX ?? 0, y: n.posY ?? 180 },
+    data: {
+      code: n.code,
+      title: n.title,
+      description: n.description,
+      path: n.path as DevelopmentPath,
+      orderIndex: n.orderIndex,
+      isCustom: n.isCustom ?? false,
+      libraryMilestoneId: n.libraryMilestoneId ?? null,
+    },
+  }));
+
+  const overview: Node = {
+    id: PLAN_OVERVIEW_ID,
+    type: "planOverview",
+    position: { x: 0, y: 0 },
+    data: { title: planTitle, role: roleIdentifier },
+    deletable: false,
+    draggable: false,
+    connectable: false,
+  };
+
+  const dbEdges: Edge[] = versionEdges.map((e) => ({
+    id: e.id,
+    source: e.sourceNodeId,
+    target: e.targetNodeId,
+    type: "beatEdge",
+  }));
+
+  const connectedTargets = new Set(versionEdges.map((e) => e.targetNodeId));
+  const autoEdges: Edge[] = [];
+  versionNodes.forEach((n) => {
+    if (!connectedTargets.has(n.id)) {
+      autoEdges.push({
+        id: `edge-root-${n.id}`,
+        source: `root-${n.path}`,
+        target: n.id,
+        type: "beatEdge",
+      });
+    }
+  });
+
+  const overviewEdges: Edge[] = INITIAL_PATH_ROOTS.map((root, index) => ({
+    id: `overview-${root.id}`,
+    source: index === 0 ? PLAN_OVERVIEW_ID : INITIAL_PATH_ROOTS[index - 1].id,
+    target: root.id,
+    sourceHandle: "spine",
+    targetHandle: "spine-in",
+    type: "beatEdge",
+    deletable: false,
+    selectable: false,
+  }));
+
+  const rawNodes = [overview, ...rootNodes, ...milestoneNodes];
+  const rawEdges = [...overviewEdges, ...dbEdges, ...autoEdges];
+  return getLayoutedElements(rawNodes, rawEdges, { direction: "TB" });
+}
 
 export interface PlanCanvasBuilderProps {
   plan: {
@@ -101,6 +209,7 @@ export interface PlanCanvasBuilderProps {
   };
   libraryMilestones?: LibraryMilestone[];
   activeTraineeCount?: number;
+  publishedVersionNumber?: number | null;
   versions?: PlanVersionSummary[];
 }
 
@@ -117,6 +226,7 @@ function PlanCanvasBuilderInner({
   initialVersion,
   libraryMilestones = [],
   activeTraineeCount = 0,
+  publishedVersionNumber = null,
   versions = [],
 }: PlanCanvasBuilderProps) {
   const [availableMilestones, setAvailableMilestones] = useState<LibraryMilestone[]>(libraryMilestones);
@@ -132,13 +242,14 @@ function PlanCanvasBuilderInner({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<CanvasNotice | null>(null);
+  const dismissNotice = useCallback(() => setNotice(null), []);
+  const setSaveMessage = useCallback((message: string | null) => setNotice(message ? { message, tone: "success" } : null), []);
   const [isLibraryOpen, setIsLibraryOpen] = useState(true);
   const libraryReopenButton = useRef<HTMLButtonElement>(null);
   const libraryFocusRequested = useRef(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [warningToast, setWarningToast] = useState<string | null>(null);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
   const [editingMilestone, setEditingMilestone] = useState<EditableMilestoneTarget | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
@@ -190,93 +301,265 @@ function PlanCanvasBuilderInner({
     setFocusRequest(null);
   }, [focusRequest, viewportInitialized, nodesInitialized, viewMode, fitView, getNode]);
 
-  const showWarning = (msg: string) => {
-    setWarningToast(msg);
-    setTimeout(() => setWarningToast(null), 3500);
-  };
+  const showWarning = useCallback((message: string) => setNotice({ message, tone: "error" }), []);
 
-  // Compute counts per path for initial display
-  const initialCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    initialVersion.nodes.forEach((n) => {
-      counts[n.path] = (counts[n.path] || 0) + 1;
-    });
-    return counts;
-  }, [initialVersion.nodes]);
-
-  // Build initial React Flow nodes from existing nodes or default path hubs
-  const initialNodes: Node[] = useMemo(() => {
-    // 1. Path root hubs
-    const rootNodes: Node[] = INITIAL_PATH_ROOTS.map((root) => ({
-      id: root.id,
-      type: "pathRoot",
-      position: { x: root.x, y: root.y },
-      data: {
-        title: root.title,
-        path: root.path,
-        childCount: initialCounts[root.path] || 0,
-      },
-      deletable: false,
-    }));
-
-    // 2. Child milestone nodes
-    const milestoneNodes: Node[] = initialVersion.nodes.map((n) => ({
-      id: n.id,
-      type: "milestone",
-      position: { x: n.posX ?? 0, y: n.posY ?? 180 },
-      data: {
-        code: n.code,
-        title: n.title,
-        description: n.description,
-        path: n.path as DevelopmentPath,
-        orderIndex: n.orderIndex,
-        isCustom: n.isCustom,
-        libraryMilestoneId: n.libraryMilestoneId,
-      },
-    }));
-
-    const overview: Node = {
-      id: PLAN_OVERVIEW_ID, type: "planOverview", position: { x: 0, y: 0 },
-      data: { title: plan.title, role: plan.roleIdentifier },
-      deletable: false, draggable: false, connectable: false,
-    };
-    return [overview, ...rootNodes, ...milestoneNodes];
-  }, [initialVersion.nodes, initialCounts, plan.title, plan.roleIdentifier]);
-
-  // Build initial edges
-  const initialEdges: Edge[] = useMemo(() => {
-    const dbEdges: Edge[] = initialVersion.edges.map((e) => ({
-      id: e.id,
-      source: e.sourceNodeId,
-      target: e.targetNodeId,
-      type: "beatEdge",
-    }));
-
-    const connectedTargets = new Set(initialVersion.edges.map((e) => e.targetNodeId));
-    const autoEdges: Edge[] = [];
-
-    initialVersion.nodes.forEach((n) => {
-      if (!connectedTargets.has(n.id)) {
-        autoEdges.push({
-          id: `edge-root-${n.id}`,
-          source: `root-${n.path}`,
-          target: n.id,
-          type: "beatEdge",
-        });
-      }
-    });
-
-    const overviewEdges: Edge[] = INITIAL_PATH_ROOTS.map((root, index) => ({
-      id: `overview-${root.id}`, source: index === 0 ? PLAN_OVERVIEW_ID : INITIAL_PATH_ROOTS[index - 1].id, target: root.id,
-      sourceHandle: "spine", targetHandle: "spine-in",
-      type: "beatEdge", deletable: false, selectable: false,
-    }));
-    return [...overviewEdges, ...dbEdges, ...autoEdges];
-  }, [initialVersion.edges, initialVersion.nodes]);
-
-  const initialTree = useMemo(() => getLayoutedElements(initialNodes, initialEdges, { direction: "TB" }), [initialNodes, initialEdges]);
+  const initialTree = useMemo(
+    () =>
+      buildGraphForVersionData(
+        initialVersion.nodes,
+        initialVersion.edges,
+        plan.title,
+        plan.roleIdentifier
+      ),
+    [initialVersion.nodes, initialVersion.edges, plan.title, plan.roleIdentifier]
+  );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialTree.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialTree.edges);
+
+  // Version management: switching, peeking, and read-only published view
+  const [allVersions, setAllVersions] = useState<PlanVersionSummary[]>(versions);
+  useEffect(() => {
+    setAllVersions(versions);
+  }, [versions]);
+
+  const [isCreatingDraft, setIsCreatingDraft] = useState(false);
+  const [selectedVersionNumber, setSelectedVersionNumber] = useState(initialVersion.versionNumber);
+  const [peekingVersionNumber, setPeekingVersionNumber] = useState<number | null>(null);
+  const effectiveVersionNumber = peekingVersionNumber ?? selectedVersionNumber;
+
+  const publishedVersion = useMemo(
+    () => allVersions.find((v) => v.status === "PUBLISHED"),
+    [allVersions]
+  );
+  const draftVersion = useMemo(
+    () =>
+      allVersions.find((v) => v.status === "DRAFT") ||
+      (currentVersion.status === "DRAFT" ? (currentVersion as unknown as PlanVersionSummary) : null),
+    [allVersions, currentVersion]
+  );
+
+  const nextDraftVersionNumber = useMemo(() => {
+    const numbers = allVersions.map((v) => v.versionNumber);
+    return Math.max(...numbers, publishedVersion?.versionNumber || 1) + 1;
+  }, [allVersions, publishedVersion]);
+
+  const isViewingReadOnly = Boolean(
+    publishedVersion && effectiveVersionNumber === publishedVersion.versionNumber
+  );
+
+  const draftGraphRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
+
+  // Preserve working draft edits in ref when in draft view
+  useEffect(() => {
+    if (
+      effectiveVersionNumber === draftVersion?.versionNumber &&
+      peekingVersionNumber === null
+    ) {
+      draftGraphRef.current = { nodes, edges };
+    }
+  }, [nodes, edges, effectiveVersionNumber, draftVersion?.versionNumber, peekingVersionNumber]);
+
+  // Handler to initialize a new working draft version from the published snapshot
+  const handleCreateNewDraft = async () => {
+    if (isCreatingDraft) return;
+    setIsCreatingDraft(true);
+    setSaveMessage(null);
+
+    try {
+      const res = await createDraftVersionAction(plan.id);
+      if (res.success && res.data) {
+        const newDraft = res.data as PlanVersionSummary & {
+          nodes: Array<{
+            id: string;
+            code: string;
+            title: string;
+            description: string;
+            path: string;
+            orderIndex: number;
+            posX: number;
+            posY: number;
+            isCustom: boolean;
+            libraryMilestoneId: string | null;
+          }>;
+          edges: Array<{
+            id: string;
+            sourceNodeId: string;
+            targetNodeId: string;
+            edgeType: string;
+          }>;
+        };
+
+        setAllVersions((prev) => {
+          const exists = prev.some((v) => v.id === newDraft.id);
+          if (exists) return prev.map((v) => (v.id === newDraft.id ? newDraft : v));
+          return [newDraft, ...prev];
+        });
+
+        setCurrentVersion({
+          id: newDraft.id,
+          versionNumber: newDraft.versionNumber,
+          status: newDraft.status,
+        });
+
+        if (newDraft.nodes && newDraft.edges) {
+          const layouted = buildGraphForVersionData(
+            newDraft.nodes,
+            newDraft.edges,
+            plan.title,
+            plan.roleIdentifier
+          );
+          setNodes(layouted.nodes);
+          setEdges(layouted.edges);
+          draftGraphRef.current = { nodes: layouted.nodes, edges: layouted.edges };
+        }
+
+        setSelectedVersionNumber(newDraft.versionNumber);
+        setPeekingVersionNumber(null);
+        setHasUnsavedChanges(false);
+        setSaveMessage(`Draft v${newDraft.versionNumber} created. You can now edit this plan.`);
+      } else {
+        showWarning(res.error || "Failed to create new draft version.");
+      }
+    } catch (err) {
+      console.error("Error creating draft version:", err);
+      showWarning("Could not create draft version. Please try again.");
+    } finally {
+      setIsCreatingDraft(false);
+    }
+  };
+
+  const handleSwitchVersion = useCallback(
+    (targetVerNum: number) => {
+      if (targetVerNum === effectiveVersionNumber && peekingVersionNumber === null) return;
+
+      // Save draft edits before leaving draft view
+      if (effectiveVersionNumber === draftVersion?.versionNumber && peekingVersionNumber === null) {
+        draftGraphRef.current = { nodes, edges };
+      }
+
+      setPeekingVersionNumber(null);
+      setSelectedVersionNumber(targetVerNum);
+
+      if (targetVerNum === draftVersion?.versionNumber && draftGraphRef.current) {
+        setNodes(draftGraphRef.current.nodes);
+        setEdges(draftGraphRef.current.edges);
+        return;
+      }
+
+      const targetVer = allVersions.find((v) => v.versionNumber === targetVerNum);
+      if (targetVer?.nodes && targetVer?.edges) {
+        const layouted = buildGraphForVersionData(
+          targetVer.nodes,
+          targetVer.edges,
+          plan.title,
+          plan.roleIdentifier
+        );
+        setNodes(layouted.nodes);
+        setEdges(layouted.edges);
+      }
+    },
+    [
+      effectiveVersionNumber,
+      peekingVersionNumber,
+      draftVersion?.versionNumber,
+      nodes,
+      edges,
+      allVersions,
+      plan.title,
+      plan.roleIdentifier,
+      setNodes,
+      setEdges,
+    ]
+  );
+
+  const handleStartPeek = useCallback(
+    (targetVerNum: number) => {
+      if (targetVerNum === effectiveVersionNumber) return;
+
+      if (effectiveVersionNumber === draftVersion?.versionNumber && peekingVersionNumber === null) {
+        draftGraphRef.current = { nodes, edges };
+      }
+
+      setPeekingVersionNumber(targetVerNum);
+
+      const targetVer = allVersions.find((v) => v.versionNumber === targetVerNum);
+      if (targetVer?.nodes && targetVer?.edges) {
+        const layouted = buildGraphForVersionData(
+          targetVer.nodes,
+          targetVer.edges,
+          plan.title,
+          plan.roleIdentifier
+        );
+        setNodes(layouted.nodes);
+        setEdges(layouted.edges);
+      }
+    },
+    [
+      effectiveVersionNumber,
+      peekingVersionNumber,
+      draftVersion?.versionNumber,
+      nodes,
+      edges,
+      allVersions,
+      plan.title,
+      plan.roleIdentifier,
+      setNodes,
+      setEdges,
+    ]
+  );
+
+  const handleEndPeek = useCallback(() => {
+    if (peekingVersionNumber === null) return;
+    const targetVerNum = selectedVersionNumber;
+    setPeekingVersionNumber(null);
+
+    if (targetVerNum === draftVersion?.versionNumber && draftGraphRef.current) {
+      setNodes(draftGraphRef.current.nodes);
+      setEdges(draftGraphRef.current.edges);
+    } else {
+      const targetVer = allVersions.find((v) => v.versionNumber === targetVerNum);
+      if (targetVer?.nodes && targetVer?.edges) {
+        const layouted = buildGraphForVersionData(
+          targetVer.nodes,
+          targetVer.edges,
+          plan.title,
+          plan.roleIdentifier
+        );
+        setNodes(layouted.nodes);
+        setEdges(layouted.edges);
+      }
+    }
+  }, [
+    peekingVersionNumber,
+    selectedVersionNumber,
+    draftVersion?.versionNumber,
+    allVersions,
+    plan.title,
+    plan.roleIdentifier,
+    setNodes,
+    setEdges,
+  ]);
+
+  // Diff metrics between working canvas and live published version
+  const publishedNodeCodes = useMemo(
+    () => new Set(publishedVersion?.nodes?.map((n) => n.code) || []),
+    [publishedVersion]
+  );
+
+  const draftMilestoneNodes = useMemo(
+    () => nodes.filter((n) => n.type === "milestone"),
+    [nodes]
+  );
+
+  const newMilestonesCount = useMemo(
+    () => draftMilestoneNodes.filter((n) => !publishedNodeCodes.has(n.data.code as string)).length,
+    [draftMilestoneNodes, publishedNodeCodes]
+  );
+
+  const retainedMilestonesCount = useMemo(
+    () => draftMilestoneNodes.filter((n) => publishedNodeCodes.has(n.data.code as string)).length,
+    [draftMilestoneNodes, publishedNodeCodes]
+  );
 
   // Placed competency codes to disable re-adding duplicates
   const placedCodes = useMemo(() => {
@@ -297,6 +580,11 @@ function PlanCanvasBuilderInner({
 
   const addLibraryMilestone = useCallback(
     (milestone: LibraryMilestone) => {
+      if (isViewingReadOnly) {
+        showWarning("You are viewing a published version (read-only). Switch to Working Draft to add milestones.");
+        return;
+      }
+
       // Check if duplicate
       if (placedCodes.has(milestone.code)) {
         showWarning(`${milestone.code} is already in this plan.`);
@@ -337,12 +625,16 @@ function PlanCanvasBuilderInner({
       setFocusedPath(milestone.path as DevelopmentPath);
       setFocusRequest({ ids: [newNodeId], detail: true });
     },
-    [placedCodes, nodes, edges, setNodes, setEdges]
+    [isViewingReadOnly, placedCodes, nodes, edges, setNodes, setEdges, showWarning]
   );
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
+      if (isViewingReadOnly) {
+        showWarning("You are viewing a published version (read-only). Switch to Working Draft to add milestones.");
+        return;
+      }
       const rawData = event.dataTransfer.getData("application/reactflow");
       if (!rawData) return;
       try {
@@ -353,17 +645,18 @@ function PlanCanvasBuilderInner({
         console.error("Failed to parse dropped milestone:", err);
       }
     },
-    [libraryMilestones, addLibraryMilestone]
+    [isViewingReadOnly, libraryMilestones, availableMilestones, addLibraryMilestone, showWarning]
   );
 
   // Callbacks for node/edge actions
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
+      if (isViewingReadOnly) return;
       setNodes((nds) => nds.filter((n) => n.id !== nodeId));
       setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
       setHasUnsavedChanges(true);
     },
-    [setNodes, setEdges]
+    [isViewingReadOnly, setNodes, setEdges]
   );
 
   const handleDeleteEdge = useCallback(
@@ -564,7 +857,7 @@ function PlanCanvasBuilderInner({
       setSaveMessage(`Custom milestone "${form.code}" added to plan and shared library.`);
       setFocusedPath(form.path);
       setFocusRequest({ ids: [newNodeId], detail: true });
-      setTimeout(() => setSaveMessage(null), 3500);
+
     },
     [nodes, edges, nodeCountMap, setNodes, setEdges]
   );
@@ -657,7 +950,7 @@ function PlanCanvasBuilderInner({
         );
         if (res.success) {
           setSaveMessage(`Custom milestone "${updated.code}" updated successfully.`);
-          setTimeout(() => setSaveMessage(null), 3000);
+
         }
       } catch (err) {
         console.error("Failed to update milestone:", err);
@@ -686,7 +979,7 @@ function PlanCanvasBuilderInner({
         });
         if (res.success) {
           setSaveMessage(`Custom milestone "${milestone.code}" deleted from library.`);
-          setTimeout(() => setSaveMessage(null), 3000);
+
         }
       } catch (err) {
         console.error("Failed to delete milestone:", err);
@@ -705,25 +998,59 @@ function PlanCanvasBuilderInner({
           data: {
             ...node.data,
             childCount: nodeCountMap[pathKey] || 0,
-            onAddMilestone: (targetPath: DevelopmentPath) => {
-              setAddingToPath(targetPath);
-            },
+            onAddMilestone: !isViewingReadOnly
+              ? (targetPath: DevelopmentPath) => {
+                  setAddingToPath(targetPath);
+                }
+              : undefined,
           },
         };
       }
       if (node.type === "milestone") {
+        const code = node.data.code as string;
+        let versionTag: "new" | "live" | null = null;
+        let versionTooltip: string | undefined = undefined;
+
+        if (isViewingReadOnly) {
+          versionTag = "live";
+          versionTooltip = `Live Version ${effectiveVersionNumber} milestone (locked)`;
+        } else if (publishedVersion) {
+          if (!publishedNodeCodes.has(code)) {
+            versionTag = "new";
+            versionTooltip = `Newly added in Draft v${currentVersion.versionNumber} · Not yet in Live v${publishedVersion.versionNumber}`;
+          } else {
+            versionTag = "live";
+            versionTooltip = `Active in Live v${publishedVersion.versionNumber} · Retained in Draft v${currentVersion.versionNumber}`;
+          }
+        }
+
         return {
           ...node,
+          draggable: !isViewingReadOnly,
           data: {
             ...node.data,
-            onEdit: node.data.isCustom ? () => handleEditNode(node.id) : undefined,
-            onDelete: handleDeleteNode,
+            readOnly: isViewingReadOnly,
+            versionTag,
+            versionTooltip,
+            onEdit: !isViewingReadOnly && node.data.isCustom ? () => handleEditNode(node.id) : undefined,
+            onDelete: !isViewingReadOnly ? handleDeleteNode : undefined,
           },
         };
       }
       return node;
     });
-  }, [nodes, nodeCountMap, handleDeleteNode, handleEditNode, setAddingToPath]);
+  }, [
+    nodes,
+    nodeCountMap,
+    isViewingReadOnly,
+    effectiveVersionNumber,
+    publishedVersion,
+    publishedNodeCodes,
+    currentVersion.versionNumber,
+    handleDeleteNode,
+    handleEditNode,
+    setAddingToPath,
+  ]);
 
   // Inject delete callback into edges
   const augmentedEdges = useMemo(() => {
@@ -748,6 +1075,11 @@ function PlanCanvasBuilderInner({
 
   // Save current canvas state as a draft version
   const onSaveDraft = async () => {
+    if (isSaving || isPublishing) return;
+    if (isViewingReadOnly) {
+      showWarning("Cannot save edits on a published version snapshot. Switch to Working Draft to edit.");
+      return;
+    }
     setIsSaving(true);
     setSaveMessage(null);
 
@@ -772,22 +1104,26 @@ function PlanCanvasBuilderInner({
       edgeType: "PARENT_CHILD" as const,
     }));
 
-    const res = await savePlanVersionAction({
-      planId: plan.id,
-      publishedById: "",
-      status: "DRAFT",
-      changelog: `Saved canvas draft for version ${currentVersion.versionNumber}`,
-      nodes: persistentNodes,
-      edges: persistentEdges,
-    });
+    try {
+      const res = await savePlanVersionAction({
+        planId: plan.id,
+        publishedById: "",
+        status: "DRAFT",
+        changelog: `Saved canvas draft for version ${currentVersion.versionNumber}`,
+        nodes: persistentNodes,
+        edges: persistentEdges,
+      });
 
-    setIsSaving(false);
-    if (res.success) {
-      setHasUnsavedChanges(false);
-      setSaveMessage("Draft saved successfully!");
-      setTimeout(() => setSaveMessage(null), 3000);
-    } else {
-      setSaveMessage(res.error || "Failed to save draft.");
+      if (res.success) {
+        setHasUnsavedChanges(false);
+        setSaveMessage("Draft saved.");
+      } else {
+        showWarning(res.error || "Failed to save draft.");
+      }
+    } catch {
+      showWarning("Could not save the draft. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -855,7 +1191,7 @@ function PlanCanvasBuilderInner({
         : "";
 
       setSaveMessage(`Version ${currentVersion.versionNumber} published!${syncInfo}`);
-      setTimeout(() => setSaveMessage(null), 4500);
+
     } else {
       showWarning(res.error || "Failed to publish plan version.");
     }
@@ -863,74 +1199,110 @@ function PlanCanvasBuilderInner({
 
   return (
     <div className="relative flex h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-lg border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
+      <CanvasNotification notice={notice} onDismiss={dismissNotice} />
       {/* Canvas Top Bar */}
-      <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 bg-white border-b border-beat-border z-10 shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="z-10 grid shrink-0 grid-cols-1 items-center gap-4 border-b border-beat-border bg-white px-4 py-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/trainer/plans"
             aria-label="Back to training plans"
-            className="flex items-center justify-center h-9 w-9 rounded-xl border border-beat-border hover:bg-beat-canvas text-beat-maroon transition-colors"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-beat-border text-beat-maroon transition-colors hover:bg-beat-canvas"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold text-beat-maroon leading-tight">
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <h2 title={plan.title} className="min-w-0 truncate text-base font-semibold leading-tight text-beat-maroon">
                 {plan.title}
               </h2>
-                <span className="text-xs capitalize text-beat-maroon/60">
-                  {plan.roleIdentifier.replace(/_/g, " ").toLowerCase()}
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsHistoryModalOpen(true)}
-                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon"
-                title="View Version History"
-              >
-                <History className="h-3 w-3 text-beat-maroon" />
-                <span>v{currentVersion.versionNumber}</span>
-                <span>·</span>
-                <span
-                  className={
-                    currentVersion.status === "PUBLISHED"
-                      ? "text-beat-maroon font-semibold"
-                      : "text-beat-maroon font-semibold"
-                  }
-                >
-                  {currentVersion.status}
-                </span>
-              </button>
-              {hasUnsavedChanges && (
-                <span className="flex items-center gap-1.5 text-xs text-beat-maroon/60">
-                  <span className="h-1.5 w-1.5 rounded-full bg-beat-gold/10" />
-                  Unsaved edits
-                </span>
-              )}
             </div>
-            <p className="text-[11px] text-beat-muted">
-              Add milestones from the library. Drag cards to adjust their position.
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+              <span className="max-w-40 truncate text-xs capitalize text-beat-maroon/60">
+                {plan.roleIdentifier.replace(/_/g, " ").toLowerCase()}
+              </span>
+
+              {/* Published and working-draft versions */}
+              <div role="group" className="inline-flex shrink-0 items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan version">
+                {publishedVersion && (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchVersion(publishedVersion.versionNumber)}
+                    onMouseEnter={() => handleStartPeek(publishedVersion.versionNumber)}
+                    onMouseLeave={handleEndPeek}
+                    className="beat-segment"
+                    aria-pressed={effectiveVersionNumber === publishedVersion.versionNumber}
+                    title={`Published v${publishedVersion.versionNumber}: hover to preview, click to open`}
+                  >
+                    <span>Published v{publishedVersion.versionNumber}</span>
+                    {activeTraineeCount > 0 && (
+                      <span className="text-[10px] opacity-80">({activeTraineeCount})</span>
+                    )}
+                  </button>
+                )}
+
+                {draftVersion ? (
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchVersion(draftVersion.versionNumber)}
+                    className="beat-segment"
+                    aria-pressed={effectiveVersionNumber === draftVersion.versionNumber}
+                    title={`Edit draft v${draftVersion.versionNumber}`}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                    <span>Draft v{draftVersion.versionNumber}</span>
+
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleCreateNewDraft}
+                    disabled={isCreatingDraft}
+                    className="beat-segment"
+                    title={`Create working Draft v${nextDraftVersionNumber}`}
+                  >
+                    {isCreatingDraft ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-beat-maroon/60" />
+                    ) : (
+                      <Plus className="h-3 w-3 text-beat-maroon/60" />
+                    )}
+                    <span>New draft</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  className="rounded-md px-1.5 py-1 text-beat-maroon/60 hover:text-beat-maroon hover:bg-white transition-colors cursor-pointer"
+                  title="Version history"
+                  aria-label="Version history"
+                >
+                  <History className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              <span role="status" aria-atomic="true" className="inline-flex h-5 w-24 shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-beat-maroon/60">
+                {hasUnsavedChanges && <><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-beat-gold" />Unsaved edits</>}
+              </span>
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-beat-maroon/60">
+              {isViewingReadOnly
+                ? `Published v${effectiveVersionNumber}. Create or open a draft to make changes.`
+                : "Add milestones and save your draft. Publish when it is ready for trainees."}
             </p>
           </div>
         </div>
 
         {/* Toolbar Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {saveMessage && (
-            <span className="text-xs font-semibold text-beat-maroon bg-beat-gold/10 px-3 py-1 rounded-xl border border-beat-gold/30 animate-in fade-in">
-              {saveMessage}
-            </span>
-          )}
 
           {/* View Mode Toggle (Canvas vs Outline) */}
-          <div className="flex items-center rounded-xl border border-beat-border bg-beat-canvas p-0.5">
+          <div role="group" className="inline-flex items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan view">
             <button
               type="button"
               onClick={openCanvas}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                viewMode === "canvas"
-                  ? "bg-beat-maroon text-white shadow-xs"
-                  : "text-beat-maroon hover:text-beat-gold"
-              }`}
+              className="beat-segment"
+              aria-pressed={viewMode === "canvas"}
+              aria-label="Canvas view"
               title="Interactive Canvas View"
             >
               <Network className="h-3.5 w-3.5" />
@@ -939,11 +1311,9 @@ function PlanCanvasBuilderInner({
             <button
               type="button"
               onClick={() => setViewMode("tree")}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                viewMode === "tree"
-                  ? "bg-beat-maroon text-white shadow-xs"
-                  : "text-beat-maroon hover:text-beat-gold"
-              }`}
+              className="beat-segment"
+              aria-pressed={viewMode === "tree"}
+              aria-label="Outline view"
               title="Structured Outline View"
             >
               <ListTree className="h-3.5 w-3.5" />
@@ -951,38 +1321,94 @@ function PlanCanvasBuilderInner({
             </button>
           </div>
 
-          {viewMode === "canvas" && (
-            <button
-              type="button"
-              onClick={onLayout}
-              className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-gold/20 transition-colors shadow-2xs cursor-pointer"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span>Arrange</span>
-            </button>
+          <button
+            type="button"
+            onClick={onLayout}
+            disabled={viewMode !== "canvas" || isSaving || isPublishing || isViewingReadOnly}
+            title={
+              isViewingReadOnly
+                ? "Layout cannot be changed on published version"
+                : viewMode === "tree"
+                ? "Arrange is available in Canvas view"
+                : "Arrange the canvas"
+            }
+            className="beat-control"
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span>Arrange</span>
+          </button>
+
+          {isViewingReadOnly ? (
+            draftVersion ? (
+              <button
+                type="button"
+                onClick={() => handleSwitchVersion(draftVersion.versionNumber)}
+                className="beat-primary"
+              >
+                <Edit2 className="h-3.5 w-3.5" />
+                <span>Edit draft v{draftVersion.versionNumber}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCreateNewDraft}
+                disabled={isCreatingDraft}
+                className="beat-primary"
+              >
+                {isCreatingDraft ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-beat-gold" />
+                ) : (
+                  <Plus className="h-3.5 w-3.5 text-beat-gold" />
+                )}
+                <span>{isCreatingDraft ? "Creating…" : `Create draft v${nextDraftVersionNumber}`}</span>
+              </button>
+            )
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onSaveDraft}
+                disabled={isSaving || isPublishing}
+                aria-busy={isSaving}
+                className="beat-control min-w-[118px]"
+              >
+                {isSaving ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-beat-gold" /> : <Save aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />}
+                <span>{isSaving ? "Saving…" : "Save draft"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(true)}
+                disabled={isSaving || isPublishing}
+                className="beat-primary"
+              >
+                <Send className="h-3.5 w-3.5 text-beat-gold" />
+                <span>Publish</span>
+              </button>
+            </>
           )}
-
-          <button
-            type="button"
-            onClick={onSaveDraft}
-            disabled={isSaving || isPublishing}
-            className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-white px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-canvas transition-all disabled:opacity-50 cursor-pointer shadow-2xs"
-          >
-            <Save className="h-3.5 w-3.5 text-beat-gold" />
-            <span>{isSaving ? "Saving..." : "Save Draft"}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsPublishModalOpen(true)}
-            disabled={isSaving || isPublishing}
-            className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-4 py-2 text-xs font-bold text-beat-gold shadow-sm hover:bg-beat-maroon-dark hover:text-white transition-all disabled:opacity-50 cursor-pointer border border-beat-gold/40"
-          >
-            <Send className="h-3.5 w-3.5 text-beat-gold" />
-            <span>Publish</span>
-          </button>
         </div>
       </header>
+
+      <aside aria-label="Version status" className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-beat-border bg-beat-canvas/60 px-4 py-2 text-xs text-beat-maroon/70 sm:px-6">
+        <div className="flex min-w-0 items-center gap-2">
+          {peekingVersionNumber !== null ? <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : isViewingReadOnly ? <Lock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : <Edit2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
+          <p className="leading-relaxed">
+            {peekingVersionNumber !== null
+              ? `Previewing published v${peekingVersionNumber}. Move away to return to your draft.`
+              : isViewingReadOnly
+              ? `Published v${effectiveVersionNumber} · Read only · ${activeTraineeCount} enrolled ${activeTraineeCount === 1 ? "trainee" : "trainees"}`
+              : publishedVersion
+              ? `Draft v${currentVersion.versionNumber} · ${retainedMilestonesCount} retained · ${newMilestonesCount} new milestones. Trainees remain on published v${publishedVersion.versionNumber}.`
+              : `Draft v${currentVersion.versionNumber} · Publish to make this plan available for assignment.`}
+          </p>
+        </div>
+        {peekingVersionNumber !== null ? (
+          <button type="button" onClick={() => handleSwitchVersion(peekingVersionNumber)} className="shrink-0 font-medium text-beat-maroon underline decoration-beat-gold/60 underline-offset-4">Open published version</button>
+        ) : (
+          <button type="button" onClick={() => setIsHistoryModalOpen(true)} className="shrink-0 font-medium text-beat-maroon underline decoration-beat-gold/60 underline-offset-4">Version history</button>
+        )}
+      </aside>
 
       <nav aria-label="Focus development path" className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
         <button type="button" aria-pressed={focusedPath === null} onClick={() => { openCanvas(); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
@@ -1006,13 +1432,6 @@ function PlanCanvasBuilderInner({
           onDragOver={onDragOver}
           onDrop={onDrop}
         >
-          {/* Warning Toast */}
-          {warningToast && (
-            <div role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border border-beat-gold/30 bg-white px-4 py-2.5 text-xs text-beat-maroon shadow-sm">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-beat-maroon" />
-              <span>{warningToast}</span>
-            </div>
-          )}
 
           <ReactFlow
             nodes={augmentedNodes}
@@ -1107,8 +1526,11 @@ function PlanCanvasBuilderInner({
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         planTitle={plan.title}
-        currentVersionNumber={currentVersion.versionNumber}
-        versions={versions}
+        currentVersionNumber={effectiveVersionNumber}
+        versions={allVersions}
+        onSelectVersion={handleSwitchVersion}
+        onCreateDraft={handleCreateNewDraft}
+        nextDraftVersionNumber={nextDraftVersionNumber}
       />
     </div>
   );

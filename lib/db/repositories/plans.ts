@@ -124,7 +124,6 @@ export async function listTrainingPlans(filters?: {
       },
       versions: {
         orderBy: { versionNumber: "desc" },
-        take: 1,
         include: {
           _count: {
             select: { nodes: true, assignments: true },
@@ -136,6 +135,13 @@ export async function listTrainingPlans(filters?: {
 
   return plans.map((p) => {
     const latest = p.versions[0];
+    const publishedVersion = p.versions.find((v) => v.status === "PUBLISHED");
+    const draftVersion = p.versions.find((v) => v.status === "DRAFT");
+    const hasDraft = Boolean(draftVersion);
+
+    // Sum active assignments across all versions of this plan so enrolled trainees don't disappear during drafting
+    const assignedTraineesCount = p.versions.reduce((sum, v) => sum + (v._count?.assignments || 0), 0);
+
     return {
       id: p.id,
       title: p.title,
@@ -149,8 +155,11 @@ export async function listTrainingPlans(filters?: {
       createdByName: p.createdBy.fullName,
       latestVersionNumber: latest?.versionNumber || 1,
       latestVersionStatus: latest?.status || "DRAFT",
+      hasDraft,
+      draftVersionNumber: draftVersion?.versionNumber || null,
+      publishedVersionNumber: publishedVersion?.versionNumber || null,
       nodeCount: latest?._count.nodes || 0,
-      assignedTraineesCount: latest?._count.assignments || 0,
+      assignedTraineesCount,
     };
   });
 }

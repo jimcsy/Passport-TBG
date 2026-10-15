@@ -50,10 +50,10 @@ export function CreatePlanModal() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 rounded-lg bg-beat-maroon px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer border border-beat-gold/30"
+        className="beat-primary"
       >
         <Plus className="h-4 w-4 text-beat-gold" />
-        <span>New Training Plan</span>
+        <span>New plan</span>
       </button>
 
       {isOpen && (

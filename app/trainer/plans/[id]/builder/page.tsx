@@ -28,6 +28,8 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
     edges: [],
   };
 
+  const publishedVersion = plan.versions.find((v) => v.status === "PUBLISHED");
+
   return (
     <div className="h-full">
       <PlanCanvasBuilder
@@ -63,6 +65,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
         }}
         libraryMilestones={libraryMilestones}
         activeTraineeCount={plan.activeAssignmentsCount || 0}
+        publishedVersionNumber={publishedVersion?.versionNumber ?? null}
         versions={plan.versions.map((v) => ({
           id: v.id,
           versionNumber: v.versionNumber,
@@ -71,6 +74,24 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
           publishedAt: v.publishedAt,
           publishedBy: v.publishedBy,
           _count: v._count,
+          nodes: v.nodes.map((n) => ({
+            id: n.id,
+            code: n.code,
+            title: n.title,
+            description: n.description,
+            path: n.path,
+            orderIndex: n.orderIndex,
+            posX: n.posX,
+            posY: n.posY,
+            isCustom: n.isCustom,
+            libraryMilestoneId: n.libraryMilestoneId,
+          })),
+          edges: v.edges.map((e) => ({
+            id: e.id,
+            sourceNodeId: e.sourceNodeId,
+            targetNodeId: e.targetNodeId,
+            edgeType: e.edgeType,
+          })),
         }))}
       />
     </div>

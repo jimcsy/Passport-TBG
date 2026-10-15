@@ -1,6 +1,7 @@
 "use client";
 
-import { X, History, Calendar, User, Users, CheckCircle2, Clock } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { X, Plus } from "lucide-react";
 
 export interface PlanVersionSummary {
   id: string;
@@ -14,6 +15,24 @@ export interface PlanVersionSummary {
   _count?: {
     assignments: number;
   };
+  nodes?: Array<{
+    id: string;
+    code: string;
+    title: string;
+    description: string;
+    path: string;
+    orderIndex: number;
+    posX: number;
+    posY: number;
+    isCustom: boolean;
+    libraryMilestoneId: string | null;
+  }>;
+  edges?: Array<{
+    id: string;
+    sourceNodeId: string;
+    targetNodeId: string;
+    edgeType: string;
+  }>;
 }
 
 interface PlanVersionHistoryModalProps {
@@ -22,6 +41,9 @@ interface PlanVersionHistoryModalProps {
   planTitle: string;
   currentVersionNumber: number;
   versions: PlanVersionSummary[];
+  onSelectVersion?: (versionNumber: number) => void;
+  onCreateDraft?: () => void;
+  nextDraftVersionNumber?: number;
 }
 
 export function PlanVersionHistoryModal({
@@ -30,127 +52,60 @@ export function PlanVersionHistoryModal({
   planTitle,
   currentVersionNumber,
   versions,
+  onSelectVersion,
+  onCreateDraft,
+  nextDraftVersionNumber,
 }: PlanVersionHistoryModalProps) {
-  if (!isOpen) return null;
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (isOpen && !element.open) element.showModal();
+    if (!isOpen && element.open) element.close();
+    return () => element.close();
+  }, [isOpen]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[85vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-beat-border shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
-              <History className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-beat-maroon">Version History</h3>
-              <p className="text-xs text-beat-muted truncate max-w-xs">{planTitle}</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Versions Timeline List */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-3">
-          {versions.length === 0 ? (
-            <div className="py-8 text-center text-xs text-beat-muted">
-              No version history records found.
-            </div>
-          ) : (
-            versions.map((ver) => {
-              const isCurrent = ver.versionNumber === currentVersionNumber;
-              const isPublished = ver.status === "PUBLISHED";
-              const isDraft = ver.status === "DRAFT";
-
-              return (
-                <div
-                  key={ver.id}
-                  className={`relative rounded-lg border p-4 transition-all ${
-                    isCurrent
-                      ? "border-beat-gold bg-beat-gold/5 shadow-xs"
-                      : "border-beat-border bg-beat-canvas/30"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-beat-maroon text-beat-gold">
-                        v{ver.versionNumber}
-                      </span>
-
-                      {isCurrent && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-gold text-beat-maroon">
-                          Viewing Current
-                        </span>
-                      )}
-                    </div>
-
-                    <span
-                      className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                        isPublished
-                          ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
-                          : isDraft
-                          ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
-                          : "bg-slate-100 text-slate-700 border-slate-300"
-                      }`}
-                    >
-                      {ver.status}
-                    </span>
+    <dialog ref={dialog} aria-labelledby="plan-version-history-title"
+      onCancel={event => { event.preventDefault(); onClose(); }}
+      onClick={event => { if (event.target === event.currentTarget) onClose(); }}
+      className="w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-xl border border-beat-border bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-beat-maroon/40 backdrop:backdrop-blur-sm">
+      <div className="flex max-h-[85dvh] flex-col">
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-beat-border px-6 py-5">
+          <div className="min-w-0"><h2 id="plan-version-history-title" className="text-base font-semibold">Version history</h2><p className="mt-1 truncate text-xs text-beat-maroon/60">{planTitle}</p></div>
+          <button type="button" onClick={onClose} aria-label="Close version history" className="-mr-2 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-beat-maroon/60 hover:bg-beat-canvas"><X aria-hidden="true" className="h-4 w-4" /></button>
+        </header>
+        <p className="shrink-0 border-b border-beat-border bg-beat-canvas/50 px-6 py-3 text-xs leading-relaxed text-beat-maroon/60">Draft changes stay separate from published training. Choose a version to inspect its milestones.</p>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {versions.length === 0 ? <p className="px-6 py-10 text-center text-sm text-beat-maroon/60">No versions yet.</p> : (
+            <ol className="divide-y divide-beat-border">
+              {versions.map(ver => {
+                const isCurrent = ver.versionNumber === currentVersionNumber;
+                const isPublished = ver.status === "PUBLISHED";
+                const isDraft = ver.status === "DRAFT";
+                const status = isPublished ? "Published" : isDraft ? "Draft" : ver.status.charAt(0) + ver.status.slice(1).toLowerCase();
+                return <li key={ver.id} className={`border-l-2 px-6 py-4 ${isCurrent ? "border-l-beat-gold bg-beat-canvas/60" : "border-l-transparent"}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2"><span className="text-sm font-semibold">Version {ver.versionNumber}</span><span className="rounded border border-beat-border bg-white px-2 py-0.5 text-[11px] text-beat-maroon/70">{status}</span></div>
+                    {isCurrent && <span className="text-xs text-beat-maroon/60">Viewing</span>}
                   </div>
-
-                  <p className="text-xs text-beat-maroon font-medium leading-relaxed">
-                    {ver.changelog || `Version ${ver.versionNumber} release snapshot.`}
-                  </p>
-
-                  <div className="mt-3 pt-2.5 border-t border-beat-border flex flex-wrap items-center justify-between gap-2 text-[10px] text-beat-muted">
-                    <div className="flex items-center gap-1.5">
-                      <User className="h-3 w-3 text-beat-maroon/60" />
-                      <span>{ver.publishedBy?.fullName || "Trainer Admin"}</span>
-                    </div>
-
-                    {ver._count && (
-                      <div className="flex items-center gap-1.5">
-                        <Users className="h-3 w-3 text-beat-maroon/60" />
-                        <span>{ver._count.assignments} trainees</span>
-                      </div>
-                    )}
-
-                    {ver.publishedAt && (
-                      <div className="flex items-center gap-1.5 font-mono">
-                        <Clock className="h-3 w-3 text-beat-maroon/60" />
-                        <span>{new Date(ver.publishedAt).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                  <p className="mt-2 text-xs leading-relaxed text-beat-maroon/70">{ver.changelog || "No change notes."}</p>
+                  <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-beat-maroon/60">
+                    <span>{ver.publishedBy?.fullName || "Author not recorded"}</span>
+                    <span>{isDraft ? "Not assigned to trainees" : `${ver._count?.assignments ?? 0} ${isPublished ? "active" : "historical"} trainees`}</span>
+                    {ver.publishedAt && <time dateTime={new Date(ver.publishedAt).toISOString()}>{new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" }).format(new Date(ver.publishedAt))}</time>}
                   </div>
-                </div>
-              );
-            })
+                  {onSelectVersion && !isCurrent && <button type="button" onClick={() => { onSelectVersion(ver.versionNumber); onClose(); }} className="beat-control mt-3">Open version {ver.versionNumber}</button>}
+                </li>;
+              })}
+            </ol>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="pt-3 border-t border-beat-border flex justify-end shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-xl border border-beat-border px-4 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-canvas transition-colors cursor-pointer"
-          >
-            Close
-          </button>
-        </div>
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-beat-border px-6 py-4">
+          {onCreateDraft ? <button type="button" onClick={() => { onCreateDraft(); onClose(); }} className="beat-primary"><Plus aria-hidden="true" className="h-3.5 w-3.5" />New draft{nextDraftVersionNumber ? ` v${nextDraftVersionNumber}` : ""}</button> : <span />}
+          <button type="button" onClick={onClose} className="beat-control">Close</button>
+        </footer>
       </div>
-    </div>
+    </dialog>
   );
 }

@@ -41,6 +41,18 @@ body {
   }
 }
 
+@layer components {
+  .beat-control {
+    @apply inline-flex min-h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-beat-border bg-white px-3 text-xs font-medium text-beat-maroon transition-colors hover:bg-beat-canvas disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .beat-primary {
+    @apply inline-flex min-h-9 items-center justify-center gap-2 whitespace-nowrap rounded-md border border-beat-maroon bg-beat-maroon px-3 text-xs font-medium text-white transition-colors hover:bg-beat-maroon/90 disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .beat-segment {
+    @apply inline-flex min-h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-transparent px-2.5 text-xs font-medium text-beat-maroon/60 transition-colors hover:text-beat-maroon aria-pressed:border-beat-border aria-pressed:bg-white aria-pressed:text-beat-maroon disabled:cursor-not-allowed disabled:opacity-40;
+  }
+}
+
 .passport-spread {
   perspective: 1800px;
   isolation: isolate;

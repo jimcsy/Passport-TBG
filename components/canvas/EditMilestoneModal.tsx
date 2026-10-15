@@ -119,21 +119,21 @@ export function EditMilestoneModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="edit-milestone-heading"
+        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-beat-border bg-white p-6 text-beat-maroon shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold shadow-xs">
-              <Edit3 className="h-5 w-5" />
-            </div>
             <div>
-              <h3 className="text-base font-bold text-beat-maroon">
-                Edit Custom Milestone
+              <h3 id="edit-milestone-heading" className="text-base font-semibold text-beat-maroon">
+                Edit milestone
               </h3>
               <p className="text-xs text-beat-muted">
-                Update competency details for {milestone.code}
+                {milestone.code}
               </p>
             </div>
           </div>
@@ -153,13 +153,13 @@ export function EditMilestoneModal({
           {/* Target Track */}
           <div>
             <label htmlFor="editMilestonePath" className="block text-xs font-bold text-beat-maroon mb-1">
-              Development Path <span className="text-beat-maroon">*</span>
+              Development path <span className="text-beat-maroon">*</span>
             </label>
             <select
               id="editMilestonePath"
               value={path}
               onChange={(e) => setPath(e.target.value as DevelopmentPath)}
-              className="w-full rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-medium text-beat-maroon focus:border-beat-gold focus:outline-hidden cursor-pointer"
+              className="w-full rounded-md border border-beat-border bg-white px-3.5 py-2.5 text-xs font-medium text-beat-maroon focus:border-beat-gold focus:outline-hidden cursor-pointer"
             >
               {PATH_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -173,7 +173,7 @@ export function EditMilestoneModal({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label htmlFor="editMilestoneCode" className="block text-xs font-bold text-beat-maroon">
-                Competency Code <span className="text-beat-maroon">*</span>
+                Milestone code <span className="text-beat-maroon">*</span>
               </label>
               <span className="text-[10px] text-beat-muted">Uppercase identifier</span>
             </div>
@@ -198,7 +198,7 @@ export function EditMilestoneModal({
           {/* Milestone Title */}
           <div>
             <label htmlFor="editMilestoneTitle" className="block text-xs font-bold text-beat-maroon mb-1">
-              Competency Title <span className="text-beat-maroon">*</span>
+              Milestone title <span className="text-beat-maroon">*</span>
             </label>
             <input
               id="editMilestoneTitle"
@@ -221,7 +221,7 @@ export function EditMilestoneModal({
           {/* Description */}
           <div>
             <label htmlFor="editMilestoneDesc" className="block text-xs font-bold text-beat-maroon mb-1">
-              Description & Learning Criteria <span className="text-beat-maroon">*</span>
+              Description and criteria <span className="text-beat-maroon">*</span>
             </label>
             <textarea
               id="editMilestoneDesc"
@@ -255,7 +255,7 @@ export function EditMilestoneModal({
               className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon/90 transition-all cursor-pointer"
             >
               <Check className="h-3.5 w-3.5 text-beat-gold" />
-              <span>Save Changes</span>
+              <span>Save changes</span>
             </button>
           </div>
         </form>

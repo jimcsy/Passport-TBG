@@ -330,7 +330,9 @@ export async function publishPlanCanvasAction(input: PublishPlanCanvasInput): Pr
     revalidatePath(`/trainer/plans/${input.planId}/builder`);
     revalidatePath("/trainer/trainees");
     revalidatePath("/trainer/queue");
-    revalidatePath("/trainee/dashboard");
+    if (input.syncTrainees) {
+      revalidatePath("/trainee/dashboard", "page");
+    }
 
     return { success: true, data: res };
   } catch (error) {
@@ -407,6 +409,110 @@ export async function changeTraineePlanAction(traineeId: string, newPlanVersionI
   } catch (error) {
     console.error("Error changing trainee plan:", error);
     return { success: false, error: "Failed to change trainee plan." };
+  }
+}
+
+/**
+ * Creates a new working draft version cloned from the latest published version (or base template).
+ */
+export async function createDraftVersionAction(planId: string): Promise<PlanActionResult> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session" };
+
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+
+    const plan = await prisma.trainingPlan.findUnique({
+      where: { id: planId },
+      include: {
+        versions: {
+          orderBy: { versionNumber: "desc" },
+          include: {
+            nodes: true,
+            edges: true,
+          },
+        },
+      },
+    });
+
+    if (!plan) return { success: false, error: "Plan not found" };
+
+    // Check if an existing draft already exists
+    const existingDraft = plan.versions.find((v) => v.status === "DRAFT");
+    if (existingDraft) {
+      return { success: true, data: existingDraft };
+    }
+
+    const latest = plan.versions[0];
+    const newVersionNumber = (latest?.versionNumber || 0) + 1;
+
+    const newDraft = await prisma.$transaction(async (tx) => {
+      const createdVersion = await tx.planVersion.create({
+        data: {
+          planId,
+          versionNumber: newVersionNumber,
+          status: "DRAFT",
+          changelog: `Draft version ${newVersionNumber} cloned from v${latest?.versionNumber || 1}`,
+          publishedById: admin.id,
+        },
+      });
+
+      // Clone nodes from latest version if any exist
+      if (latest && latest.nodes.length > 0) {
+        const nodeIdMap = new Map<string, string>();
+
+        for (const node of latest.nodes) {
+          const createdNode = await tx.planNode.create({
+            data: {
+              planVersionId: createdVersion.id,
+              code: node.code,
+              title: node.title,
+              description: node.description,
+              path: node.path,
+              orderIndex: node.orderIndex,
+              posX: node.posX,
+              posY: node.posY,
+              isCustom: node.isCustom,
+              libraryMilestoneId: node.libraryMilestoneId,
+            },
+          });
+          nodeIdMap.set(node.id, createdNode.id);
+        }
+
+        for (const edge of latest.edges) {
+          const newSourceId = nodeIdMap.get(edge.sourceNodeId);
+          const newTargetId = nodeIdMap.get(edge.targetNodeId);
+
+          if (newSourceId && newTargetId) {
+            await tx.planEdge.create({
+              data: {
+                planVersionId: createdVersion.id,
+                sourceNodeId: newSourceId,
+                targetNodeId: newTargetId,
+                edgeType: edge.edgeType,
+              },
+            });
+          }
+        }
+      }
+
+      return tx.planVersion.findUnique({
+        where: { id: createdVersion.id },
+        include: {
+          nodes: true,
+          edges: true,
+          publishedBy: { select: { fullName: true } },
+          _count: { select: { assignments: true } },
+        },
+      });
+    });
+
+    revalidatePath(`/trainer/plans/${planId}/builder`);
+    revalidatePath("/trainer/plans");
+    return { success: true, data: newDraft };
+  } catch (error) {
+    console.error("Error creating draft version:", error);
+    return { success: false, error: "Failed to create draft version." };
   }
 }
 

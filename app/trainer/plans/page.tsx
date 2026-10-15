@@ -1,15 +1,7 @@
 import Link from "next/link";
 import { listTrainingPlans } from "@/lib/db/repositories/plans";
 import { CreatePlanModal } from "@/components/admin/CreatePlanModal";
-import {
-  GitBranch,
-  Layers,
-  Users,
-  CheckCircle2,
-  Calendar,
-  ArrowRight,
-  ShieldAlert,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -18,124 +10,32 @@ export default async function TrainingPlansPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-beat-maroon tracking-tight">
-              Training Plans
-            </h1>
-            <span className="passport-stamp px-2.5 py-0.5 text-[9px] border-beat-gold text-beat-gold">
-              Dynamic Builder
-            </span>
-          </div>
-          <p className="text-xs text-beat-muted mt-1">
-            Manage custom role-tailored development paths and published version snapshots.
-          </p>
-        </div>
-
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-beat-border pb-5">
+        <div><h1 className="text-2xl font-semibold tracking-tight text-beat-maroon">Training plans</h1><p className="mt-2 text-sm text-beat-maroon/60">Build role-based plans and manage their draft and published versions.</p></div>
         <CreatePlanModal />
-      </div>
-
-      {/* Plan Cards Grid */}
+      </header>
       {plans.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-beat-gold/40 bg-white p-12 text-center text-beat-maroon">
-          <GitBranch className="mx-auto h-12 w-12 text-beat-gold mb-3" />
-          <h3 className="text-lg font-bold">No Training Plans Configured</h3>
-          <p className="text-xs text-beat-muted mt-1 max-w-sm mx-auto">
-            Create your first role-tailored training plan using the button above or run the database seed.
-          </p>
-        </div>
+        <div className="rounded-lg border border-beat-border bg-white px-6 py-12 text-center"><h2 className="text-base font-semibold text-beat-maroon">No training plans yet</h2><p className="mt-2 text-sm text-beat-maroon/60">Create a plan to start adding milestones.</p></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className="flex flex-col justify-between rounded-xl border border-beat-gold/30 bg-white p-5 shadow-sm hover:shadow-sm transition-shadow text-beat-maroon relative group"
-            >
-              <div>
-                {/* Header row with badges */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-beat-maroon/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-beat-maroon border border-beat-maroon/20">
-                    {plan.roleIdentifier}
-                  </span>
-
-                  <div className="flex items-center gap-1.5">
-                    {plan.isDefault && (
-                      <span className="rounded-full bg-beat-gold/20 px-2 py-0.5 text-[10px] font-bold text-beat-maroon border border-beat-gold/40">
-                        Default
-                      </span>
-                    )}
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                        plan.status === "PUBLISHED"
-                          ? "bg-beat-gold/10 text-beat-maroon border border-beat-gold/30"
-                          : "bg-beat-gold/10 text-beat-maroon border border-beat-gold/30"
-                      }`}
-                    >
-                      {plan.status}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Plan Title & Brand */}
-                <h3 className="font-bold text-base text-beat-maroon line-clamp-1">
-                  {plan.title}
-                </h3>
-                <p className="text-xs text-beat-gold font-semibold mt-0.5">
-                  {plan.restaurantBrand || "All Bistro Group Brands"}
-                </p>
-
-                {plan.description && (
-                  <p className="text-xs text-beat-muted line-clamp-2 mt-2 leading-relaxed">
-                    {plan.description}
-                  </p>
-                )}
-
-                {/* Metrics Breakdown */}
-                <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-beat-border/60 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-beat-gold" />
-                    <div>
-                      <p className="text-[10px] text-beat-muted uppercase tracking-wider font-semibold">
-                        Version & Nodes
-                      </p>
-                      <p className="font-bold text-beat-maroon">
-                        v{plan.latestVersionNumber} · {plan.nodeCount} milestones
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-beat-maroon" />
-                    <div>
-                      <p className="text-[10px] text-beat-muted uppercase tracking-wider font-semibold">
-                        Active Enrolled
-                      </p>
-                      <p className="font-bold text-beat-maroon">
-                        {plan.assignedTraineesCount} trainees
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="mt-5 pt-3 border-t border-beat-border flex items-center justify-between">
-                <span className="text-[10px] text-beat-muted font-medium">
-                  Author: {plan.createdByName}
-                </span>
-
-                <Link
-                  href={`/trainer/plans/${plan.id}/builder`}
-                  className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-3.5 py-1.5 text-xs font-bold text-white hover:bg-beat-maroon-dark transition-colors shadow-xs"
-                >
-                  <span>Open Canvas</span>
-                  <ArrowRight className="h-3.5 w-3.5 text-beat-gold" />
-                </Link>
-              </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {plans.map(plan => <article key={plan.id} className="flex min-w-0 flex-col rounded-lg border border-beat-border bg-white p-5 text-beat-maroon">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-beat-maroon/60">
+              <span className="capitalize">{plan.roleIdentifier.replace(/_/g, " ").toLowerCase()}</span>
+              {plan.isDefault && <span className="rounded border border-beat-border px-2 py-0.5 text-[11px]">Default</span>}
             </div>
-          ))}
+            <h2 className="mt-4 line-clamp-2 text-base font-semibold">{plan.title}</h2>
+            <p className="mt-1 text-xs text-beat-maroon/60">{plan.restaurantBrand || "All brands"}</p>
+            {plan.description && <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-beat-maroon/70">{plan.description}</p>}
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] text-beat-maroon/70">
+              {plan.publishedVersionNumber ? <span className="rounded border border-beat-border bg-beat-canvas px-2 py-1">Published v{plan.publishedVersionNumber}</span> : !plan.hasDraft ? <span className="rounded border border-beat-border px-2 py-1">v{plan.latestVersionNumber} · {plan.status.charAt(0) + plan.status.slice(1).toLowerCase()}</span> : null}
+              {plan.hasDraft && <span className="rounded border border-beat-gold/30 bg-beat-gold/5 px-2 py-1">Draft v{plan.draftVersionNumber}</span>}
+            </div>
+            <dl className="mt-auto grid grid-cols-2 gap-4 border-b border-beat-border py-5 text-xs">
+              <div><dt className="text-beat-maroon/60">Milestones</dt><dd className="mt-1 font-medium">{plan.nodeCount}</dd></div>
+              <div><dt className="text-beat-maroon/60">Enrolled trainees</dt><dd className="mt-1 font-medium">{plan.assignedTraineesCount}</dd></div>
+            </dl>
+            <footer className="mt-4 flex items-center justify-between gap-3"><span className="min-w-0 truncate text-[11px] text-beat-maroon/60" title={plan.createdByName}>{plan.createdByName}</span><Link href={`/trainer/plans/${plan.id}/builder`} className="beat-control shrink-0" aria-label={`Open ${plan.title}`}>Open plan<ArrowRight aria-hidden="true" className="h-3.5 w-3.5" /></Link></footer>
+          </article>)}
         </div>
       )}
     </div>

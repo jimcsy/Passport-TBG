@@ -128,6 +128,11 @@ See [UI-DESIGN.md](./UI-DESIGN.md) for shared surface, typography, control,
 and copy conventions and the design references behind the interface refinement.
 
 The training plan builder docks the milestone library beside the canvas on
+desktop. Its toolbar keeps Arrange visible but disabled in Outline view. Save,
+publish, and milestone feedback appears in a dismissible top-right notification
+outside the toolbar, so messages do not shift controls. Success messages dismiss
+automatically; errors remain visible until dismissed.
+The library sits beside the canvas on
 desktop and stacks it below the viewport on smaller screens. The library starts
 expanded whenever a plan opens. Closing
 it with × leaves a compact panel icon at the canvas edge to reopen it, rather
