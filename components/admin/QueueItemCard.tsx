@@ -9,7 +9,6 @@ import {
   MapPin,
   Loader2,
   MessageSquare,
-  Sparkles,
   Award,
 } from "lucide-react";
 import { verifyMilestone } from "@/lib/actions/progress";
@@ -53,16 +52,16 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
 
   if (isVerified) {
     return (
-      <div className="rounded-3xl bg-emerald-50/60 p-6 border border-emerald-200 flex items-center justify-between gap-4 animate-in fade-out duration-700">
+      <div className="rounded-xl bg-beat-gold/10 p-6 border border-beat-gold/30 flex items-center justify-between gap-4 animate-in fade-out duration-700">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-beat-gold/10 text-beat-maroon">
             <CheckCircle2 className="h-6 w-6" />
           </div>
           <div>
-            <h4 className="text-sm font-bold text-emerald-900">
+            <h4 className="text-sm font-bold text-beat-maroon">
               Stamped & Verified!
             </h4>
-            <p className="text-xs text-emerald-700">
+            <p className="text-xs text-beat-maroon">
               {item.trainee.fullName} • {item.milestone.code}
             </p>
           </div>
@@ -75,14 +74,14 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
   }
 
   return (
-    <div className="rounded-3xl bg-beat-card p-6 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all">
+    <div className="rounded-xl bg-beat-card p-6 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all">
       {/* Top Header: Trainee Identity & Submission Time */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-beat-border">
         <div className="flex items-center gap-2.5">
-          <span className="font-mono text-xs font-black text-beat-gold bg-beat-maroon/5 px-2.5 py-0.5 rounded-md border border-beat-border">
+          <span className="font-mono text-xs font-semibold text-beat-gold bg-beat-maroon/5 px-2.5 py-0.5 rounded-md border border-beat-border">
             {item.trainee.traineeCode}
           </span>
-          <h3 className="text-base font-extrabold text-beat-maroon">
+          <h3 className="text-base font-semibold text-beat-maroon">
             {item.trainee.fullName}
           </h3>
           <span className="hidden sm:inline-block text-xs text-beat-muted">•</span>
@@ -97,7 +96,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-beat-muted">
-          <Clock className="h-3.5 w-3.5 text-amber-600" />
+          <Clock className="h-3.5 w-3.5 text-beat-maroon" />
           <span>Submitted {formattedDate}</span>
         </div>
       </div>
@@ -105,7 +104,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
       {/* Middle: Milestone Details */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-beat-gold/10 text-beat-maroon border border-beat-gold/30">
             {item.milestone.code}
           </span>
           <span className="text-xs font-bold text-beat-gold uppercase tracking-wider">
@@ -113,7 +112,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
           </span>
         </div>
 
-        <h4 className="text-sm font-extrabold text-beat-maroon">
+        <h4 className="text-sm font-semibold text-beat-maroon">
           {item.milestone.title}
         </h4>
         <p className="text-xs text-beat-muted leading-relaxed">
@@ -122,12 +121,12 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
 
         {/* Trainee Reflection Note */}
         {item.traineeNote && (
-          <div className="mt-3 rounded-2xl bg-beat-canvas p-3.5 border border-beat-border text-xs">
+          <div className="mt-3 rounded-lg bg-beat-canvas p-3.5 border border-beat-border text-xs">
             <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-beat-maroon">
               <MessageSquare className="h-3 w-3 text-beat-gold" />
               <span>Trainee Reflection Note:</span>
             </div>
-            <p className="mt-1 text-[#2B1810] italic">
+            <p className="mt-1 text-beat-maroon italic">
               &ldquo;{item.traineeNote}&rdquo;
             </p>
           </div>
@@ -148,7 +147,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
               value={trainerNote}
               onChange={(e) => setTrainerNote(e.target.value)}
               placeholder="e.g. Excellent station preparation during the lunch rush."
-              className="w-full rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs text-[#2B1810] focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold"
+              className="w-full rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold"
             />
           </div>
         )}
@@ -168,7 +167,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
           type="button"
           onClick={handleVerify}
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-70 cursor-pointer group"
+          className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-70 cursor-pointer group"
         >
           {isPending ? (
             <>

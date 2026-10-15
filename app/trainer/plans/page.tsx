@@ -22,7 +22,7 @@ export default async function TrainingPlansPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-beat-maroon tracking-tight">
+            <h1 className="text-2xl font-semibold text-beat-maroon tracking-tight">
               Training Plans
             </h1>
             <span className="passport-stamp px-2.5 py-0.5 text-[9px] border-beat-gold text-beat-gold">
@@ -39,7 +39,7 @@ export default async function TrainingPlansPage() {
 
       {/* Plan Cards Grid */}
       {plans.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-beat-gold/40 bg-white p-12 text-center text-beat-maroon">
+        <div className="rounded-xl border border-dashed border-beat-gold/40 bg-white p-12 text-center text-beat-maroon">
           <GitBranch className="mx-auto h-12 w-12 text-beat-gold mb-3" />
           <h3 className="text-lg font-bold">No Training Plans Configured</h3>
           <p className="text-xs text-beat-muted mt-1 max-w-sm mx-auto">
@@ -51,7 +51,7 @@ export default async function TrainingPlansPage() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="flex flex-col justify-between rounded-3xl border border-beat-gold/30 bg-white p-5 shadow-sm hover:shadow-md transition-shadow text-beat-maroon relative group"
+              className="flex flex-col justify-between rounded-xl border border-beat-gold/30 bg-white p-5 shadow-sm hover:shadow-sm transition-shadow text-beat-maroon relative group"
             >
               <div>
                 {/* Header row with badges */}
@@ -69,8 +69,8 @@ export default async function TrainingPlansPage() {
                     <span
                       className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
                         plan.status === "PUBLISHED"
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-amber-100 text-amber-800 border border-amber-300"
+                          ? "bg-beat-gold/10 text-beat-maroon border border-beat-gold/30"
+                          : "bg-beat-gold/10 text-beat-maroon border border-beat-gold/30"
                       }`}
                     >
                       {plan.status}

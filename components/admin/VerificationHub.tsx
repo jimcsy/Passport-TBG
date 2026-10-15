@@ -8,7 +8,6 @@ import {
   Clock,
   Users,
   CheckCircle2,
-  Sparkles,
   ArrowRight,
   ShieldCheck,
 } from "lucide-react";
@@ -49,12 +48,9 @@ export function VerificationHub({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-beat-maroon tracking-tight">
-              Verifications & Stamping
+            <h1 className="text-2xl font-semibold text-beat-maroon tracking-tight">
+              Verifications
             </h1>
-            <span className="passport-stamp px-2.5 py-0.5 text-[9px] border-beat-gold text-beat-gold">
-              BEAT Stamping Hub
-            </span>
           </div>
           <p className="text-xs text-beat-muted mt-1">
             Review trainee milestone submissions and conduct cohort batch sign-offs in one place.
@@ -63,17 +59,17 @@ export function VerificationHub({
 
         {/* Quick Metrics Badges */}
         <div className="flex items-center gap-2 text-xs">
-          <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs">
-            <Clock className={`h-4 w-4 ${queueItems.length > 0 ? "text-amber-600" : "text-beat-muted"}`} />
-            <span className="font-extrabold text-beat-maroon">
+          <div className="flex items-center gap-2 rounded-lg bg-beat-card px-4 py-2 border border-beat-border shadow-xs">
+            <Clock className={`h-4 w-4 ${queueItems.length > 0 ? "text-beat-maroon" : "text-beat-muted"}`} />
+            <span className="font-semibold text-beat-maroon">
               {queueItems.length}
             </span>
             <span className="text-beat-muted">Pending Reviews</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs">
+          <div className="flex items-center gap-2 rounded-lg bg-beat-card px-4 py-2 border border-beat-border shadow-xs">
             <Users className="h-4 w-4 text-beat-gold" />
-            <span className="font-extrabold text-beat-maroon">
+            <span className="font-semibold text-beat-maroon">
               {batchData.trainees.length}
             </span>
             <span className="text-beat-muted">Eligible Trainees</span>
@@ -86,7 +82,7 @@ export function VerificationHub({
         <button
           type="button"
           onClick={() => handleTabChange("queue")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-t-2xl font-bold text-sm transition-all border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-5 py-3 rounded-t-lg font-bold text-sm transition-all border-b-2 -mb-px ${
             activeTab === "queue"
               ? "border-beat-maroon bg-white text-beat-maroon shadow-xs"
               : "border-transparent text-beat-muted hover:text-beat-maroon hover:bg-white/50"
@@ -95,9 +91,9 @@ export function VerificationHub({
           <Inbox className={`h-4 w-4 ${activeTab === "queue" ? "text-beat-maroon" : "text-beat-muted"}`} />
           <span>Review Queue</span>
           <span
-            className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-extrabold ${
+            className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-semibold ${
               queueItems.length > 0
-                ? "bg-amber-100 text-amber-800"
+                ? "bg-beat-gold/10 text-beat-maroon"
                 : "bg-beat-canvas text-beat-muted border border-beat-border"
             }`}
           >
@@ -108,7 +104,7 @@ export function VerificationHub({
         <button
           type="button"
           onClick={() => handleTabChange("batch")}
-          className={`flex items-center gap-2 px-5 py-3 rounded-t-2xl font-bold text-sm transition-all border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-5 py-3 rounded-t-lg font-bold text-sm transition-all border-b-2 -mb-px ${
             activeTab === "batch"
               ? "border-beat-maroon bg-white text-beat-maroon shadow-xs"
               : "border-transparent text-beat-muted hover:text-beat-maroon hover:bg-white/50"
@@ -116,7 +112,7 @@ export function VerificationHub({
         >
           <CheckSquare className={`h-4 w-4 ${activeTab === "batch" ? "text-beat-maroon" : "text-beat-muted"}`} />
           <span>Cohort Batch Sign-Off</span>
-          <span className="ml-1 text-[11px] px-2 py-0.5 rounded-full font-extrabold bg-beat-canvas text-beat-muted border border-beat-border">
+          <span className="ml-1 text-[11px] px-2 py-0.5 rounded-full font-semibold bg-beat-canvas text-beat-muted border border-beat-border">
             {batchData.trainees.length}
           </span>
         </button>
@@ -127,7 +123,7 @@ export function VerificationHub({
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <p className="text-xs text-beat-muted">
-              Actionable list of milestones flagged &ldquo;Ready for Review&rdquo; by trainees awaiting your official verification stamp.
+              Review milestones submitted by your trainees.
             </p>
             {queueItems.length > 0 && (
               <span className="text-xs font-semibold text-beat-maroon">
@@ -137,23 +133,20 @@ export function VerificationHub({
           </div>
 
           {queueItems.length === 0 ? (
-            <div className="rounded-3xl bg-beat-card p-12 text-center border border-beat-border shadow-sm space-y-4">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 ring-4 ring-emerald-100">
-                <CheckCircle2 className="h-8 w-8" />
-              </div>
+            <div className="rounded-xl bg-beat-card p-12 text-center border border-beat-border shadow-sm space-y-4">
               <div className="space-y-1">
-                <h3 className="text-lg font-extrabold text-beat-maroon">
-                  All caught up!
+                <h3 className="text-lg font-semibold text-beat-maroon">
+                  No pending reviews
                 </h3>
                 <p className="text-xs text-beat-muted max-w-sm mx-auto">
-                  No trainee milestones are pending review. New submissions will appear here automatically when self-reported.
+                  Submissions appear here when trainees request a review.
                 </p>
               </div>
               <div className="pt-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange("batch")}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon/90 transition-all"
+                  className="inline-flex items-center gap-2 rounded-lg bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon/90 transition-all"
                 >
                   <CheckSquare className="h-4 w-4 text-beat-gold" />
                   <span>Open Cohort Batch Sign-Off</span>
@@ -175,7 +168,7 @@ export function VerificationHub({
       {activeTab === "batch" && (
         <div className="space-y-4">
           <p className="text-xs text-beat-muted">
-            Conduct multi-trainee sign-offs and classroom session attendance logs across cohorts in an atomic batch transaction.
+            Select trainees and a milestone to approve a group in one step.
           </p>
           <BatchSignOffTool data={batchData} />
         </div>

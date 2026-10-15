@@ -124,8 +124,16 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
 4. All application code, server actions, and repositories remain 100% unchanged.
 # Trainee dashboard and digital booklet
 
+See [UI-DESIGN.md](./UI-DESIGN.md) for shared surface, typography, control,
+and copy conventions and the design references behind the interface refinement.
+
 The training plan builder docks the milestone library beside the canvas on
-desktop and stacks it below the viewport on smaller screens. Dropping a library
+desktop and stacks it below the viewport on smaller screens. The library starts
+expanded whenever a plan opens. Closing
+it with × leaves a compact panel icon at the canvas edge to reopen it, rather
+than a large toolbar button. Reopening the panel focuses search; closing it
+returns keyboard focus to the panel icon. Returning from Outline to Canvas
+also opens the library. Dropping a library
 card, or using its Add to plan button, connects the milestone to its matching
 development path and rebalances the vertical tree. The default canvas starts
 with a visual training-plan root and a vertical spine of five path hubs.

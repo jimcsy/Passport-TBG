@@ -30,9 +30,9 @@ export function PathTabs({ paths, activePathKey: controlledPath }: PathTabsProps
               key={p.path}
               type="button"
               onClick={() => setActivePathKey(p.path)}
-              className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold transition-all border cursor-pointer ${
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition-all border cursor-pointer ${
                 isActive
-                  ? "bg-beat-maroon text-white border-beat-maroon shadow-md ring-2 ring-beat-gold/40"
+                  ? "bg-beat-maroon text-white border-beat-maroon shadow-sm ring-2 ring-beat-gold/40"
                   : "bg-beat-card text-beat-maroon border-beat-border hover:border-beat-gold/60 hover:bg-white"
               }`}
             >
@@ -68,7 +68,7 @@ export function PathTabs({ paths, activePathKey: controlledPath }: PathTabsProps
 
       {/* Active Path Header & Milestone List */}
       {activePath && (
-        <div id="active-path-panel" role={controlledPath ? "tabpanel" : undefined} aria-labelledby={controlledPath ? `path-tab-${controlledPath}` : undefined} className="rounded-3xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
+        <div id="active-path-panel" role={controlledPath ? "tabpanel" : undefined} aria-labelledby={controlledPath ? `path-tab-${controlledPath}` : undefined} className="rounded-xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
             <div>
               <div className="flex items-center gap-2">
@@ -81,7 +81,7 @@ export function PathTabs({ paths, activePathKey: controlledPath }: PathTabsProps
                   {activePath.verified} of {activePath.total} Verified ({activePath.percent}%)
                 </span>
               </div>
-              <h2 className="mt-1 text-2xl font-black text-beat-maroon">
+              <h2 className="mt-1 text-2xl font-semibold text-beat-maroon">
                 {activePath.title}
               </h2>
               <p className="mt-1 text-xs text-beat-muted max-w-xl">
@@ -97,7 +97,7 @@ export function PathTabs({ paths, activePathKey: controlledPath }: PathTabsProps
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-beat-canvas border border-beat-border">
                 <div
-                  className="h-full bg-gradient-to-r from-beat-maroon to-beat-gold transition-all duration-500"
+                  className="h-full bg-beat-gold transition-all duration-500"
                   style={{ width: `${activePath.percent}%` }}
                 />
               </div>

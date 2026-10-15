@@ -95,7 +95,7 @@ export function PlanTreeView({
     <div className="flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
       <div className="flex items-center justify-between pb-2 border-b border-beat-border">
         <div>
-          <h3 className="text-sm font-extrabold text-beat-maroon">Structured Path Outline</h3>
+          <h3 className="text-sm font-semibold text-beat-maroon">Structured Path Outline</h3>
           <p className="text-[11px] text-beat-muted">
             Manage competencies per track in an accessible list layout.
           </p>
@@ -112,7 +112,7 @@ export function PlanTreeView({
           return (
             <section
               key={path}
-              className="rounded-2xl border border-beat-border bg-white shadow-xs overflow-hidden transition-all"
+              className="rounded-lg border border-beat-border bg-white shadow-xs overflow-hidden transition-all"
             >
               {/* Accordion Track Header */}
               <div
@@ -132,7 +132,7 @@ export function PlanTreeView({
                         {items.length} {items.length === 1 ? "milestone" : "milestones"}
                       </span>
                     </div>
-                    <h4 className="text-sm font-extrabold text-beat-maroon">{trackTitle}</h4>
+                    <h4 className="text-sm font-semibold text-beat-maroon">{trackTitle}</h4>
                   </div>
                 </div>
 
@@ -202,7 +202,7 @@ export function PlanTreeView({
                                 <span
                                   className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                                     isCustom
-                                      ? "bg-purple-50 text-purple-700 border-purple-200"
+                                      ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
                                       : "bg-beat-gold/20 text-beat-maroon border-beat-gold/40"
                                   }`}
                                 >
@@ -245,7 +245,7 @@ export function PlanTreeView({
                             <button
                               type="button"
                               onClick={() => onDeleteNode(milestone.id)}
-                              className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 hover:text-red-700 cursor-pointer transition-colors ml-1"
+                              className="rounded-lg p-1.5 text-beat-maroon hover:bg-beat-maroon/5 hover:text-beat-maroon cursor-pointer transition-colors ml-1"
                               title="Delete Milestone"
                             >
                               <Trash2 className="h-3.5 w-3.5" />

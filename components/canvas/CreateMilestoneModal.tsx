@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { X, Sparkles, Plus, AlertCircle } from "lucide-react";
+import { X, Plus, AlertCircle } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
 
 const PATH_PREFIX_MAP: Record<DevelopmentPath, string> = {
@@ -125,17 +125,16 @@ export function CreateMilestoneModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
+        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-beat-maroon text-beat-gold shadow-md">
-              <Sparkles className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-beat-maroon">
+              <h3 className="text-base font-semibold text-beat-maroon">
                 Create Custom Milestone
               </h3>
               <p className="text-xs text-beat-muted">
@@ -156,7 +155,7 @@ export function CreateMilestoneModal({
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {/* Target Track & Role Badge */}
-          <div className="flex items-center gap-2 p-3 rounded-2xl bg-beat-canvas border border-beat-border">
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-beat-canvas border border-beat-border">
             <span className="text-[10px] uppercase font-bold text-beat-gold tracking-wider">
               Assigned Path:
             </span>
@@ -172,7 +171,7 @@ export function CreateMilestoneModal({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label htmlFor="milestoneCode" className="block text-xs font-bold text-beat-maroon">
-                Competency Code <span className="text-red-500">*</span>
+                Competency Code <span className="text-beat-maroon">*</span>
               </label>
               <span className="text-[10px] text-beat-muted">Auto-generated, editable</span>
             </div>
@@ -183,11 +182,11 @@ export function CreateMilestoneModal({
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="e.g. BAR-TECH-03"
               className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 font-mono text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
-                errors.code ? "border-red-400 focus:border-red-500" : "border-beat-border focus:border-beat-gold"
+                errors.code ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
             {errors.code && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-beat-maroon">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{errors.code}</span>
               </p>
@@ -197,7 +196,7 @@ export function CreateMilestoneModal({
           {/* Milestone Title */}
           <div>
             <label htmlFor="milestoneTitle" className="block text-xs font-bold text-beat-maroon mb-1">
-              Competency Title <span className="text-red-500">*</span>
+              Competency Title <span className="text-beat-maroon">*</span>
             </label>
             <input
               id="milestoneTitle"
@@ -206,11 +205,11 @@ export function CreateMilestoneModal({
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Espresso Machine Dial-in & Extraction"
               className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
-                errors.title ? "border-red-400 focus:border-red-500" : "border-beat-border focus:border-beat-gold"
+                errors.title ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
             {errors.title && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-beat-maroon">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{errors.title}</span>
               </p>
@@ -220,7 +219,7 @@ export function CreateMilestoneModal({
           {/* Description */}
           <div>
             <label htmlFor="milestoneDesc" className="block text-xs font-bold text-beat-maroon mb-1">
-              Competency Description & Verification Criteria <span className="text-red-500">*</span>
+              Competency Description & Verification Criteria <span className="text-beat-maroon">*</span>
             </label>
             <textarea
               id="milestoneDesc"
@@ -229,11 +228,11 @@ export function CreateMilestoneModal({
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what the trainee must demonstrate to earn the verified stamp from the trainer..."
               className={`w-full rounded-xl border bg-beat-canvas p-3 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
-                errors.description ? "border-red-400 focus:border-red-500" : "border-beat-border focus:border-beat-gold"
+                errors.description ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
             {errors.description && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-600">
+              <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-beat-maroon">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>{errors.description}</span>
               </p>
@@ -251,7 +250,7 @@ export function CreateMilestoneModal({
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5 text-beat-gold" />
               <span>Add to Canvas</span>

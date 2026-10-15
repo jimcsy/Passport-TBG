@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, ArrowRight, Loader2, AlertCircle, Sparkles } from "lucide-react";
+import { BookOpen, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { lookupTrainee } from "@/lib/auth/actions";
 
 export function TraineeLookupForm() {
@@ -40,8 +40,8 @@ export function TraineeLookupForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div role="alert" className="flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-800 border border-red-200 animate-in fade-in">
-          <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+        <div role="alert" className="flex items-start gap-2.5 rounded-xl bg-beat-maroon/5 p-3.5 text-xs text-beat-maroon border border-beat-maroon/25 animate-in fade-in">
+          <AlertCircle className="h-4 w-4 shrink-0 text-beat-maroon mt-0.5" />
           <p className="font-medium leading-relaxed">{error}</p>
         </div>
       )}
@@ -51,7 +51,7 @@ export function TraineeLookupForm() {
           htmlFor="traineeCode"
           className="block text-xs font-bold uppercase tracking-wider text-beat-maroon mb-1.5"
         >
-          Trainee Code
+          Trainee code
         </label>
         <input
           id="traineeCode"
@@ -71,7 +71,7 @@ export function TraineeLookupForm() {
           htmlFor="email"
           className="block text-xs font-bold uppercase tracking-wider text-beat-maroon mb-1.5"
         >
-          Registered Email
+          Registered email
         </label>
         <input
           id="email"
@@ -83,41 +83,40 @@ export function TraineeLookupForm() {
           placeholder="e.g. trainee@bistro.com.ph"
           required
           disabled={isPending}
-          className="w-full rounded-xl border border-beat-border bg-beat-canvas px-4 py-3 text-sm text-[#2B1810] placeholder:text-beat-muted/60 focus:border-beat-gold focus:outline-none focus:ring-2 focus:ring-beat-gold/20 transition-all"
+          className="w-full rounded-xl border border-beat-border bg-beat-canvas px-4 py-3 text-sm text-beat-maroon placeholder:text-beat-muted/60 focus:border-beat-gold focus:outline-none focus:ring-2 focus:ring-beat-gold/20 transition-all"
         />
       </div>
 
       <button
         type="submit"
         disabled={isPending}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-beat-maroon py-3.5 px-4 text-sm font-bold text-white shadow-md hover:bg-beat-maroon-light active:bg-beat-maroon-dark focus:outline-none focus:ring-2 focus:ring-beat-maroon/30 transition-all disabled:opacity-70 disabled:cursor-not-allowed group cursor-pointer"
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-beat-maroon py-3.5 px-4 text-sm font-bold text-white shadow-sm hover:bg-beat-maroon-light active:bg-beat-maroon-dark focus:outline-none focus:ring-2 focus:ring-beat-maroon/30 transition-all disabled:opacity-70 disabled:cursor-not-allowed group cursor-pointer"
       >
         {isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin text-beat-gold" />
-            <span>Verifying Passport...</span>
+            <span>Signing in…</span>
           </>
         ) : (
           <>
             <BookOpen className="h-4 w-4 text-beat-gold" />
-            <span>Open Growth Passport</span>
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <span>Continue</span>
+            <ArrowRight className="h-4 w-4 " />
           </>
         )}
       </button>
 
       {/* Quick Test Demo Button */}
-      <div className="pt-2 flex items-center justify-center">
+      {process.env.NODE_ENV === "development" && <div className="pt-2 flex items-center justify-center">
         <button
           type="button"
           onClick={handleQuickFill}
           disabled={isPending}
           className="inline-flex items-center gap-1.5 text-xs text-beat-gold hover:text-beat-gold-dark font-medium transition-colors cursor-pointer"
         >
-          <Sparkles className="h-3 w-3" />
-          Quick Fill Demo Trainee (TBG-2024-001)
+          Use demo trainee
         </button>
-      </div>
+      </div>}
     </form>
   );
 }

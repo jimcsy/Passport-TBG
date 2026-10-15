@@ -48,7 +48,7 @@ export function StampDetailCallout({ milestone, id, onSubmittingChange, onQueued
   }
 
   return (
-    <section id={id} aria-label="Stamp details" aria-busy={pending} className="rounded-2xl border border-beat-gold/30 bg-white p-5 font-sans text-beat-maroon shadow-sm sm:p-6">
+    <section id={id} aria-label="Stamp details" aria-busy={pending} className="rounded-lg border border-beat-gold/30 bg-white p-5 font-sans text-beat-maroon shadow-sm sm:p-6">
       {!milestone ? (
         <div className="flex items-center gap-4 py-2">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-beat-gold/50 bg-beat-canvas"><Stamp className="h-7 w-7 text-beat-gold" /></div>

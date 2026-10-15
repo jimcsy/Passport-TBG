@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { X, Sparkles, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { X, Send, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { submitMilestoneForReview } from "@/lib/actions/progress";
 import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
 
@@ -43,7 +43,7 @@ export function ReadyForReviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-beat-maroon/60 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-beat-border animate-in zoom-in-95">
+      <div className="relative w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-border animate-in zoom-in-95">
         {/* Close Button */}
         <button
           type="button"
@@ -59,11 +59,11 @@ export function ReadyForReviewModal({
             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-beat-gold/15 text-beat-gold">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h3 className="text-xl font-extrabold text-beat-maroon">
-              Ready for Review Submitted!
+            <h3 className="text-xl font-semibold text-beat-maroon">
+              Submitted for review
             </h3>
             <p className="text-xs text-beat-muted max-w-sm">
-              Your milestone is now queued for your store trainer&#39;s review and official gold seal stamp.
+              Your milestone and reflection are now in your trainer’s review queue.
             </p>
           </div>
         ) : (
@@ -71,14 +71,14 @@ export function ReadyForReviewModal({
             {/* Modal Header */}
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-xs font-black text-beat-gold bg-beat-maroon/5 px-2.5 py-0.5 rounded-md border border-beat-border">
+                <span className="font-mono text-xs font-semibold text-beat-gold bg-beat-maroon/5 px-2.5 py-0.5 rounded-md border border-beat-border">
                   {milestone.code}
                 </span>
                 <span className="text-xs font-bold uppercase tracking-wider text-beat-maroon">
-                  Self-Service Verification Request
+                  Request trainer review
                 </span>
               </div>
-              <h2 className="mt-2 text-xl font-extrabold text-beat-maroon leading-snug">
+              <h2 className="mt-2 text-xl font-semibold text-beat-maroon leading-snug">
                 {milestone.title}
               </h2>
               <p className="mt-1 text-xs text-beat-muted leading-relaxed">
@@ -108,7 +108,7 @@ export function ReadyForReviewModal({
                 rows={3}
                 disabled={isPending}
                 placeholder="Share what you learned during your shift, feedback from your store buddy, or practice notes..."
-                className="w-full rounded-2xl border border-beat-border bg-beat-canvas p-3.5 text-xs text-[#2B1810] placeholder:text-beat-muted/60 focus:border-beat-gold focus:outline-none focus:ring-2 focus:ring-beat-gold/20 transition-all resize-none"
+                className="w-full rounded-lg border border-beat-border bg-beat-canvas p-3.5 text-xs text-beat-maroon placeholder:text-beat-muted/60 focus:border-beat-gold focus:outline-none focus:ring-2 focus:ring-beat-gold/20 transition-all resize-none"
               />
               <p className="mt-1 text-[11px] text-beat-muted">
                 Your notes will be visible to your trainer when they inspect the review queue.
@@ -128,7 +128,7 @@ export function ReadyForReviewModal({
               <button
                 type="submit"
                 disabled={isPending}
-                className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-70 cursor-pointer"
+                className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-70 cursor-pointer"
               >
                 {isPending ? (
                   <>
@@ -137,7 +137,7 @@ export function ReadyForReviewModal({
                   </>
                 ) : (
                   <>
-                    <Sparkles className="h-3.5 w-3.5 text-beat-gold" />
+                    <Send className="h-3.5 w-3.5 text-beat-gold" />
                     <span>Send for Trainer Review</span>
                   </>
                 )}

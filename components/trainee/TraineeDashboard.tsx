@@ -33,11 +33,10 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-beat-maroon/60">My learning journey</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-beat-maroon">Your next chapter starts here.</h1>
-          <p className="mt-2 text-sm text-beat-maroon/70">Build your skills. Earn your stamps. Grow with Bistro.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-beat-maroon">Learning overview</h1>
+          <p className="mt-2 text-sm text-beat-maroon/70">Track your milestones and submit completed work for review.</p>
         </div>
-        <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-lg shadow-beat-maroon/10 hover:bg-beat-maroon/90">
+        <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-sm shadow-beat-maroon/10 hover:bg-beat-maroon/90">
           <BookOpen className="h-5 w-5 text-beat-gold" />
           View passport
           <ArrowUpRight className="h-4 w-4 text-beat-gold" />
@@ -48,7 +47,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
 
       {/* Plan Metadata Bar or Empty State */}
       {data.plan ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-beat-card p-4 border border-beat-border shadow-xs text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-beat-card p-4 border border-beat-border shadow-xs text-xs">
           <div className="flex items-center gap-2.5">
             <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold">
               <GitBranch className="h-3.5 w-3.5" />
@@ -74,19 +73,19 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
           )}
         </div>
       ) : (
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 p-4 border border-amber-200 text-amber-900 text-xs">
-          <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-lg bg-beat-gold/10 p-4 border border-beat-gold/30 text-beat-maroon text-xs">
+          <AlertCircle className="h-5 w-5 text-beat-maroon shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">No Training Plan Assigned Yet</p>
-            <p className="mt-0.5 text-amber-800 text-[11px]">
-              Your store trainer will assign a customized BEAT training plan for your role shortly. Once assigned, your competencies and passport will reflect your tailored milestones.
+            <p className="mt-0.5 text-beat-maroon text-[11px]">
+              Ask your trainer to assign a plan. Your milestones will appear here once it is assigned.
             </p>
           </div>
         </div>
       )}
 
       <section aria-labelledby="paths-title" className="space-y-4">
-        <div className="flex items-center justify-between gap-3"><h2 id="paths-title" className="text-xl font-bold text-beat-maroon">Development Paths</h2><span className="text-xs text-beat-maroon/60">5 paths · One growth journey</span></div>
+        <div className="flex items-center justify-between gap-3"><h2 id="paths-title" className="text-xl font-semibold text-beat-maroon">Development paths</h2><span className="text-xs text-beat-maroon/60">5 tracks</span></div>
         <div role="tablist" aria-label="Development paths" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {data.paths.map((path, index) => <button key={path.path} id={`path-tab-${path.path}`} role="tab" type="button" tabIndex={activePath === path.path ? 0 : -1} aria-selected={activePath === path.path} aria-controls="active-path-panel" onClick={() => setActivePath(path.path)}
             onKeyDown={event => {
@@ -100,7 +99,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
               setActivePath(data.paths[next].path);
               document.getElementById(`path-tab-${data.paths[next].path}`)?.focus();
             }}
-            className={`flex flex-col rounded-2xl border p-4 text-left transition-colors ${activePath === path.path ? "border-beat-gold bg-beat-maroon text-white shadow-md" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}>
+            className={`flex flex-col rounded-lg border p-4 text-left transition-colors ${activePath === path.path ? "border-beat-gold bg-beat-maroon text-white shadow-sm" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-beat-gold">Path {String(index + 1).padStart(2, "0")}</span>
             <span className="mt-3 min-h-10 text-sm font-bold">{path.title}</span>
             <span className={`mt-4 h-1.5 w-full overflow-hidden rounded-full ${activePath === path.path ? "bg-white/15" : "bg-beat-gold/15"}`}><span className="block h-full rounded-full bg-beat-gold" style={{ width: `${path.percent}%` }} /></span>
@@ -116,7 +115,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
             const review = m.status === "READY_FOR_REVIEW";
             const locked = m.status === "LOCKED";
             const status = completed ? "Completed" : review ? "In Review" : locked ? "Not Started" : "In Progress";
-            return <article key={m.id} className="flex flex-col rounded-2xl border border-beat-gold/20 bg-white p-5">
+            return <article key={m.id} className="flex flex-col rounded-lg border border-beat-gold/20 bg-white p-5">
               <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold tracking-wide text-beat-maroon/60">{m.code}</span><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${completed ? "bg-beat-maroon text-beat-gold" : "bg-beat-gold/15 text-beat-maroon"}`}>{completed ? <CheckCircle2 className="h-3 w-3" /> : review ? <Clock className="h-3 w-3" /> : null}{status}</span></div>
               <h3 className="mt-4 font-bold text-beat-maroon">{m.title}</h3><p className="mt-2 flex-1 text-xs leading-relaxed text-beat-maroon/70">{m.description}</p>
               <Link href={`/trainee/dashboard/modules/${m.id}`} className="mt-5 inline-flex items-center gap-1 self-start text-xs font-bold text-beat-maroon underline decoration-beat-gold decoration-2 underline-offset-4">{completed ? "View approval" : review ? "View review status" : locked ? "View requirements" : "Continue module"}<ArrowUpRight className="h-3 w-3 text-beat-gold" /></Link>

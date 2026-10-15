@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, MapPin, Building2, Award, CheckCircle2, Clock, Sparkles, GitBranch } from "lucide-react";
+import { Calendar, MapPin, Building2, CheckCircle2, Clock } from "lucide-react";
 import type { PlanMetadata } from "@/lib/db/repositories/trainee";
 
 interface PassportCoverProps {
@@ -27,34 +27,24 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
   const strokeDashoffset = circumference - (stats.overallPercent / 100) * circumference;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-beat-card p-6 sm:p-8 shadow-lg border border-beat-border">
-      {/* Decorative top brand bar */}
-      <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-beat-maroon via-beat-gold to-beat-maroon" />
+    <div className="relative overflow-hidden rounded-xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border">
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         {/* Left: Trainee Profile Details */}
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-beat-maroon text-beat-gold shadow-md ring-4 ring-beat-gold/20">
-              <BookOpen className="h-7 w-7" />
-            </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-beat-canvas px-2.5 py-0.5 text-[11px] font-bold text-beat-maroon border border-beat-border">
-                  <Award className="h-3 w-3 text-beat-gold" />
-                  BEAT Trainee
-                </span>
-                <span className="font-mono text-xs font-bold text-beat-gold bg-beat-maroon/5 px-2 py-0.5 rounded-md border border-beat-border">
+                <span className="text-xs text-beat-maroon/60">
                   {trainee.traineeCode}
                 </span>
                 {trainee.jobRole && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-beat-gold/15 px-2.5 py-0.5 text-[11px] font-extrabold text-beat-maroon border border-beat-gold/40">
-                    <Sparkles className="h-3 w-3 text-beat-gold" />
+                  <span className="border-l border-beat-border pl-2 text-xs text-beat-maroon/60">
                     {trainee.jobRole}
                   </span>
                 )}
               </div>
-              <h2 className="mt-1 text-2xl sm:text-3xl font-extrabold text-beat-maroon tracking-tight">
+              <h2 className="mt-1 text-2xl sm:text-3xl font-semibold text-beat-maroon tracking-tight">
                 {trainee.fullName}
               </h2>
             </div>
@@ -115,7 +105,7 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
               />
             </svg>
             <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="text-2xl font-black text-beat-maroon">
+              <span className="text-2xl font-semibold text-beat-maroon">
                 {stats.overallPercent}%
               </span>
               <span className="text-[10px] font-bold uppercase tracking-wider text-beat-muted">
@@ -141,12 +131,11 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
             </div>
             <div className="pt-1">
               {plan ? (
-                <span className="passport-stamp px-2.5 py-0.5 text-[9px] text-beat-gold border-beat-gold inline-flex items-center gap-1 font-mono">
-                  <GitBranch className="h-2.5 w-2.5" />
+                <span className="text-xs text-beat-maroon/60">
                   {plan.title} · v{plan.versionNumber}
                 </span>
               ) : (
-                <span className="passport-stamp px-2.5 py-0.5 text-[9px] text-beat-gold border-beat-gold">
+                <span className="text-xs text-beat-maroon/60">
                   Growth Passport
                 </span>
               )}

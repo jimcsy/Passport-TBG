@@ -81,21 +81,21 @@ export function MilestoneLibraryDrawer({
       aria-label="BEAT Milestone Library"
       className={
         className ||
-        "absolute inset-y-0 right-0 z-30 flex w-full max-w-sm sm:max-w-md flex-col bg-white shadow-2xl border-l border-beat-gold/30 animate-in slide-in-from-right duration-200 text-beat-maroon"
+        "absolute inset-y-0 right-0 z-30 flex w-full max-w-sm sm:max-w-md flex-col bg-white shadow-sm border-l border-beat-gold/30 animate-in slide-in-from-right duration-200 text-beat-maroon"
       }
     >
       {/* Drawer Header */}
       <div className="flex items-center justify-between p-5 border-b border-beat-border bg-beat-canvas/50">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold shadow-xs">
-            <BookOpen className="h-4 w-4" />
+            <BookOpen aria-hidden="true" className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-extrabold text-beat-maroon">
+            <h3 className="text-sm font-semibold text-beat-maroon">
               Milestone Library
             </h3>
             <p className="text-[11px] text-beat-muted">
-              {milestones.length} standard BEAT competencies
+              {milestones.length} milestones
             </p>
           </div>
         </div>
@@ -115,11 +115,12 @@ export function MilestoneLibraryDrawer({
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-beat-maroon/40" />
           <input
+            id="plan-milestone-search"
             type="text"
             aria-label="Search milestone library"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search competencies or code (e.g. COMM-01)..."
+            placeholder="Search milestones or code…"
             className="w-full rounded-xl border border-beat-border bg-beat-canvas pl-9 pr-3 py-2 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:border-beat-gold focus:outline-hidden"
           />
         </div>
@@ -169,10 +170,10 @@ export function MilestoneLibraryDrawer({
                 key={milestone.id}
                 draggable={!isPlaced}
                 onDragStart={(e) => onDragStart(e, milestone)}
-                className={`group relative rounded-2xl border p-3.5 transition-all select-none ${
+                className={`group relative rounded-lg border p-3.5 transition-all select-none ${
                   isPlaced
                     ? "border-beat-gold/30 bg-beat-canvas opacity-70"
-                    : "border-beat-border bg-white hover:border-beat-gold hover:shadow-md cursor-grab active:cursor-grabbing"
+                    : "border-beat-border bg-white hover:border-beat-gold hover:shadow-sm cursor-grab active:cursor-grabbing"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2 mb-1.5">
@@ -192,7 +193,7 @@ export function MilestoneLibraryDrawer({
                     </span>
                   ) : (
                     <span className="text-[9px] font-bold uppercase tracking-wider text-beat-gold">
-                      {milestone.path}
+                      {DEVELOPMENT_PATHS[milestone.path as DevelopmentPath]?.title || milestone.path}
                     </span>
                   )}
                 </div>

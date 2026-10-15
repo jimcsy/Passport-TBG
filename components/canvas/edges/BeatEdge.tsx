@@ -50,7 +50,7 @@ function BeatEdgeComponent({
         style={{
           ...style,
           stroke: selected ? "#5C1D24" : "#C29B38",
-          strokeWidth: selected ? 3.5 : 2.5,
+          strokeWidth: selected ? 2.5 : 1.5,
           transition: "stroke 0.15s ease, stroke-width 0.15s ease",
         }}
       />
@@ -71,7 +71,7 @@ function BeatEdgeComponent({
                 e.stopPropagation();
                 edgeData.onDeleteEdge?.(id);
               }}
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-beat-maroon text-white hover:bg-red-600 shadow-md transition-colors cursor-pointer border border-white"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-beat-maroon text-white hover:bg-beat-maroon/5 shadow-sm transition-colors cursor-pointer border border-white"
             >
               <X className="h-3 w-3 stroke-[3]" />
             </button>

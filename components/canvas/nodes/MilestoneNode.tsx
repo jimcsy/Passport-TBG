@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Trash2, Edit2, Sparkles, BookOpen } from "lucide-react";
+import { Trash2, Edit2 } from "lucide-react";
 import { DevelopmentPath } from "@/lib/types/models";
 
 export interface MilestoneNodeData {
@@ -20,7 +20,7 @@ export interface MilestoneNodeData {
 
 function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeData }) {
   return (
-    <div className="group relative w-60 rounded-2xl bg-white text-beat-maroon p-3.5 shadow-md border-l-4 border-l-beat-gold border border-beat-border hover:shadow-xl hover:border-beat-gold transition-all select-none">
+    <div className="group relative w-60 rounded-lg border border-beat-border bg-white p-4 text-beat-maroon shadow-sm transition-colors hover:border-beat-gold select-none">
       {/* Invisible anchors keep branch endpoints attached to the card. */}
       <Handle id="branch-left" type="target" position={Position.Left} isConnectable={false} className="!h-3 !w-3 !opacity-0 !pointer-events-none" />
       <Handle id="branch-right" type="target" position={Position.Right} isConnectable={false} className="!h-3 !w-3 !opacity-0 !pointer-events-none" />
@@ -34,33 +34,19 @@ function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeD
 
       {/* Top Header Row */}
       <div className="flex items-center justify-between gap-1.5 mb-1.5">
-        <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
+        <span className="font-mono text-[11px] font-medium text-beat-maroon/70">
           {data.code}
         </span>
 
         <span
-          className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1 ${
-            data.isCustom
-              ? "bg-purple-100 text-purple-800 border border-purple-200"
-              : "bg-beat-gold/15 text-beat-maroon border border-beat-gold/30"
-          }`}
+          className="text-[10px] text-beat-maroon/50"
         >
-          {data.isCustom ? (
-            <>
-              <Sparkles className="h-2.5 w-2.5" />
-              <span>Custom</span>
-            </>
-          ) : (
-            <>
-              <BookOpen className="h-2.5 w-2.5 text-beat-gold" />
-              <span>Standard</span>
-            </>
-          )}
+          {data.isCustom ? "Custom" : "Standard"}
         </span>
       </div>
 
       {/* Content */}
-      <h5 className="font-bold text-xs leading-tight line-clamp-1 text-beat-maroon">
+      <h5 title={data.title} className="line-clamp-2 text-[13px] font-semibold leading-snug text-beat-maroon">
         {data.title}
       </h5>
       <p className="text-[11px] text-beat-muted line-clamp-2 mt-1 leading-snug">
@@ -68,7 +54,7 @@ function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeD
       </p>
 
       {/* Action Overlay on Hover */}
-      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/95 backdrop-blur-xs p-1 rounded-xl shadow-md border border-beat-border z-10">
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center gap-1 bg-white p-1 rounded-md border border-beat-border z-10">
         {data.onEdit && (
           <button
             type="button"
@@ -90,7 +76,7 @@ function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeD
               e.stopPropagation();
               data.onDelete?.(id);
             }}
-            className="p-1 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
+            className="p-1 rounded-lg text-beat-maroon hover:bg-beat-maroon/5 transition-colors"
           >
             <Trash2 className="h-3 w-3" />
           </button>

@@ -39,17 +39,17 @@ export function PlanVersionHistoryModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[85vh] flex flex-col"
+        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-beat-maroon text-beat-gold shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
               <History className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-beat-maroon">Version History</h3>
+              <h3 className="text-base font-semibold text-beat-maroon">Version History</h3>
               <p className="text-xs text-beat-muted truncate max-w-xs">{planTitle}</p>
             </div>
           </div>
@@ -78,7 +78,7 @@ export function PlanVersionHistoryModal({
               return (
                 <div
                   key={ver.id}
-                  className={`relative rounded-2xl border p-4 transition-all ${
+                  className={`relative rounded-lg border p-4 transition-all ${
                     isCurrent
                       ? "border-beat-gold bg-beat-gold/5 shadow-xs"
                       : "border-beat-border bg-beat-canvas/30"
@@ -100,9 +100,9 @@ export function PlanVersionHistoryModal({
                     <span
                       className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                         isPublished
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                          ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
                           : isDraft
-                          ? "bg-amber-50 text-amber-800 border-amber-300"
+                          ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
                           : "bg-slate-100 text-slate-700 border-slate-300"
                       }`}
                     >

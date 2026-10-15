@@ -24,7 +24,7 @@ export function NotesEndorsementsPage({
             Official Endorsements
           </p>
         </div>
-        <h3 className="mt-1 text-base font-extrabold text-beat-maroon">
+        <h3 className="mt-1 text-base font-semibold text-beat-maroon">
           Notes & Transferred Seals
         </h3>
       </div>
@@ -51,7 +51,7 @@ export function NotesEndorsementsPage({
                   <span className="font-mono text-[10px] font-bold text-beat-gold bg-beat-maroon/5 px-1.5 py-0.2 rounded border border-beat-border">
                     {m.code}
                   </span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-beat-maroon/10 px-2 py-0.5 text-[9px] font-extrabold text-beat-maroon">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-beat-maroon/10 px-2 py-0.5 text-[9px] font-semibold text-beat-maroon">
                     <CheckCircle2 className="h-2.5 w-2.5 text-beat-gold" />
                     Preserved Stamp
                   </span>

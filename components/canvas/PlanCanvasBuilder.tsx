@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ReactFlow,
@@ -22,13 +22,13 @@ import {
 import "@xyflow/react/dist/style.css";
 import {
   ArrowLeft,
-  Sparkles,
+  LayoutGrid,
   Save,
   RotateCcw,
   Maximize2,
   GitBranch,
   ShieldCheck,
-  BookOpen,
+  PanelRightOpen,
   Award,
   AlertTriangle,
   Network,
@@ -99,7 +99,7 @@ export interface PlanCanvasBuilderProps {
 
 export function PlanCanvasBuilder(props: PlanCanvasBuilderProps) {
   return (
-    <ReactFlowProvider>
+    <ReactFlowProvider key={props.plan.id}>
       <PlanCanvasBuilderInner {...props} />
     </ReactFlowProvider>
   );
@@ -121,6 +121,8 @@ function PlanCanvasBuilderInner({
   const [isPublishing, setIsPublishing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isLibraryOpen, setIsLibraryOpen] = useState(true);
+  const libraryReopenButton = useRef<HTMLButtonElement>(null);
+  const libraryFocusRequested = useRef(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
@@ -136,10 +138,26 @@ function PlanCanvasBuilderInner({
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
         setViewMode("tree");
-        setIsLibraryOpen(false);
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!libraryFocusRequested.current) return;
+    libraryFocusRequested.current = false;
+    if (isLibraryOpen) document.getElementById("plan-milestone-search")?.focus();
+    else libraryReopenButton.current?.focus();
+  }, [isLibraryOpen]);
+
+  function setLibraryVisible(visible: boolean) {
+    libraryFocusRequested.current = true;
+    setIsLibraryOpen(visible);
+  }
+
+  function openCanvas() {
+    if (viewMode !== "canvas") setIsLibraryOpen(true);
+    setViewMode("canvas");
+  }
 
   const { fitView, getNode, viewportInitialized } = useReactFlow();
   const nodesInitialized = useNodesInitialized();
@@ -267,7 +285,7 @@ function PlanCanvasBuilderInner({
     (milestone: LibraryMilestone) => {
       // Check if duplicate
       if (placedCodes.has(milestone.code)) {
-        showWarning(`Competency "${milestone.code}" is already placed on the canvas.`);
+        showWarning(`${milestone.code} is already in this plan.`);
         return;
       }
 
@@ -535,9 +553,6 @@ function PlanCanvasBuilderInner({
           data: {
             ...node.data,
             onDelete: handleDeleteNode,
-            onEdit: (id: string) => {
-              console.log(`Edit milestone: ${id}`);
-            },
           },
         };
       }
@@ -682,7 +697,7 @@ function PlanCanvasBuilderInner({
   };
 
   return (
-    <div className="relative flex h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-2xl border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
+    <div className="relative flex h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-lg border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
       {/* Canvas Top Bar */}
       <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 bg-white border-b border-beat-border z-10 shrink-0">
         <div className="flex items-center gap-3">
@@ -695,16 +710,16 @@ function PlanCanvasBuilderInner({
           </Link>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-base font-extrabold text-beat-maroon leading-tight">
+              <h2 className="text-base font-semibold text-beat-maroon leading-tight">
                 {plan.title}
               </h2>
-              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
-                {plan.roleIdentifier}
+                <span className="text-xs capitalize text-beat-maroon/60">
+                  {plan.roleIdentifier.replace(/_/g, " ").toLowerCase()}
               </span>
               <button
                 type="button"
                 onClick={() => setIsHistoryModalOpen(true)}
-                className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-beat-gold/20 text-beat-maroon border border-beat-gold/40 hover:bg-beat-gold/30 transition-all cursor-pointer"
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon"
                 title="View Version History"
               >
                 <History className="h-3 w-3 text-beat-maroon" />
@@ -713,22 +728,22 @@ function PlanCanvasBuilderInner({
                 <span
                   className={
                     currentVersion.status === "PUBLISHED"
-                      ? "text-emerald-700 font-extrabold"
-                      : "text-amber-800 font-extrabold"
+                      ? "text-beat-maroon font-semibold"
+                      : "text-beat-maroon font-semibold"
                   }
                 >
                   {currentVersion.status}
                 </span>
               </button>
               {hasUnsavedChanges && (
-                <span className="flex items-center gap-1 font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                <span className="flex items-center gap-1.5 text-xs text-beat-maroon/60">
+                  <span className="h-1.5 w-1.5 rounded-full bg-beat-gold/10" />
                   Unsaved edits
                 </span>
               )}
             </div>
             <p className="text-[11px] text-beat-muted">
-              Interactive two-tier path tree. Hover over nodes to edit or delete; hover over connectors to disconnect.
+              Add milestones from the library. Drag cards to adjust their position.
             </p>
           </div>
         </div>
@@ -736,7 +751,7 @@ function PlanCanvasBuilderInner({
         {/* Toolbar Controls */}
         <div className="flex flex-wrap items-center gap-2">
           {saveMessage && (
-            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 animate-in fade-in">
+            <span className="text-xs font-semibold text-beat-maroon bg-beat-gold/10 px-3 py-1 rounded-xl border border-beat-gold/30 animate-in fade-in">
               {saveMessage}
             </span>
           )}
@@ -745,7 +760,7 @@ function PlanCanvasBuilderInner({
           <div className="flex items-center rounded-xl border border-beat-border bg-beat-canvas p-0.5">
             <button
               type="button"
-              onClick={() => setViewMode("canvas")}
+              onClick={openCanvas}
               className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                 viewMode === "canvas"
                   ? "bg-beat-maroon text-white shadow-xs"
@@ -771,38 +786,14 @@ function PlanCanvasBuilderInner({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsLibraryOpen((v) => !v)}
-            aria-expanded={isLibraryOpen}
-            aria-controls="plan-milestone-library"
-            className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
-              isLibraryOpen
-                ? "bg-beat-maroon text-white border-beat-maroon"
-                : "bg-beat-canvas border-beat-border text-beat-maroon hover:bg-beat-gold/20"
-            }`}
-          >
-            <BookOpen className="h-3.5 w-3.5 text-beat-gold" />
-            <span>Milestone Library</span>
-            {libraryMilestones.length > 0 && (
-              <span
-                className={`ml-0.5 rounded-full px-1.5 py-0.2 font-mono text-[10px] ${
-                  isLibraryOpen ? "bg-white/20 text-white" : "bg-beat-maroon/10 text-beat-maroon"
-                }`}
-              >
-                {libraryMilestones.length}
-              </span>
-            )}
-          </button>
-
           {viewMode === "canvas" && (
             <button
               type="button"
               onClick={onLayout}
               className="flex items-center gap-1.5 rounded-xl border border-beat-border bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon hover:bg-beat-gold/20 transition-colors shadow-2xs cursor-pointer"
             >
-              <Sparkles className="h-3.5 w-3.5 text-beat-gold" />
-              <span>Auto Layout</span>
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Arrange</span>
             </button>
           )}
 
@@ -820,7 +811,7 @@ function PlanCanvasBuilderInner({
             type="button"
             onClick={() => setIsPublishModalOpen(true)}
             disabled={isSaving || isPublishing}
-            className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-4 py-2 text-xs font-bold text-beat-gold shadow-md hover:bg-beat-maroon-dark hover:text-white transition-all disabled:opacity-50 cursor-pointer border border-beat-gold/40"
+            className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-4 py-2 text-xs font-bold text-beat-gold shadow-sm hover:bg-beat-maroon-dark hover:text-white transition-all disabled:opacity-50 cursor-pointer border border-beat-gold/40"
           >
             <Send className="h-3.5 w-3.5 text-beat-gold" />
             <span>Publish</span>
@@ -829,8 +820,8 @@ function PlanCanvasBuilderInner({
       </header>
 
       <nav aria-label="Focus development path" className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
-        <button type="button" aria-pressed={focusedPath === null} onClick={() => { setViewMode("canvas"); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
-        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { setViewMode("canvas"); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
+        <button type="button" aria-pressed={focusedPath === null} onClick={() => { openCanvas(); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
+        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { openCanvas(); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
       </nav>
 
       {/* Main Viewport: Canvas vs Tree View */}
@@ -852,8 +843,8 @@ function PlanCanvasBuilderInner({
         >
           {/* Warning Toast */}
           {warningToast && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2.5 text-xs font-bold text-white shadow-xl border border-amber-500 animate-in fade-in slide-in-from-top-2">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-amber-200" />
+            <div role="alert" className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border border-beat-gold/30 bg-white px-4 py-2.5 text-xs text-beat-maroon shadow-sm">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-beat-maroon" />
               <span>{warningToast}</span>
             </div>
           )}
@@ -873,7 +864,7 @@ function PlanCanvasBuilderInner({
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
           >
-            <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#C29B38" />
+            <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="rgba(92,29,36,0.14)" />
             <Controls position="bottom-right" showInteractive={false} className="!m-4" />
             <MiniMap
               position="bottom-left"
@@ -895,12 +886,19 @@ function PlanCanvasBuilderInner({
       {/* Docked milestone library */}
       <MilestoneLibraryDrawer
         isOpen={isLibraryOpen}
-        onClose={() => setIsLibraryOpen(false)}
+        onClose={() => setLibraryVisible(false)}
         milestones={libraryMilestones}
         placedCodes={placedCodes}
         onAddMilestone={addLibraryMilestone}
         className="flex min-h-0 max-h-[45%] w-full shrink-0 flex-col border-t border-beat-gold/25 bg-white text-beat-maroon md:max-h-none md:w-72 md:border-l md:border-t-0 lg:w-80"
       />
+      {!isLibraryOpen && (
+        <aside aria-label="Milestone library controls" className="flex shrink-0 justify-end border-t border-beat-border bg-white p-2 md:w-12 md:flex-col md:justify-start md:border-l md:border-t-0 md:px-1 md:py-3">
+          <button ref={libraryReopenButton} type="button" onClick={() => setLibraryVisible(true)} aria-label="Open milestone library" aria-controls="plan-milestone-library" aria-expanded={false} title="Open milestone library" className="flex h-10 w-10 items-center justify-center rounded-md text-beat-maroon/70 hover:bg-beat-canvas hover:text-beat-maroon">
+            <PanelRightOpen aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </aside>
+      )}
       </div>
 
       {/* Custom Milestone Creation Modal */}

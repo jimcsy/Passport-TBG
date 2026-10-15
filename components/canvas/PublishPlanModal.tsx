@@ -69,17 +69,17 @@ export function PublishPlanModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-beat-maroon text-beat-gold shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
               <Send className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-beat-maroon">
+              <h3 className="text-base font-semibold text-beat-maroon">
                 Publish Training Plan Version {versionNumber}
               </h3>
               <p className="text-xs text-beat-muted">
@@ -101,9 +101,9 @@ export function PublishPlanModal({
         {/* Content Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {/* Metadata Banner */}
-          <div className="p-3.5 rounded-2xl bg-beat-canvas border border-beat-border space-y-2">
+          <div className="p-3.5 rounded-lg bg-beat-canvas border border-beat-border space-y-2">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-extrabold text-beat-maroon">{planTitle}</span>
+              <span className="font-semibold text-beat-maroon">{planTitle}</span>
               <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
                 {roleIdentifier}
               </span>
@@ -161,7 +161,7 @@ export function PublishPlanModal({
           </div>
 
           {/* Sync Active Trainees Section */}
-          <div className="rounded-2xl border border-beat-border p-4 bg-beat-canvas/30 space-y-3">
+          <div className="rounded-lg border border-beat-border p-4 bg-beat-canvas/30 space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
@@ -189,8 +189,8 @@ export function PublishPlanModal({
             </div>
 
             {syncTrainees && activeTraineeCount > 0 && (
-              <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 p-3 border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
-                <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+              <div className="flex items-start gap-2.5 rounded-xl bg-beat-gold/10 p-3 border border-beat-gold/30 text-beat-maroon text-[11px] leading-relaxed">
+                <AlertTriangle className="h-4 w-4 shrink-0 text-beat-maroon mt-0.5" />
                 <div>
                   <span className="font-bold">Safe Reconcile Active: </span>
                   Verified and pending milestones will be preserved without data loss. Removed
@@ -214,7 +214,7 @@ export function PublishPlanModal({
             <button
               type="submit"
               disabled={isPublishing}
-              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all disabled:opacity-50 cursor-pointer"
             >
               {isPublishing ? (
                 <span>Publishing & Reconciling...</span>

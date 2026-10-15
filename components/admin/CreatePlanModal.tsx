@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, GitBranch, Sparkles } from "lucide-react";
+import { Plus, X, GitBranch } from "lucide-react";
 import { createPlanAction } from "@/lib/actions/plans";
 
 const BRANDS = [
@@ -50,7 +50,7 @@ export function CreatePlanModal() {
       <button
         type="button"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 rounded-2xl bg-beat-maroon px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all cursor-pointer border border-beat-gold/30"
+        className="flex items-center gap-2 rounded-lg bg-beat-maroon px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer border border-beat-gold/30"
       >
         <Plus className="h-4 w-4 text-beat-gold" />
         <span>New Training Plan</span>
@@ -62,7 +62,7 @@ export function CreatePlanModal() {
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
         >
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-beat-gold/40 text-beat-maroon">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-gold/40 text-beat-maroon">
             <div className="flex items-start justify-between pb-4 border-b border-beat-border">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold">
@@ -85,7 +85,7 @@ export function CreatePlanModal() {
             </div>
 
             {error && (
-              <div className="mt-4 rounded-xl bg-red-50 p-3 text-xs text-red-700 border border-red-200">
+              <div className="mt-4 rounded-xl bg-beat-maroon/5 p-3 text-xs text-beat-maroon border border-beat-maroon/25">
                 {error}
               </div>
             )}
@@ -93,7 +93,7 @@ export function CreatePlanModal() {
             <form onSubmit={handleSubmit} className="mt-5 space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-beat-maroon mb-1">
-                  Plan Title <span className="text-red-500">*</span>
+                  Plan Title <span className="text-beat-maroon">*</span>
                 </label>
                 <input
                   type="text"
@@ -107,7 +107,7 @@ export function CreatePlanModal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-beat-maroon mb-1">
-                    Role Identifier <span className="text-red-500">*</span>
+                    Role Identifier <span className="text-beat-maroon">*</span>
                   </label>
                   <input
                     type="text"
@@ -162,9 +162,8 @@ export function CreatePlanModal() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-2 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-beat-maroon px-5 py-2 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all disabled:opacity-50"
                 >
-                  <Sparkles className="h-4 w-4 text-beat-gold" />
                   <span>{isSubmitting ? "Creating..." : "Create & Launch Builder"}</span>
                 </button>
               </div>

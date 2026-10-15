@@ -4,9 +4,9 @@
 
 :root {
   --background: #FAF8F4;
-  --foreground: #2B1810;
+  --foreground: #5C1D24;
   --card: #FFFFFF;
-  --card-foreground: #2B1810;
+  --card-foreground: #5C1D24;
   --primary: #5C1D24;
   --primary-foreground: #FFFFFF;
   --accent: #C29B38;
@@ -102,18 +102,18 @@ body {
 
 .beat-canvas .react-flow__edge-path {
   stroke: #C29B38;
-  stroke-width: 2.5;
+  stroke-width: 1.5;
 }
 
 .beat-canvas .react-flow__edge.selected .react-flow__edge-path {
   stroke: #5C1D24;
-  stroke-width: 3;
+  stroke-width: 2.5;
 }
 
 .beat-canvas .react-flow__controls {
-  box-shadow: 0 4px 14px rgba(92, 29, 36, 0.1);
+  box-shadow: 0 1px 3px rgba(92, 29, 36, 0.06);
   border: 1px solid rgba(194, 155, 56, 0.3);
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   background: #FFFFFF;
 }
@@ -133,8 +133,8 @@ body {
 .beat-canvas .react-flow__minimap {
   background-color: #FAF8F4;
   border: 1px solid rgba(194, 155, 56, 0.3);
-  border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(92, 29, 36, 0.08);
+  border-radius: 8px;
+  box-shadow: none;
 }
 
 .beat-canvas .react-flow__selection {

@@ -44,7 +44,7 @@ export default async function TraineesDirectoryPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-beat-maroon tracking-tight">
+            <h1 className="text-2xl font-semibold text-beat-maroon tracking-tight">
               Trainee Directory
             </h1>
             <span className="passport-stamp px-2.5 py-0.5 text-[9px] border-beat-gold text-beat-gold">
@@ -64,9 +64,9 @@ export default async function TraineesDirectoryPage() {
             <UserPlus className="h-4 w-4 text-beat-gold" />
             Register Trainee
           </Link>
-          <div className="flex items-center gap-2 rounded-2xl bg-beat-card px-4 py-2 border border-beat-border shadow-xs text-xs">
+          <div className="flex items-center gap-2 rounded-lg bg-beat-card px-4 py-2 border border-beat-border shadow-xs text-xs">
             <Users className="h-4 w-4 text-beat-gold" />
-            <span className="font-extrabold text-beat-maroon">
+            <span className="font-semibold text-beat-maroon">
               {trainees.length}
             </span>
             <span className="text-beat-muted">Total Trainees</span>

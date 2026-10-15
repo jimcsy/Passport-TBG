@@ -47,7 +47,7 @@ export default async function TraineeDetailPage({
       {/* 5 Paths with Trainer Approval Controls */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-lg font-black text-beat-maroon tracking-tight">
+          <h2 className="text-lg font-semibold text-beat-maroon tracking-tight">
             Development Paths & Sign-Offs
           </h2>
           <span className="text-xs font-semibold text-beat-muted">

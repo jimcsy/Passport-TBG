@@ -30,7 +30,7 @@ export function ExemptStampPage({ path, roleName }: ExemptStampPageProps) {
           Official Status
         </span>
 
-        <h4 className="mt-1 text-2xl font-black tracking-widest text-beat-maroon uppercase">
+        <h4 className="mt-1 text-2xl font-semibold tracking-widest text-beat-maroon uppercase">
           EXEMPT
         </h4>
 

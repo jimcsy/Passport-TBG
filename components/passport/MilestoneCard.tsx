@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, Lock, Sparkles, UserCheck } from "lucide-react";
+import { CheckCircle2, Clock, Lock, Send, UserCheck } from "lucide-react";
 import { MilestoneStatus } from "@/lib/types/models";
 import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
 
@@ -23,7 +23,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
 
   return (
     <div id={`milestone-${milestone.id}`} tabIndex={-1}
-      className={`relative overflow-hidden rounded-2xl p-5 transition-all border ${
+      className={`relative overflow-hidden rounded-lg p-5 transition-all border ${
         isVerified
           ? "bg-white border-beat-gold/40 shadow-sm ring-1 ring-beat-gold/20"
           : isReadyForReview
@@ -38,7 +38,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
         <div className="space-y-1.5 flex-1">
           <div className="flex items-center gap-2">
             <span
-              className={`font-mono text-xs font-black px-2 py-0.5 rounded-md ${
+              className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-md ${
                 isVerified
                   ? "bg-beat-gold/15 text-beat-maroon"
                   : isReadyForReview
@@ -89,7 +89,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
               <p className="text-[10px] font-bold uppercase tracking-wider text-beat-maroon/70">
                 Trainee Reflection Note
               </p>
-              <p className="mt-0.5 text-[#2B1810] italic">
+              <p className="mt-0.5 text-beat-maroon italic">
                 &ldquo;{milestone.traineeNote}&rdquo;
               </p>
             </div>
@@ -103,10 +103,10 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
               {/* Official Gold Stamp Seal */}
               <div className="passport-stamp px-3 py-1 text-[11px] bg-beat-gold/5 shadow-inner">
                 <div className="flex flex-col items-center text-center">
-                  <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-extrabold">
-                    ★ BEAT VERIFIED ★
+                  <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-semibold">
+                    BEAT verified
                   </span>
-                  <span className="text-[10px] font-black text-beat-maroon">
+                  <span className="text-[10px] font-semibold text-beat-maroon">
                     {milestone.trainerName || "BEAT Trainer"}
                   </span>
                   <span className="text-[8px] font-semibold text-beat-muted">
@@ -119,7 +119,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
 
           {isReadyForReview && (
             <div className="text-xs text-beat-maroon flex items-center gap-1 font-semibold">
-              <Clock className="h-3.5 w-3.5 animate-pulse" />
+              <Clock className="h-3.5 w-3.5" />
               <span>In Trainer Queue</span>
             </div>
           )}
@@ -130,7 +130,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
               onClick={() => onRequestReview(milestone)}
               className="inline-flex items-center gap-1.5 rounded-xl bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon border border-beat-border hover:border-beat-gold hover:bg-beat-gold/10 hover:text-beat-maroon transition-all cursor-pointer shadow-sm"
             >
-              <Sparkles className="h-3.5 w-3.5 text-beat-gold" />
+              <Send className="h-3.5 w-3.5 text-beat-gold" />
               <span>Mark for Review</span>
             </button>
           )}

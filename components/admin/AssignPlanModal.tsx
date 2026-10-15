@@ -72,17 +72,17 @@ export function AssignPlanModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[90vh] overflow-y-auto"
+        className="w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-beat-maroon text-beat-gold shadow-md">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
               <GitBranch className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-extrabold text-beat-maroon">
+              <h3 className="text-base font-semibold text-beat-maroon">
                 {traineeIds.length === 1 ? "Assign Training Plan" : "Bulk Assign Plan"}
               </h3>
               <p className="text-xs text-beat-muted">
@@ -104,13 +104,13 @@ export function AssignPlanModal({
         {/* Content Form */}
         <form onSubmit={handleAssign} className="mt-5 space-y-4">
           {errorMessage && (
-            <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800">
+            <div className="rounded-xl border border-beat-maroon/25 bg-beat-maroon/5 p-3 text-xs text-beat-maroon">
               {errorMessage}
             </div>
           )}
 
           {/* Trainee Names Summary */}
-          <div className="p-3.5 rounded-2xl bg-beat-canvas border border-beat-border space-y-1.5">
+          <div className="p-3.5 rounded-lg bg-beat-canvas border border-beat-border space-y-1.5">
             <div className="flex items-center gap-1.5 text-xs font-bold text-beat-maroon">
               <Users className="h-3.5 w-3.5 text-beat-gold" />
               <span>Target Trainees:</span>
@@ -127,7 +127,7 @@ export function AssignPlanModal({
               htmlFor="selectPlan"
               className="block text-xs font-bold text-beat-maroon mb-1"
             >
-              Select Published Plan <span className="text-red-500">*</span>
+              Select Published Plan <span className="text-beat-maroon">*</span>
             </label>
             <select
               id="selectPlan"
@@ -146,7 +146,7 @@ export function AssignPlanModal({
 
           {/* Selected Plan Details */}
           {selectedPlan && (
-            <div className="rounded-2xl border border-beat-border p-3.5 bg-beat-canvas/40 text-xs space-y-1.5">
+            <div className="rounded-lg border border-beat-border p-3.5 bg-beat-canvas/40 text-xs space-y-1.5">
               <div className="flex items-center justify-between font-bold text-beat-maroon">
                 <span>{selectedPlan.title}</span>
                 <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon">
@@ -163,8 +163,8 @@ export function AssignPlanModal({
           )}
 
           {/* Safe Reconcile Notice */}
-          <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 p-3 border border-amber-200 text-amber-900 text-[11px] leading-relaxed">
-            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+          <div className="flex items-start gap-2.5 rounded-xl bg-beat-gold/10 p-3 border border-beat-gold/30 text-beat-maroon text-[11px] leading-relaxed">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-beat-maroon mt-0.5" />
             <div>
               <span className="font-bold">Safe Reconcile Active: </span>
               If trainees have verified progress on matching competencies, their stamps will be
@@ -186,7 +186,7 @@ export function AssignPlanModal({
             <button
               type="submit"
               disabled={isSubmitting || plans.length === 0}
-              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-md hover:bg-beat-maroon-dark transition-all disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all disabled:opacity-50 cursor-pointer"
             >
               <CheckCircle2 className="h-4 w-4 text-beat-gold" />
               <span>{isSubmitting ? "Assigning..." : "Confirm Plan Assignment"}</span>

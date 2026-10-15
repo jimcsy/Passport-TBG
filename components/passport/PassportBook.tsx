@@ -215,7 +215,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             goTo(spread - 1);
           }
         }}
-        className="rounded-3xl border border-beat-gold/25 bg-white p-4 text-beat-maroon shadow-sm sm:p-8"
+        className="rounded-xl border border-beat-gold/25 bg-white p-4 text-beat-maroon shadow-sm sm:p-8"
       >
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <span className="inline-flex items-center gap-2 text-xs font-bold">

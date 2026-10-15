@@ -7,7 +7,6 @@ import {
   Square,
   Users,
   Award,
-  Sparkles,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -128,16 +127,16 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
     <div className="space-y-6">
       {/* Success Notification */}
       {isSuccess && (
-        <div className="flex items-center justify-between rounded-3xl bg-emerald-50 p-5 border border-emerald-200 animate-in fade-in">
+        <div className="flex items-center justify-between rounded-xl bg-beat-gold/10 p-5 border border-beat-gold/30 animate-in fade-in">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-beat-gold/10 text-beat-maroon">
               <CheckCircle2 className="h-6 w-6" />
             </div>
             <div>
-              <h4 className="text-sm font-bold text-emerald-900">
+              <h4 className="text-sm font-bold text-beat-maroon">
                 Bulk Sign-Off Completed!
               </h4>
-              <p className="text-xs text-emerald-700">
+              <p className="text-xs text-beat-maroon">
                 Successfully stamped milestone <strong>{selectedMilestone?.code}</strong> for <strong>{successCount}</strong> trainees in a single transaction.
               </p>
             </div>
@@ -149,8 +148,8 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
       )}
 
       {error && (
-        <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 p-4 text-xs text-red-800 border border-red-200">
-          <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+        <div className="flex items-start gap-2.5 rounded-lg bg-beat-maroon/5 p-4 text-xs text-beat-maroon border border-beat-maroon/25">
+          <AlertCircle className="h-4 w-4 shrink-0 text-beat-maroon mt-0.5" />
           <p className="font-semibold">{error}</p>
         </div>
       )}
@@ -159,7 +158,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
         {/* Left 2 Cols: Cohort Filter & Trainee Checkbox List */}
         <div className="lg:col-span-2 space-y-4">
           {/* Filters Bar */}
-          <div className="rounded-3xl bg-beat-card p-5 border border-beat-border shadow-xs space-y-3">
+          <div className="rounded-xl bg-beat-card p-5 border border-beat-border shadow-xs space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-beat-maroon">
               Step 1: Filter Cohort & Select Attendees
             </h3>
@@ -215,7 +214,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
           </div>
 
           {/* Trainees List with Select All */}
-          <div className="rounded-3xl bg-beat-card border border-beat-border shadow-xs overflow-hidden">
+          <div className="rounded-xl bg-beat-card border border-beat-border shadow-xs overflow-hidden">
             <div className="flex items-center justify-between p-4 bg-beat-canvas/60 border-b border-beat-border">
               <button
                 type="button"
@@ -259,7 +258,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
                           className="h-4 w-4 rounded text-beat-maroon focus:ring-beat-gold cursor-pointer"
                         />
                         <div>
-                          <p className="text-sm font-extrabold text-beat-maroon">
+                          <p className="text-sm font-semibold text-beat-maroon">
                             {t.fullName}
                           </p>
                           <p className="text-[11px] text-beat-muted">
@@ -280,7 +279,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
 
         {/* Right Col: Milestone Picker & Execute */}
         <div className="space-y-4">
-          <div className="rounded-3xl bg-beat-card p-6 border border-beat-border shadow-xs space-y-5">
+          <div className="rounded-xl bg-beat-card p-6 border border-beat-border shadow-xs space-y-5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-beat-maroon">
               Step 2: Training Milestone to Stamp
             </h3>
@@ -293,7 +292,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
               <select
                 value={selectedMilestoneId}
                 onChange={(e) => setSelectedMilestoneId(e.target.value)}
-                className="w-full rounded-2xl border border-beat-border bg-beat-canvas p-3 text-xs font-bold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
+                className="w-full rounded-lg border border-beat-border bg-beat-canvas p-3 text-xs font-bold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
               >
                 {data.milestones.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -322,7 +321,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
                 onChange={(e) => setTrainerNote(e.target.value)}
                 rows={3}
                 placeholder="e.g. Completed Shift Classroom orientation with 100% attendance."
-                className="w-full rounded-2xl border border-beat-border bg-beat-canvas p-3 text-xs text-[#2B1810] focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold resize-none"
+                className="w-full rounded-lg border border-beat-border bg-beat-canvas p-3 text-xs text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold resize-none"
               />
             </div>
 
@@ -330,7 +329,7 @@ export function BatchSignOffTool({ data }: BatchSignOffToolProps) {
             <button
               type="submit"
               disabled={isPending || selectedTraineeIds.length === 0}
-              className="w-full flex items-center justify-center gap-2 rounded-2xl bg-beat-maroon py-4 px-4 text-xs font-extrabold text-white shadow-lg shadow-beat-maroon/20 hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 rounded-lg bg-beat-maroon py-4 px-4 text-xs font-semibold text-white shadow-sm shadow-beat-maroon/20 hover:bg-beat-maroon-light active:bg-beat-maroon-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isPending ? (
                 <>

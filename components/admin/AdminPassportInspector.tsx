@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   Clock,
-  Sparkles,
   Award,
   Loader2,
   MessageSquare,
@@ -54,9 +53,9 @@ export function AdminPassportInspector({
               key={p.path}
               type="button"
               onClick={() => setActivePathKey(p.path)}
-              className={`flex shrink-0 items-center gap-2 rounded-2xl px-4 py-3 text-xs font-bold transition-all border cursor-pointer ${
+              className={`flex shrink-0 items-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition-all border cursor-pointer ${
                 isActive
-                  ? "bg-beat-maroon text-white border-beat-maroon shadow-md ring-2 ring-beat-gold/40"
+                  ? "bg-beat-maroon text-white border-beat-maroon shadow-sm ring-2 ring-beat-gold/40"
                   : "bg-beat-card text-beat-maroon border-beat-border hover:border-beat-gold/60 hover:bg-white"
               }`}
             >
@@ -92,7 +91,7 @@ export function AdminPassportInspector({
 
       {/* Active Path Header & Milestone Cards with Trainer Sign-Off Controls */}
       {activePath && (
-        <div className="rounded-3xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
+        <div className="rounded-xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
             <div>
               <div className="flex items-center gap-2">
@@ -105,7 +104,7 @@ export function AdminPassportInspector({
                   {activePath.verified} of {activePath.total} Verified ({activePath.percent}%)
                 </span>
               </div>
-              <h2 className="mt-1 text-2xl font-black text-beat-maroon">
+              <h2 className="mt-1 text-2xl font-semibold text-beat-maroon">
                 {activePath.title}
               </h2>
               <p className="mt-1 text-xs text-beat-muted max-w-xl">
@@ -120,7 +119,7 @@ export function AdminPassportInspector({
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-beat-canvas border border-beat-border">
                 <div
-                  className="h-full bg-gradient-to-r from-beat-maroon to-beat-gold transition-all duration-300"
+                  className="h-full bg-beat-gold transition-all duration-300"
                   style={{ width: `${activePath.percent}%` }}
                 />
               </div>
@@ -145,30 +144,30 @@ export function AdminPassportInspector({
               return (
                 <div
                   key={m.id}
-                  className={`rounded-2xl p-5 border transition-all ${
+                  className={`rounded-lg p-5 border transition-all ${
                     isVerified
                       ? "bg-white border-beat-gold/40 ring-1 ring-beat-gold/20 shadow-xs"
                       : isReadyForReview
-                      ? "bg-amber-50/50 border-amber-300 ring-2 ring-amber-400/20 shadow-sm"
+                      ? "bg-beat-gold/10 border-beat-gold/30 ring-2 ring-beat-gold/30 shadow-sm"
                       : "bg-beat-canvas/40 border-beat-border"
                   }`}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="space-y-1.5 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-beat-maroon/5 text-beat-maroon border border-beat-border">
+                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-md bg-beat-maroon/5 text-beat-maroon border border-beat-border">
                           {m.code}
                         </span>
 
                         {isVerified && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-beat-gold/10 px-2 py-0.5 text-[10px] font-bold text-beat-maroon border border-beat-gold/30">
+                            <CheckCircle2 className="h-3 w-3 text-beat-maroon" />
                             Verified
                           </span>
                         )}
 
                         {isReadyForReview && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-300 animate-pulse">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-beat-gold/10 px-2.5 py-0.5 text-[10px] font-bold text-beat-maroon border border-beat-gold/30">
                             <Clock className="h-3 w-3" />
                             Ready for Review Submission
                           </span>
@@ -181,7 +180,7 @@ export function AdminPassportInspector({
                         )}
                       </div>
 
-                      <h3 className="text-sm font-extrabold text-beat-maroon">
+                      <h3 className="text-sm font-semibold text-beat-maroon">
                         {m.title}
                       </h3>
                       <p className="text-xs text-beat-muted leading-relaxed">
@@ -195,7 +194,7 @@ export function AdminPassportInspector({
                             <MessageSquare className="h-3 w-3 text-beat-gold" />
                             <span>Trainee Reflection Note:</span>
                           </div>
-                          <p className="mt-1 text-[#2B1810] italic">
+                          <p className="mt-1 text-beat-maroon italic">
                             &ldquo;{m.traineeNote}&rdquo;
                           </p>
                         </div>
@@ -207,10 +206,10 @@ export function AdminPassportInspector({
                       {isVerified ? (
                         <div className="passport-stamp px-3 py-1 text-[10px] bg-beat-gold/5 shadow-inner">
                           <div className="flex flex-col items-center text-center">
-                            <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-extrabold">
-                              ★ BEAT STAMP ★
+                            <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-semibold">
+                              Verified
                             </span>
-                            <span className="text-[10px] font-black text-beat-maroon">
+                            <span className="text-[10px] font-semibold text-beat-maroon">
                               {m.trainerName || "Trainer Verified"}
                             </span>
                             <span className="text-[8px] font-semibold text-beat-muted">
