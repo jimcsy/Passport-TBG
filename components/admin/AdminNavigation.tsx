@@ -11,10 +11,9 @@ interface AdminNavigationProps {
 }
 
 const links = [
-  { href: "/trainer/queue", label: "Review Queue", icon: Inbox },
+  { href: "/trainer/queue", label: "Verifications", icon: ShieldCheck },
   { href: "/trainer/plans", label: "Training Plans", icon: GitBranch },
   { href: "/trainer/trainees", label: "Trainees", icon: Users },
-  { href: "/trainer/batch", label: "Batch Sign-Off", icon: CheckSquare },
 ];
 
 export function AdminNavigation({ admin, signOut }: AdminNavigationProps) {
@@ -27,14 +26,17 @@ export function AdminNavigation({ admin, signOut }: AdminNavigationProps) {
       <a href="#trainer-main" className="sr-only fixed left-4 top-4 z-50 rounded-md bg-beat-maroon px-4 py-3 font-semibold text-white focus:not-sr-only">Skip to content</a>
       <header className="border-b border-beat-gold/25 bg-white font-sans">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-3 px-4 sm:gap-x-5 sm:px-8 xl:px-0">
-          <Link href="/trainer/queue" aria-label="Trainer workspace review queue" className="my-4 flex shrink-0 items-center gap-2 rounded-sm sm:gap-3">
+          <Link href="/trainer/queue" aria-label="Trainer workspace verifications" className="my-4 flex shrink-0 items-center gap-2 rounded-sm sm:gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold"><ShieldCheck aria-hidden="true" className="h-5 w-5" /></span>
             <span><span className="block text-sm font-bold tracking-tight text-beat-maroon sm:text-base">Trainer workspace</span><span className="mt-0.5 block text-[9px] font-medium uppercase tracking-[.1em] text-beat-maroon/60 sm:text-[10px]">The Bistro Group · BEAT</span></span>
           </Link>
           <nav aria-label="Trainer navigation" className="order-3 w-full overflow-x-auto border-t border-beat-gold/15 xl:order-none xl:w-auto xl:self-stretch xl:border-0">
             <ul className="flex h-full w-max gap-5 sm:gap-6 xl:gap-5">
               {links.map(({ href, label, icon: Icon }) => {
-                const active = pathname === href || pathname.startsWith(`${href}/`);
+                const active =
+                  pathname === href ||
+                  pathname.startsWith(`${href}/`) ||
+                  (href === "/trainer/queue" && pathname.startsWith("/trainer/batch"));
                 return (
                   <li key={href} className="flex">
                     <Link href={href} aria-current={active ? pathname === href ? "page" : "location" : undefined}

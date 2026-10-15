@@ -17,10 +17,15 @@ async function runEndToEndVerification() {
   }
   console.log(`   ✓ Found trainee: ${trainee.fullName} (${trainee.restaurantBrand} - ${trainee.branchLocation})`);
 
-  // Step 2: Trainee Self-Reports Milestone "COMM-01" as READY_FOR_REVIEW
-  console.log("\n2️⃣  Simulating Trainee marking milestone COMM-01 'Ready for Review'...");
+  const activeAssignment = await prisma.traineePlanAssignment.findFirst({
+    where: { traineeId: trainee.id, status: "ACTIVE" },
+  });
+
   const nodeComm01 = await prisma.planNode.findFirst({
-    where: { code: "COMM-01" },
+    where: {
+      code: "COMM-01",
+      ...(activeAssignment ? { planVersionId: activeAssignment.planVersionId } : {}),
+    },
   });
 
   if (!nodeComm01) {
@@ -123,7 +128,10 @@ async function runEndToEndVerification() {
   // Step 6: Verify Cohort Batch Attendance Transaction
   console.log("\n6️⃣  Verifying Cohort Batch Sign-Off Transaction...");
   const nodeTech01 = await prisma.planNode.findFirst({
-    where: { code: "TECH-01" },
+    where: {
+      code: "TECH-01",
+      ...(activeAssignment ? { planVersionId: activeAssignment.planVersionId } : {}),
+    },
   });
 
   if (!nodeTech01) {
