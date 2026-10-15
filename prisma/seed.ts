@@ -4,35 +4,40 @@ import { DevelopmentPath, MilestoneStatus, Role } from "../lib/types/models";
 
 const prisma = new PrismaClient();
 
-const CANONICAL_MILESTONES = [
+// ============================================================================
+// 1. BEAT STANDARD CORPORATE MILESTONE LIBRARY
+// ============================================================================
+
+// Core Shared Milestones across all corporate tracks
+const SHARED_CORE_MILESTONES = [
   // 1. Onboarding
   {
     path: DevelopmentPath.ONBOARDING,
     orderIndex: 1,
     code: "ONB-01",
-    title: "Orientation & Bistro Group Company History",
-    description: "Overview of The Bistro Group culture, company heritage, and restaurant brands.",
+    title: "The Bistro Group Corporate Orientation & Heritage",
+    description: "Overview of The Bistro Group culture, corporate governance, multi-brand restaurant portfolio, and organizational values.",
   },
   {
     path: DevelopmentPath.ONBOARDING,
     orderIndex: 2,
     code: "ONB-02",
-    title: "Food Safety, Sanitation & Hygiene Standards",
-    description: "HACCP principles, cross-contamination prevention, sanitization schedules, and personal hygiene.",
+    title: "Data Privacy, Information Security & Compliance",
+    description: "Data Privacy Act (DPA), handling sensitive business data, confidentiality agreements, and acceptable IT use policies.",
   },
   {
     path: DevelopmentPath.ONBOARDING,
     orderIndex: 3,
     code: "ONB-03",
-    title: "Store Tour, Safety Equipment & Emergency Protocols",
-    description: "Walkthrough of fire exits, first aid kits, emergency shut-offs, and store safety readiness.",
+    title: "Corporate Tools & Workplace Systems Setup",
+    description: "Configuration of corporate email, HRIS self-service portal, internal communications, and IT service desk workflows.",
   },
   {
     path: DevelopmentPath.ONBOARDING,
     orderIndex: 4,
     code: "ONB-04",
-    title: "First 30 Days Check-in & Buddy Alignment",
-    description: "Formal check-in with store trainer, buddy feedback evaluation, and passport orientation.",
+    title: "First 30 Days Check-in & Corporate Buddy Alignment",
+    description: "Structured check-in with department manager, corporate buddy alignment, and Growth Passport milestone review.",
   },
 
   // 2. Communication Skills
@@ -40,59 +45,29 @@ const CANONICAL_MILESTONES = [
     path: DevelopmentPath.COMMUNICATION,
     orderIndex: 1,
     code: "COMM-01",
-    title: "Guest Welcoming & Table Greetings Etiquette",
-    description: "Warm hospitality, 30-second table greeting standard, and positive first impressions.",
+    title: "Professional Business Communication & Email Etiquette",
+    description: "High-standard corporate correspondence, email response SLAs, clear documentation, and brand voice consistency.",
   },
   {
     path: DevelopmentPath.COMMUNICATION,
     orderIndex: 2,
     code: "COMM-02",
-    title: "Active Listening & Order Clarification",
-    description: "Order confirmation, special requests, allergy cross-checks, and proactive table attentiveness.",
+    title: "Cross-Department Collaboration & Active Listening",
+    description: "Effective cross-functional alignment, requirements gathering, stakeholder empathy, and collaborative problem-solving.",
   },
   {
     path: DevelopmentPath.COMMUNICATION,
     orderIndex: 3,
     code: "COMM-03",
-    title: "Service Recovery & Resolving Guest Concerns",
-    description: "Applying the LAST principle (Listen, Apologize, Solve, Thank) during dining concerns.",
+    title: "Internal Customer Service & Service Recovery",
+    description: "Partnering with restaurant branches and corporate units as internal clients, handling urgent requests with the LAST model.",
   },
   {
     path: DevelopmentPath.COMMUNICATION,
     orderIndex: 4,
     code: "COMM-04",
-    title: "Shift Handovers & Team Briefings",
-    description: "Effective pre-shift briefing participation and station status handovers.",
-  },
-
-  // 3. Technical Skills
-  {
-    path: DevelopmentPath.TECHNICAL,
-    orderIndex: 1,
-    code: "TECH-01",
-    title: "POS & Order Entry Competency",
-    description: "Accurate order punching, seat numbering, modifier entries, and bill splitting.",
-  },
-  {
-    path: DevelopmentPath.TECHNICAL,
-    orderIndex: 2,
-    code: "TECH-02",
-    title: "Menu Knowledge, Allergen Guide & Recipe Specs",
-    description: "Ingredient mastery, flavor profiles, allergen cross-references, and signature drink specs.",
-  },
-  {
-    path: DevelopmentPath.TECHNICAL,
-    orderIndex: 3,
-    code: "TECH-03",
-    title: "Table Service Sequence & Station Prep",
-    description: "Mise en place standards, beverage delivery timing, food pacing, and plate clearing.",
-  },
-  {
-    path: DevelopmentPath.TECHNICAL,
-    orderIndex: 4,
-    code: "TECH-04",
-    title: "Station Closing, Auditing & Inventory Logs",
-    description: "End-of-shift station teardown, sanitation sweep, waste logs, and stock replenishment.",
+    title: "Team Briefings, Status Reporting & Alignment",
+    description: "Active participation in standups, weekly department KPI reporting, and transparent roadblock escalations.",
   },
 
   // 4. Personal Effectiveness & Culture
@@ -100,29 +75,29 @@ const CANONICAL_MILESTONES = [
     path: DevelopmentPath.CULTURE,
     orderIndex: 1,
     code: "CUL-01",
-    title: "Core Bistro Values & Hospitality Heart",
-    description: "Demonstrating passion for hospitality, integrity, positive energy, and pride in craft.",
+    title: "Living The Bistro Core Values & Service Heart",
+    description: "Demonstrating passion for hospitality excellence, workplace integrity, and pride in supporting restaurant teams.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 2,
     code: "CUL-02",
-    title: "Teamwork Spirit & Cross-Station Support",
-    description: "Collaboration during peak rushes, helping bussers/runners, and team synergy.",
+    title: "Cross-Functional Synergy & Team Accountability",
+    description: "Supporting peer departments during peak operational campaigns, product launches, and company-wide initiatives.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 3,
     code: "CUL-03",
-    title: "Grooming, Uniform Standards & Brand Ambassadorship",
-    description: "Impeccable uniform presentation, grooming code compliance, and brand representation.",
+    title: "Professional Work Ethics & Corporate Standards",
+    description: "Punctuality, professional dress code, workplace etiquette, time management, and commitment to corporate deliverables.",
   },
   {
     path: DevelopmentPath.CULTURE,
     orderIndex: 4,
     code: "CUL-04",
     title: "Peer Recognition & BEAT Spirit Champion",
-    description: "Upholding team morale, recognizing colleagues' contributions, and living the BEAT spirit.",
+    description: "Celebrating colleague achievements, fostering high team morale, and actively promoting the BEAT recognition culture.",
   },
 
   // 5. Leadership Skills
@@ -130,90 +105,264 @@ const CANONICAL_MILESTONES = [
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 1,
     code: "LEAD-01",
-    title: "Peer Mentorship & New Hire Buddying",
-    description: "Guiding incoming trainees through their first shifts and providing supportive feedback.",
+    title: "Peer Mentorship & New Hire Buddy Coaching",
+    description: "Guiding incoming corporate team members through their initial weeks and providing constructive support.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 2,
     code: "LEAD-02",
-    title: "Shift Rush Coordination & Station Ownership",
-    description: "Maintaining calmness, pacing station queues, and guiding peers during sudden volume spikes.",
+    title: "Project Ownership & Cross-Team Coordination",
+    description: "Leading an assigned department project workstream, tracking deliverables, and coordinating with stakeholders.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 3,
     code: "LEAD-03",
-    title: "Store Auditing & Quality Standard Enforcement",
-    description: "Conducting pre-opening audits, line-checks, sanitation verification, and safety walk-throughs.",
+    title: "Process Optimization & Operational Excellence",
+    description: "Identifying workflow bottlenecks, drafting standard operating procedures (SOP), and proposing productivity enhancements.",
   },
   {
     path: DevelopmentPath.LEADERSHIP,
     orderIndex: 4,
     code: "LEAD-04",
     title: "Capstone Presentation & Growth Passport Defense",
-    description: "Presenting key development milestones, learnings, and personal growth goals to the general manager.",
+    description: "Presenting key corporate milestones, learnings, and personal growth goals to the department leadership.",
   },
 ];
 
-// Defined Role Plan Templates
-const ROLE_TEMPLATES = [
+// Department-specific Technical Milestones
+const DEPARTMENT_TECHNICAL_MILESTONES = [
+  // IT & Tech Support
   {
-    planId: "plan-barista",
-    title: "Specialty Barista Training Track",
-    roleIdentifier: "BARISTA",
-    description: "Tailored path focusing on beverage station excellence, hospitality greeting, and food safety.",
-    isDefault: false,
-    milestoneCodes: [
-      "ONB-01", "ONB-02", "ONB-03", "ONB-04", // Full onboarding
-      "COMM-01", "COMM-02",                   // Guest greeting & listening
-      "TECH-01", "TECH-02", "TECH-04",        // POS, menu specs, station closing
-      "CUL-01", "CUL-03",                     // Culture & grooming
-      "LEAD-01",                              // Buddy mentorship
-    ],
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 1,
+    code: "TECH-IT-01",
+    title: "Helpdesk Ticket & Incident Management",
+    description: "SLA compliance, ticket triage, remote troubleshooting, and resolution tracking for store and head office users.",
   },
   {
-    planId: "plan-kitchen-staff",
-    title: "Culinary & Kitchen Staff Track",
-    roleIdentifier: "KITCHEN_STAFF",
-    description: "Kitchen operations focusing on recipe specifications, line checks, HACCP safety, and station closing.",
-    isDefault: false,
-    milestoneCodes: [
-      "ONB-01", "ONB-02", "ONB-03",           // Core safety & orientation
-      "COMM-04",                              // Shift handovers & briefings
-      "TECH-01", "TECH-02", "TECH-03", "TECH-04", // Full technical line skills
-      "CUL-01", "CUL-02", "CUL-03",           // Teamwork, hygiene, values
-      "LEAD-02",                              // Shift rush coordination
-    ],
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 2,
+    code: "TECH-IT-02",
+    title: "POS & Restaurant Systems Infrastructure",
+    description: "Network connectivity, POS terminal diagnostics, store server uptime, and peripheral equipment maintenance.",
   },
   {
-    planId: "plan-floor-server",
-    title: "Dining Floor & Guest Service Specialist",
-    roleIdentifier: "FLOOR_SERVER",
-    description: "Front-of-house excellence focusing on table service sequence, guest hospitality, and service recovery.",
-    isDefault: false,
-    milestoneCodes: [
-      "ONB-01", "ONB-02", "ONB-03", "ONB-04", // Full onboarding
-      "COMM-01", "COMM-02", "COMM-03", "COMM-04", // Full communication & LAST method
-      "TECH-01", "TECH-02", "TECH-03",        // POS, allergen guide, table sequence
-      "CUL-01", "CUL-02", "CUL-04",           // Values, cross-station help, BEAT spirit
-      "LEAD-01",                              // Peer mentorship
-    ],
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 3,
+    code: "TECH-IT-03",
+    title: "Corporate Identity, Software & Access Control",
+    description: "User provisioning, Google Workspace / Microsoft 365 administration, SSO credentials, and software licensing.",
   },
   {
-    planId: "plan-supervisor",
-    title: "Store Supervisor & Shift Leader Track",
-    roleIdentifier: "STORE_SUPERVISOR",
-    description: "Comprehensive development path spanning all 5 paths with intensive leadership, quality audits, and capstone.",
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 4,
+    code: "TECH-IT-04",
+    title: "System Backup, Disaster Recovery & Security Audits",
+    description: "Data backup verification, security patch deployment, vulnerability scans, and IT asset inventory auditing.",
+  },
+
+  // HR & People Operations
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 1,
+    code: "TECH-HR-01",
+    title: "Talent Acquisition & Candidate Onboarding",
+    description: "Job requisition management, candidate screening, pre-employment documentation, and corporate orientation logistics.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 2,
+    code: "TECH-HR-02",
+    title: "HRIS & Employee Records Management",
+    description: "201 file maintenance, master employee database administration, attendance tracking, and leave administration.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 3,
+    code: "TECH-HR-03",
+    title: "Employee Relations & Policy Administration",
+    description: "Company code of discipline, labor compliance fundamentals, grievance handling, and employee well-being initiatives.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 4,
+    code: "TECH-HR-04",
+    title: "Performance Appraisal & Learning Administration",
+    description: "Performance review cycles, BEAT passport tracking, training session scheduling, and HR metrics reporting.",
+  },
+
+  // Finance & Accounting
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 1,
+    code: "TECH-FIN-01",
+    title: "Accounts Payable & Invoice Processing",
+    description: "3-way matching of purchase orders, vendor invoice verification, check voucher generation, and payment scheduling.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 2,
+    code: "TECH-FIN-02",
+    title: "General Ledger, Sales Reconciliation & Journal Entries",
+    description: "Daily store sales audits, petty cash verification, bank reconciliations, and month-end journal entries.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 3,
+    code: "TECH-FIN-03",
+    title: "Tax Compliance & Statutory Remittances",
+    description: "Withholding tax schedules, VAT filing preparation, BIR regulatory compliance, and statutory remittance checks.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 4,
+    code: "TECH-FIN-04",
+    title: "Budget Monitoring & Financial Variance Analysis",
+    description: "Department OPEX tracking, store cost variance analysis, financial statement schedules, and reporting pack preparation.",
+  },
+
+  // Marketing & Creative
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 1,
+    code: "TECH-MKT-01",
+    title: "Campaign Ideation & Brand Promotion Execution",
+    description: "Multi-brand marketing calendars, promotional launch rollouts, in-store POP material distribution, and campaign timelines.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 2,
+    code: "TECH-MKT-02",
+    title: "Social Media Management & Digital Engagement",
+    description: "Content scheduling, social listening, diner community moderation, digital copywriting, and brand voice oversight.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 3,
+    code: "TECH-MKT-03",
+    title: "Market Research, Menu Analytics & Customer Insights",
+    description: "Guest feedback surveys, guest demographic analytics, campaign ROI evaluation, and competitor benchmark reviews.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 4,
+    code: "TECH-MKT-04",
+    title: "Agency & Creative Asset Vendor Coordination",
+    description: "Creative brief formulation, food photoshoot coordination, print vendor liaison, and digital asset library management.",
+  },
+
+  // Supply Chain & Logistics
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 1,
+    code: "TECH-SCM-01",
+    title: "Procurement & Purchase Order Management",
+    description: "Requisition review, vendor purchase orders, price catalog adherence, supplier quotation analysis, and delivery SLAs.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 2,
+    code: "TECH-SCM-02",
+    title: "Central Commissary & Warehouse Inventory Control",
+    description: "Stock movement monitoring, cold chain storage audits, FIFO stock rotation, and inventory shrinkage minimization.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 3,
+    code: "TECH-SCM-03",
+    title: "Store Delivery Logistics & Route Coordination",
+    description: "Daily branch dispatch schedules, multi-drop route optimization, delivery turnaround tracking, and discrepancy claims.",
+  },
+  {
+    path: DevelopmentPath.TECHNICAL,
+    orderIndex: 4,
+    code: "TECH-SCM-04",
+    title: "Supplier Quality Assurance & Vendor Scorecards",
+    description: "Raw ingredient quality inspection standards, supplier performance evaluations, and HACCP transport compliance.",
+  },
+];
+
+// ============================================================================
+// 2. THE 5 CORPORATE SUPPORT TRAINING TRACKS
+// ============================================================================
+
+interface CorporateTrackDefinition {
+  planId: string;
+  title: string;
+  roleIdentifier: string;
+  jobRole: string;
+  description: string;
+  isDefault: boolean;
+  technicalMilestoneCodes: string[];
+}
+
+const CORPORATE_TRACKS: CorporateTrackDefinition[] = [
+  {
+    planId: "plan-it-tech-support",
+    title: "IT & Tech Support Track",
+    roleIdentifier: "IT_TECH_SUPPORT",
+    jobRole: "IT Support Specialist",
+    description: "Covers corporate systems administration, POS infrastructure, helpdesk management, and network security standards.",
+    isDefault: true,
+    technicalMilestoneCodes: ["TECH-IT-01", "TECH-IT-02", "TECH-IT-03", "TECH-IT-04"],
+  },
+  {
+    planId: "plan-hr-people-ops",
+    title: "HR & People Operations Track",
+    roleIdentifier: "HR_PEOPLE_OPS",
+    jobRole: "HR Specialist",
+    description: "Development track covering talent acquisition, HRIS maintenance, employee relations, and learning administration.",
     isDefault: false,
-    milestoneCodes: CANONICAL_MILESTONES.map((m) => m.code), // All 20 milestones
+    technicalMilestoneCodes: ["TECH-HR-01", "TECH-HR-02", "TECH-HR-03", "TECH-HR-04"],
+  },
+  {
+    planId: "plan-finance-accounting",
+    title: "Finance & Accounting Track",
+    roleIdentifier: "FINANCE_ACCOUNTING",
+    jobRole: "Accounting Associate",
+    description: "Focuses on accounts payable, store sales reconciliations, tax compliance, and financial variance monitoring.",
+    isDefault: false,
+    technicalMilestoneCodes: ["TECH-FIN-01", "TECH-FIN-02", "TECH-FIN-03", "TECH-FIN-04"],
+  },
+  {
+    planId: "plan-marketing-creative",
+    title: "Marketing & Creative Track",
+    roleIdentifier: "MARKETING_CREATIVE",
+    jobRole: "Marketing Specialist",
+    description: "Designed for marketing and creative support in brand promotion, digital engagement, campaign analytics, and agency coordination.",
+    isDefault: false,
+    technicalMilestoneCodes: ["TECH-MKT-01", "TECH-MKT-02", "TECH-MKT-03", "TECH-MKT-04"],
+  },
+  {
+    planId: "plan-supply-chain-logistics",
+    title: "Supply Chain & Logistics Track",
+    roleIdentifier: "SUPPLY_CHAIN_LOGISTICS",
+    jobRole: "Supply Chain Specialist",
+    description: "Focuses on procurement management, central warehouse inventory, delivery logistics, and supplier quality assurance.",
+    isDefault: false,
+    technicalMilestoneCodes: ["TECH-SCM-01", "TECH-SCM-02", "TECH-SCM-03", "TECH-SCM-04"],
   },
 ];
 
 async function main() {
-  console.log("🌱 Seeding The Bistro Group Growth Passport Database with Role-Based Plans...");
+  console.log("🌱 Seeding The Bistro Group Growth Passport Database (Corporate Support Edition)...");
 
-  // 1. Seed Admin Trainer
+  // 1. Wipe all test records, stale plans, nodes, and assignments for full clean reset
+  console.log("🧹 Cleaning up old test data, stale plans, and non-Juan trainees...");
+  await prisma.traineeProgress.deleteMany({});
+  await prisma.traineePlanAssignment.deleteMany({});
+  await prisma.trainee.deleteMany({
+    where: { traineeCode: { not: "TBG-2024-001" } },
+  });
+  await prisma.planEdge.deleteMany({});
+  await prisma.planNode.deleteMany({});
+  await prisma.planVersion.deleteMany({});
+  await prisma.trainingPlan.deleteMany({});
+  console.log("✓ Cleaned up old database records.");
+
+  // 2. Seed Admin Trainer
   const passwordHash = await bcrypt.hash("password123", 10);
   const trainer = await prisma.adminUser.upsert({
     where: { employeeId: "EMP-1001" },
@@ -233,36 +382,37 @@ async function main() {
   });
   console.log(`✓ Admin Trainer seeded: ${trainer.fullName} (${trainer.employeeId})`);
 
-  // 2. Seed Trainee
+  // 3. Seed Single Trainee: Juan Dela Cruz (Corporate IT Support Specialist)
   const trainee = await prisma.trainee.upsert({
     where: { traineeCode: "TBG-2024-001" },
     update: {
       fullName: "Juan Dela Cruz",
       email: "trainee@bistro.com.ph",
-      restaurantBrand: "TGI Fridays",
-      branchLocation: "Bonifacio High Street",
+      restaurantBrand: "Corporate Head Office",
+      branchLocation: "Bistro Support Center",
       cohortBatch: "Cohort-2024-Q4",
-      jobRole: "Barista",
+      jobRole: "IT Support Specialist",
       hireDate: new Date("2024-10-01T00:00:00Z"),
     },
     create: {
       traineeCode: "TBG-2024-001",
       fullName: "Juan Dela Cruz",
       email: "trainee@bistro.com.ph",
-      restaurantBrand: "TGI Fridays",
-      branchLocation: "Bonifacio High Street",
+      restaurantBrand: "Corporate Head Office",
+      branchLocation: "Bistro Support Center",
       cohortBatch: "Cohort-2024-Q4",
-      jobRole: "Barista",
+      jobRole: "IT Support Specialist",
       hireDate: new Date("2024-10-01T00:00:00Z"),
     },
   });
-  console.log(`✓ Trainee seeded: ${trainee.fullName} (${trainee.traineeCode}, Role: ${trainee.jobRole})`);
+  console.log(`✓ Single Trainee seeded: ${trainee.fullName} (${trainee.traineeCode}, Role: ${trainee.jobRole})`);
 
-  // 3. Seed Milestone Definitions (BEAT Standard Library)
-  console.log("⏳ Seeding 20 canonical milestones in BEAT Standard Library...");
-  const milestoneMap = new Map<string, typeof CANONICAL_MILESTONES[0] & { id: string }>();
+  // 4. Seed BEAT Standard Corporate Milestone Library
+  console.log("⏳ Seeding BEAT Standard Corporate Milestones Library...");
+  const allLibraryMilestones = [...SHARED_CORE_MILESTONES, ...DEPARTMENT_TECHNICAL_MILESTONES];
+  const libraryMap = new Map<string, { id: string; code: string; title: string; description: string; path: string; orderIndex: number }>();
 
-  for (const m of CANONICAL_MILESTONES) {
+  for (const m of allLibraryMilestones) {
     const record = await prisma.milestoneDefinition.upsert({
       where: { code: m.code },
       update: {
@@ -281,104 +431,32 @@ async function main() {
         isStandard: true,
       },
     });
-    milestoneMap.set(m.code, { ...m, id: record.id });
+    libraryMap.set(m.code, { ...m, id: record.id });
   }
-  console.log(`✓ Seeded ${milestoneMap.size} milestones into BEAT Library.`);
+  console.log(`✓ Seeded ${libraryMap.size} corporate milestones into BEAT Library.`);
 
-  // 4. Seed Universal Baseline Default Plan
-  console.log("⏳ Seeding Universal Baseline Plan...");
-  const universalPlan = await prisma.trainingPlan.upsert({
-    where: { id: "universal-default-plan" },
-    update: {
-      title: "Universal BEAT Development Track",
-      roleIdentifier: "UNIVERSAL_DEFAULT",
-      isDefault: true,
-      status: "PUBLISHED",
-      createdById: trainer.id,
-    },
-    create: {
-      id: "universal-default-plan",
-      title: "Universal BEAT Development Track",
-      roleIdentifier: "UNIVERSAL_DEFAULT",
-      isDefault: true,
-      status: "PUBLISHED",
-      createdById: trainer.id,
-    },
-  });
+  // 5. Seed the 5 Ready-Made Corporate Training Plans & Plan Versions
+  console.log("⏳ Seeding 5 Corporate Support Training Plans...");
+  const trackVersionMap = new Map<string, string>();
+  let itSupportPlanVersionId = "";
 
-  const universalVersion = await prisma.planVersion.upsert({
-    where: {
-      planId_versionNumber: {
-        planId: universalPlan.id,
-        versionNumber: 1,
-      },
-    },
-    update: {
-      status: "PUBLISHED",
-      publishedById: trainer.id,
-    },
-    create: {
-      id: "universal-default-plan-v1",
-      planId: universalPlan.id,
-      versionNumber: 1,
-      status: "PUBLISHED",
-      publishedById: trainer.id,
-      changelog: "Universal baseline development track covering all 5 paths",
-    },
-  });
-
-  const universalNodeMap = new Map<string, string>();
-  for (const m of CANONICAL_MILESTONES) {
-    const libraryMilestone = milestoneMap.get(m.code)!;
-    const nodeId = `node_${m.code}`;
-    const node = await prisma.planNode.upsert({
-      where: { id: nodeId },
-      update: {
-        planVersionId: universalVersion.id,
-        libraryMilestoneId: libraryMilestone.id,
-        path: m.path,
-        code: m.code,
-        title: m.title,
-        description: m.description,
-        orderIndex: m.orderIndex,
-      },
-      create: {
-        id: nodeId,
-        planVersionId: universalVersion.id,
-        libraryMilestoneId: libraryMilestone.id,
-        path: m.path,
-        code: m.code,
-        title: m.title,
-        description: m.description,
-        orderIndex: m.orderIndex,
-        posX: 0,
-        posY: 0,
-        isCustom: false,
-      },
-    });
-    universalNodeMap.set(m.code, node.id);
-  }
-
-  // 5. Seed Role-Specific Training Plans (Barista, Kitchen Staff, Floor Server, Supervisor)
-  console.log("⏳ Seeding 4 Role-Specific Training Plans & Version Snapshots...");
-  const roleVersionMap = new Map<string, string>();
-
-  for (const role of ROLE_TEMPLATES) {
+  for (const track of CORPORATE_TRACKS) {
     const plan = await prisma.trainingPlan.upsert({
-      where: { id: role.planId },
+      where: { id: track.planId },
       update: {
-        title: role.title,
-        roleIdentifier: role.roleIdentifier,
-        description: role.description,
+        title: track.title,
+        roleIdentifier: track.roleIdentifier,
+        description: track.description,
+        isDefault: track.isDefault,
         status: "PUBLISHED",
         createdById: trainer.id,
       },
       create: {
-        id: role.planId,
-        title: role.title,
-        roleIdentifier: role.roleIdentifier,
-        description: role.description,
-        isDefault: false,
+        id: track.planId,
+        title: track.title,
+        roleIdentifier: track.roleIdentifier,
+        description: track.description,
+        isDefault: track.isDefault,
         status: "PUBLISHED",
         createdById: trainer.id,
       },
@@ -396,46 +474,67 @@ async function main() {
         publishedById: trainer.id,
       },
       create: {
-        id: `${role.planId}-v1`,
+        id: `${track.planId}-v1`,
         planId: plan.id,
         versionNumber: 1,
         status: "PUBLISHED",
         publishedById: trainer.id,
-        changelog: `Initial published version for ${role.title}`,
+        changelog: `Initial corporate development track for ${track.title}`,
       },
     });
-    roleVersionMap.set(role.roleIdentifier, version.id);
 
-    // Seed nodes for this role plan
-    let orderCounter: Record<string, number> = {};
-    for (const code of role.milestoneCodes) {
-      const libraryMilestone = milestoneMap.get(code);
-      if (!libraryMilestone) continue;
+    trackVersionMap.set(track.planId, version.id);
+    if (track.planId === "plan-it-tech-support") {
+      itSupportPlanVersionId = version.id;
+    }
 
-      orderCounter[libraryMilestone.path] = (orderCounter[libraryMilestone.path] || 0) + 1;
-      const orderIndex = orderCounter[libraryMilestone.path];
-      const nodeId = `${role.planId}-node-${code}`;
+    // Build the 20 milestones for this track:
+    // 4 Onboarding + 4 Communication + 4 Track Technical + 4 Culture + 4 Leadership
+    const trackMilestones = [
+      ...SHARED_CORE_MILESTONES.filter((m) => m.path === DevelopmentPath.ONBOARDING),
+      ...SHARED_CORE_MILESTONES.filter((m) => m.path === DevelopmentPath.COMMUNICATION),
+      ...track.technicalMilestoneCodes.map((techCode, idx) => {
+        const libM = libraryMap.get(techCode)!;
+        return {
+          path: DevelopmentPath.TECHNICAL,
+          orderIndex: idx + 1,
+          code: `TECH-0${idx + 1}`, // Standard TECH-01..04 code on the plan node
+          title: libM.title,
+          description: libM.description,
+          libraryMilestoneId: libM.id,
+        };
+      }),
+      ...SHARED_CORE_MILESTONES.filter((m) => m.path === DevelopmentPath.CULTURE),
+      ...SHARED_CORE_MILESTONES.filter((m) => m.path === DevelopmentPath.LEADERSHIP),
+    ];
+
+    for (const m of trackMilestones) {
+      const libraryMilestone = "libraryMilestoneId" in m
+        ? { id: m.libraryMilestoneId }
+        : libraryMap.get(m.code)!;
+
+      const nodeId = `${track.planId}-node-${m.code}`;
 
       await prisma.planNode.upsert({
         where: { id: nodeId },
         update: {
           planVersionId: version.id,
           libraryMilestoneId: libraryMilestone.id,
-          path: libraryMilestone.path,
-          code: libraryMilestone.code,
-          title: libraryMilestone.title,
-          description: libraryMilestone.description,
-          orderIndex,
+          path: m.path,
+          code: m.code,
+          title: m.title,
+          description: m.description,
+          orderIndex: m.orderIndex,
         },
         create: {
           id: nodeId,
           planVersionId: version.id,
           libraryMilestoneId: libraryMilestone.id,
-          path: libraryMilestone.path,
-          code: libraryMilestone.code,
-          title: libraryMilestone.title,
-          description: libraryMilestone.description,
-          orderIndex,
+          path: m.path,
+          code: m.code,
+          title: m.title,
+          description: m.description,
+          orderIndex: m.orderIndex,
           posX: 0,
           posY: 0,
           isCustom: false,
@@ -443,80 +542,63 @@ async function main() {
       });
     }
   }
-  console.log(`✓ Seeded 4 role templates (Barista, Kitchen Staff, Floor Server, Supervisor).`);
+  console.log("✓ Seeded 5 ready-made corporate tracks (IT, HR, Finance, Marketing, Supply Chain).");
 
-  // 6. Assign Juan Dela Cruz to the Universal Default Plan
-  // (Ensuring backward compatibility with existing tests and mirrors)
+  // 7. Assign Juan Dela Cruz to IT & Tech Support Track
+  console.log("⏳ Assigning Juan Dela Cruz to IT & Tech Support Track...");
   await prisma.traineePlanAssignment.upsert({
     where: {
       traineeId_planVersionId: {
         traineeId: trainee.id,
-        planVersionId: universalVersion.id,
+        planVersionId: itSupportPlanVersionId,
       },
     },
     update: { status: "ACTIVE" },
     create: {
       id: `assign_${trainee.id}`,
       traineeId: trainee.id,
-      planVersionId: universalVersion.id,
+      planVersionId: itSupportPlanVersionId,
       assignedById: trainer.id,
       status: "ACTIVE",
     },
   });
 
-  // 7. Seed Trainee Progress Records
-  // - ONB-01: VERIFIED (Stamped by trainer)
-  // - ONB-02: READY_FOR_REVIEW (With trainee reflection note)
-  // - Others: IN_PROGRESS
-  for (const m of CANONICAL_MILESTONES) {
-    const planNodeId = universalNodeMap.get(m.code)!;
+  // Remove any stale assignments to old plans
+  await prisma.traineePlanAssignment.deleteMany({
+    where: {
+      traineeId: trainee.id,
+      planVersionId: { not: itSupportPlanVersionId },
+    },
+  });
 
-    let status: MilestoneStatus = MilestoneStatus.IN_PROGRESS;
-    let verifiedBy: string | null = null;
-    let verifiedAt: Date | null = null;
-    let traineeNote: string | null = null;
-    let requestedAt: Date | null = null;
+  // 8. Initialize Fresh Clean Progress for Juan Dela Cruz (All IN_PROGRESS)
+  console.log("⏳ Initializing fresh clean progress state (all IN_PROGRESS)...");
+  // Delete all existing progress records for Juan to clear any prior stamps/reviews
+  await prisma.traineeProgress.deleteMany({
+    where: { traineeId: trainee.id },
+  });
 
-    if (m.code === "ONB-01") {
-      status = MilestoneStatus.VERIFIED;
-      verifiedBy = trainer.id;
-      verifiedAt = new Date("2024-10-03T14:30:00Z");
-      traineeNote = "Completed corporate orientation at Bistro Head Office.";
-    } else if (m.code === "ONB-02") {
-      status = MilestoneStatus.READY_FOR_REVIEW;
-      requestedAt = new Date("2024-10-05T10:00:00Z");
-      traineeNote = "Reviewed Food Safety and Sanitation checklist with store buddy. Ready for audit.";
-    }
+  const itNodes = await prisma.planNode.findMany({
+    where: { planVersionId: itSupportPlanVersionId },
+    orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+  });
 
-    await prisma.traineeProgress.upsert({
-      where: {
-        traineeId_planNodeId: {
-          traineeId: trainee.id,
-          planNodeId,
-        },
-      },
-      update: {
-        status,
-        verifiedBy,
-        verifiedAt,
-        traineeNote,
-        requestedAt,
-        isArchived: false,
-      },
-      create: {
+  for (const node of itNodes) {
+    await prisma.traineeProgress.create({
+      data: {
         traineeId: trainee.id,
-        planNodeId,
-        status,
-        verifiedBy,
-        verifiedAt,
-        traineeNote,
-        requestedAt,
+        planNodeId: node.id,
+        status: MilestoneStatus.IN_PROGRESS,
+        verifiedBy: null,
+        verifiedAt: null,
+        traineeNote: null,
+        requestedAt: null,
         isArchived: false,
       },
     });
   }
 
-  console.log("✓ Trainee progress seeded with 1 VERIFIED stamp and 1 READY_FOR_REVIEW submission.");
+  console.log(`✓ Initialized ${itNodes.length} milestones for Juan Dela Cruz in fresh IN_PROGRESS state.`);
   console.log("✨ Seeding completed successfully!");
 }
 

@@ -33,31 +33,31 @@ export const DEVELOPMENT_PATHS: Record<DevelopmentPath, DevelopmentPathMeta> = {
   [DevelopmentPath.ONBOARDING]: {
     key: DevelopmentPath.ONBOARDING,
     title: "Onboarding",
-    description: "Orientation, food safety standards, company history, and emergency protocols",
+    description: "Company heritage, organizational structure, compliance, and workplace policies",
     color: "#5C1D24",
   },
   [DevelopmentPath.COMMUNICATION]: {
     key: DevelopmentPath.COMMUNICATION,
     title: "Communication Skills",
-    description: "Guest hospitality, table etiquette, active listening, and service recovery",
+    description: "Inter-departmental collaboration, active listening, stakeholder reporting, and professional etiquette",
     color: "#C29B38",
   },
   [DevelopmentPath.TECHNICAL]: {
     key: DevelopmentPath.TECHNICAL,
     title: "Technical Skills",
-    description: "POS operations, menu specs, allergy matrix, station management, and closing logs",
+    description: "Department-specific systems, workflow competencies, digital tools, and operational execution",
     color: "#782831",
   },
   [DevelopmentPath.CULTURE]: {
     key: DevelopmentPath.CULTURE,
     title: "Personal Effectiveness & Culture",
-    description: "Core Bistro values, teamwork spirit, grooming standards, and peer recognition",
+    description: "Core Bistro values, cross-functional teamwork, professional standards, and peer recognition",
     color: "#A38027",
   },
   [DevelopmentPath.LEADERSHIP]: {
     key: DevelopmentPath.LEADERSHIP,
     title: "Leadership Skills",
-    description: "Peer mentorship, buddy coaching, shift rush leadership, and capstone sign-off",
+    description: "Mentorship, initiative ownership, process improvement, and capstone presentation",
     color: "#45141A",
   },
 };

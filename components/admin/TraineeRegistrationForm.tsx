@@ -20,13 +20,13 @@ export interface PlanOption {
 
 const fields: { name: RegistrationField; label: string; placeholder?: string; type?: string; maxLength?: number; hint?: string }[] = [
   { name: "fullName", label: "Full name", placeholder: "e.g. Maria Santos" },
-  { name: "email", label: "Registered email", placeholder: "e.g. maria@example.com", type: "email", maxLength: 254 },
+  { name: "email", label: "Registered email", placeholder: "e.g. maria@bistro.com.ph", type: "email", maxLength: 254 },
   { name: "traineeCode", label: "Trainee code", placeholder: "e.g. TBG-2026-002", maxLength: 50, hint: "Choose a unique code. The trainee uses this to open their passport." },
   { name: "hireDate", label: "Hire date", type: "date" },
-  { name: "jobRole", label: "Job role / position", placeholder: "e.g. Barista, Kitchen Staff", hint: "Assigns the appropriate BEAT competencies for this position." },
-  { name: "restaurantBrand", label: "Restaurant brand", placeholder: "e.g. TGI Fridays" },
-  { name: "branchLocation", label: "Branch", placeholder: "e.g. Bonifacio High Street" },
-  { name: "cohortBatch", label: "Cohort / batch", placeholder: "e.g. Cohort-2026-Q4" },
+  { name: "jobRole", label: "Job role / position", placeholder: "e.g. IT Support Specialist, HR Specialist", hint: "Assigns the appropriate BEAT competencies for this position." },
+  { name: "restaurantBrand", label: "Organization / Division", placeholder: "e.g. Corporate Head Office" },
+  { name: "branchLocation", label: "Office / Branch location", placeholder: "e.g. Bistro Support Center" },
+  { name: "cohortBatch", label: "Cohort / batch", placeholder: "e.g. Cohort-2024-Q4" },
 ];
 
 type Options = Record<"jobRole" | "restaurantBrand" | "branchLocation" | "cohortBatch", string[]>;
