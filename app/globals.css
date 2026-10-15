@@ -141,3 +141,8 @@ body {
   background: rgba(92, 29, 36, 0.08);
   border: 1px dashed #5C1D24;
 }
+
+.beat-canvas .react-flow__node-milestone.selected > div {
+  border-color: #C29B38;
+  box-shadow: 0 0 0 3px rgb(194 155 56 / 20%);
+}

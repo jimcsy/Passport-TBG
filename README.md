@@ -124,6 +124,27 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
 4. All application code, server actions, and repositories remain 100% unchanged.
 # Trainee dashboard and digital booklet
 
+The training plan builder docks the milestone library beside the canvas on
+desktop and stacks it below the viewport on smaller screens. Dropping a library
+card, or using its Add to plan button, connects the milestone to its matching
+development path and rebalances the vertical tree. The default canvas starts
+with a visual training-plan root and a vertical spine of five path hubs.
+Milestones branch to both sides of their hub in staggered rows, with individual
+curved connectors rather than one shared horizontal bus. Path spacing adapts
+to milestone counts and measured sizes. The spine is visual only and is excluded
+from saved/published graph data. Initial loading applies this grouped layout
+rather than displaying raw seed coordinates, and opens at the first path for
+readability; Whole plan fits the entire tree.
+Once React Flow measures the
+new node, the viewport smoothly focuses it at a readable zoom (instant with
+reduced motion). Path shortcuts focus a category; Whole plan restores the overview.
+The pannable, zoomable minimap remains at bottom left and zoom controls at bottom
+right. Viewport behavior uses React Flow's measured-node and fitView APIs:
+https://reactflow.dev/api-reference/hooks/use-nodes-initialized
+https://reactflow.dev/api-reference/types/react-flow-instance
+`node --import tsx scripts/test_canvas_layout.ts` checks vertical path ordering,
+staggered branches, and collision-free placement with uneven milestone counts.
+
 The authenticated `/trainer` workspace uses a top navbar in
 `components/admin/AdminNavigation.tsx` in place of the sidebar. Review Queue,
 Training Plans, Trainees, and Batch Sign-Off keep their existing routes, with

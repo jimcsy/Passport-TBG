@@ -21,11 +21,15 @@ export interface MilestoneNodeData {
 function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeData }) {
   return (
     <div className="group relative w-60 rounded-2xl bg-white text-beat-maroon p-3.5 shadow-md border-l-4 border-l-beat-gold border border-beat-border hover:shadow-xl hover:border-beat-gold transition-all select-none">
-      {/* Target Handle from Parent Path Hub */}
+      {/* Invisible anchors keep branch endpoints attached to the card. */}
+      <Handle id="branch-left" type="target" position={Position.Left} isConnectable={false} className="!h-3 !w-3 !opacity-0 !pointer-events-none" />
+      <Handle id="branch-right" type="target" position={Position.Right} isConnectable={false} className="!h-3 !w-3 !opacity-0 !pointer-events-none" />
+      {/* Retain anchors for existing milestone-to-milestone connections. */}
       <Handle
         type="target"
         position={Position.Top}
-        className="!bg-beat-gold !w-3 !h-3 !border-2 !border-white !top-[-6px] shadow-xs"
+        isConnectable={false}
+        className="!w-3 !h-3 !top-[-6px] !opacity-0 !pointer-events-none"
       />
 
       {/* Top Header Row */}
@@ -97,7 +101,8 @@ function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeD
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!bg-beat-maroon !w-2.5 !h-2.5 !border-2 !border-white !bottom-[-5px]"
+        isConnectable={false}
+        className="!w-2.5 !h-2.5 !bottom-[-5px] !opacity-0 !pointer-events-none"
       />
     </div>
   );

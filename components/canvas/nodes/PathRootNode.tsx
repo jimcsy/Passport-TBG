@@ -43,6 +43,9 @@ function PathRootNodeComponent({ data }: { data: PathRootNodeData }) {
 
   return (
     <div className="w-72 rounded-3xl bg-beat-maroon text-beat-gold p-4 shadow-xl border-2 border-beat-gold select-none transition-all hover:shadow-2xl">
+      <Handle id="spine-in" type="target" position={Position.Top} isConnectable={false} className="!h-3 !w-3 !border-white !bg-beat-gold" />
+      <Handle id="branch-left" type="source" position={Position.Left} className="!h-3 !w-3 !border-white !bg-beat-gold" />
+      <Handle id="branch-right" type="source" position={Position.Right} className="!h-3 !w-3 !border-white !bg-beat-gold" />
       {/* Top track & badge row */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <span className="text-[10px] uppercase font-bold tracking-widest text-beat-gold/90">
@@ -88,6 +91,8 @@ function PathRootNodeComponent({ data }: { data: PathRootNodeData }) {
 
       {/* Outgoing Edge Source Handle */}
       <Handle
+        id="spine"
+        isConnectable={false}
         type="source"
         position={Position.Bottom}
         className="!bg-beat-gold !w-3.5 !h-3.5 !border-2 !border-white !bottom-[-7px] shadow-sm"

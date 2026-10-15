@@ -17,6 +17,7 @@ import {
   Panel,
   ReactFlowProvider,
   useReactFlow,
+  useNodesInitialized,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
@@ -37,9 +38,11 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
+import { getMilestonePlacement } from "@/lib/canvas/placement";
 import { DevelopmentPath } from "@/lib/types/models";
 import { savePlanVersionAction, publishPlanCanvasAction } from "@/lib/actions/plans";
 import { PathRootNode, type PathRootNodeData } from "./nodes/PathRootNode";
+import { PlanOverviewNode } from "./nodes/PlanOverviewNode";
 import { MilestoneNode, type MilestoneNodeData } from "./nodes/MilestoneNode";
 import { BeatEdge, type BeatEdgeData } from "./edges/BeatEdge";
 import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibraryDrawer";
@@ -49,6 +52,7 @@ import { PublishPlanModal } from "./PublishPlanModal";
 import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
 
 // Initial 5 Development Path Hubs definition
+const PLAN_OVERVIEW_ID = "plan-overview";
 const INITIAL_PATH_ROOTS: { id: string; path: DevelopmentPath; title: string; x: number; y: number }[] = [
   { id: "root-ONBOARDING", path: DevelopmentPath.ONBOARDING, title: "Onboarding", x: 0, y: 0 },
   { id: "root-COMMUNICATION", path: DevelopmentPath.COMMUNICATION, title: "Communication Skills", x: 320, y: 0 },
@@ -116,13 +120,15 @@ function PlanCanvasBuilderInner({
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(true);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [warningToast, setWarningToast] = useState<string | null>(null);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [focusRequest, setFocusRequest] = useState<{ ids: string[]; detail: boolean } | null>(null);
+  const [focusedPath, setFocusedPath] = useState<DevelopmentPath | null>(DevelopmentPath.ONBOARDING);
 
   // Auto-detect mobile screen (< 768px) and default to structured outline view
   useEffect(() => {
@@ -130,11 +136,27 @@ function PlanCanvasBuilderInner({
       const isMobile = window.innerWidth < 768;
       if (isMobile) {
         setViewMode("tree");
+        setIsLibraryOpen(false);
       }
     }
   }, []);
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { fitView, getNode, viewportInitialized } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+
+  // Wait for React Flow's node measurements instead of racing a timeout after drop.
+  useEffect(() => {
+    if (!focusRequest || !viewportInitialized || !nodesInitialized || viewMode !== "canvas") return;
+    if (focusRequest.ids.some(id => !getNode(id)?.measured?.width)) return;
+    void fitView({
+      nodes: focusRequest.ids.map(id => ({ id })),
+      padding: focusRequest.detail ? 0.6 : 0.25,
+      minZoom: focusRequest.detail ? 0.85 : 0.2,
+      maxZoom: focusRequest.detail ? 1.05 : 0.95,
+      duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450,
+    });
+    setFocusRequest(null);
+  }, [focusRequest, viewportInitialized, nodesInitialized, viewMode, fitView, getNode]);
 
   const showWarning = (msg: string) => {
     setWarningToast(msg);
@@ -169,7 +191,7 @@ function PlanCanvasBuilderInner({
     const milestoneNodes: Node[] = initialVersion.nodes.map((n) => ({
       id: n.id,
       type: "milestone",
-      position: { x: n.posX || 0, y: n.posY || 180 },
+      position: { x: n.posX ?? 0, y: n.posY ?? 180 },
       data: {
         code: n.code,
         title: n.title,
@@ -181,8 +203,13 @@ function PlanCanvasBuilderInner({
       },
     }));
 
-    return [...rootNodes, ...milestoneNodes];
-  }, [initialVersion.nodes, initialCounts]);
+    const overview: Node = {
+      id: PLAN_OVERVIEW_ID, type: "planOverview", position: { x: 0, y: 0 },
+      data: { title: plan.title, role: plan.roleIdentifier },
+      deletable: false, draggable: false, connectable: false,
+    };
+    return [overview, ...rootNodes, ...milestoneNodes];
+  }, [initialVersion.nodes, initialCounts, plan.title, plan.roleIdentifier]);
 
   // Build initial edges
   const initialEdges: Edge[] = useMemo(() => {
@@ -207,11 +234,17 @@ function PlanCanvasBuilderInner({
       }
     });
 
-    return [...dbEdges, ...autoEdges];
+    const overviewEdges: Edge[] = INITIAL_PATH_ROOTS.map((root, index) => ({
+      id: `overview-${root.id}`, source: index === 0 ? PLAN_OVERVIEW_ID : INITIAL_PATH_ROOTS[index - 1].id, target: root.id,
+      sourceHandle: "spine", targetHandle: "spine-in",
+      type: "beatEdge", deletable: false, selectable: false,
+    }));
+    return [...overviewEdges, ...dbEdges, ...autoEdges];
   }, [initialVersion.edges, initialVersion.nodes]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const initialTree = useMemo(() => getLayoutedElements(initialNodes, initialEdges, { direction: "TB" }), [initialNodes, initialEdges]);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialTree.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialTree.edges);
 
   // Placed competency codes to disable re-adding duplicates
   const placedCodes = useMemo(() => {
@@ -230,57 +263,65 @@ function PlanCanvasBuilderInner({
     event.dataTransfer.dropEffect = "move";
   }, []);
 
+  const addLibraryMilestone = useCallback(
+    (milestone: LibraryMilestone) => {
+      // Check if duplicate
+      if (placedCodes.has(milestone.code)) {
+        showWarning(`Competency "${milestone.code}" is already placed on the canvas.`);
+        return;
+      }
+
+      const placement = getMilestonePlacement(nodes, milestone.path as DevelopmentPath);
+      if (!placement) { showWarning("This milestone does not have a matching development path."); return; }
+
+      const newNodeId = `node-lib-${milestone.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
+      const newNode: Node = {
+        id: newNodeId,
+        type: "milestone",
+        position: placement.position,
+        selected: true,
+        data: {
+          code: milestone.code,
+          title: milestone.title,
+          description: milestone.description,
+          path: milestone.path as DevelopmentPath,
+          orderIndex: placement.orderIndex,
+          isCustom: false,
+          libraryMilestoneId: milestone.id,
+        },
+      };
+
+      const newEdge: Edge = {
+        id: `edge-${Date.now()}`,
+        source: `root-${milestone.path}`,
+        target: newNodeId,
+        type: "beatEdge",
+      };
+
+      const tree = getLayoutedElements([...nodes.map(node => ({ ...node, selected: false })), newNode], [...edges, newEdge], { direction: "TB" });
+      setNodes(tree.nodes);
+      setEdges(tree.edges);
+      setHasUnsavedChanges(true);
+      setFocusedPath(milestone.path as DevelopmentPath);
+      setFocusRequest({ ids: [newNodeId], detail: true });
+    },
+    [placedCodes, nodes, edges, setNodes, setEdges]
+  );
+
   const onDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
       const rawData = event.dataTransfer.getData("application/reactflow");
       if (!rawData) return;
-
       try {
-        const milestone: LibraryMilestone = JSON.parse(rawData);
-
-        // Check if duplicate
-        if (placedCodes.has(milestone.code)) {
-          showWarning(`Competency "${milestone.code}" is already placed on the canvas.`);
-          return;
-        }
-
-        const position = screenToFlowPosition({
-          x: event.clientX,
-          y: event.clientY,
-        });
-
-        const newNodeId = `node-lib-${milestone.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
-        const newNode: Node = {
-          id: newNodeId,
-          type: "milestone",
-          position,
-          data: {
-            code: milestone.code,
-            title: milestone.title,
-            description: milestone.description,
-            path: milestone.path as DevelopmentPath,
-            orderIndex: milestone.orderIndex || nodes.length + 1,
-            isCustom: false,
-            libraryMilestoneId: milestone.id,
-          },
-        };
-
-        const newEdge: Edge = {
-          id: `edge-${Date.now()}`,
-          source: `root-${milestone.path}`,
-          target: newNodeId,
-          type: "beatEdge",
-        };
-
-        setNodes((nds) => [...nds, newNode]);
-        setEdges((eds) => [...eds, newEdge]);
-        setHasUnsavedChanges(true);
+        const payload = JSON.parse(rawData);
+        const milestone = libraryMilestones.find(item => item.id === payload.id);
+        if (milestone) addLibraryMilestone(milestone);
       } catch (err) {
         console.error("Failed to parse dropped milestone:", err);
       }
     },
-    [screenToFlowPosition, placedCodes, nodes.length, setNodes, setEdges]
+    [libraryMilestones, addLibraryMilestone]
   );
 
   // Callbacks for node/edge actions
@@ -361,6 +402,7 @@ function PlanCanvasBuilderInner({
   const nodeTypes = useMemo(
     () => ({
       pathRoot: PathRootNode,
+      planOverview: PlanOverviewNode,
       milestone: MilestoneNode,
     }),
     []
@@ -383,6 +425,7 @@ function PlanCanvasBuilderInner({
       const target = connection.target;
       if (!source || !target) return false;
       if (source === target) return false;
+      if (source === PLAN_OVERVIEW_ID || target === PLAN_OVERVIEW_ID) return false;
 
       // Hubs cannot be target of any edge
       if (target.startsWith("root-")) return false;
@@ -463,6 +506,8 @@ function PlanCanvasBuilderInner({
       setHasUnsavedChanges(true);
 
       setSaveMessage(`Custom milestone "${form.code}" added and canvas layout balanced.`);
+      setFocusedPath(form.path);
+      setFocusRequest({ ids: [newNodeId], detail: true });
       setTimeout(() => setSaveMessage(null), 3500);
     },
     [nodes, edges, nodeCountMap, setNodes, setEdges]
@@ -506,7 +551,7 @@ function PlanCanvasBuilderInner({
       ...edge,
       data: {
         ...edge.data,
-        onDeleteEdge: handleDeleteEdge,
+          onDeleteEdge: edge.id.startsWith("overview-") ? undefined : handleDeleteEdge,
       },
     }));
   }, [edges, handleDeleteEdge]);
@@ -517,6 +562,8 @@ function PlanCanvasBuilderInner({
     setNodes([...layouted.nodes]);
     setEdges([...layouted.edges]);
     setHasUnsavedChanges(true);
+    setFocusedPath(null);
+    setFocusRequest({ ids: layouted.nodes.map(node => node.id), detail: false });
   }, [augmentedNodes, augmentedEdges, setNodes, setEdges]);
 
   // Save current canvas state as a draft version
@@ -539,7 +586,7 @@ function PlanCanvasBuilderInner({
         isCustom: (n.data.isCustom as boolean) ?? true,
       }));
 
-    const persistentEdges = edges.map((e) => ({
+    const persistentEdges = edges.filter(edge => !edge.id.startsWith("overview-")).map((e) => ({
       sourceNodeId: e.source,
       targetNodeId: e.target,
       edgeType: "PARENT_CHILD" as const,
@@ -589,7 +636,7 @@ function PlanCanvasBuilderInner({
         isCustom: (n.data.isCustom as boolean) ?? true,
       }));
 
-    const persistentEdges = edges.map((e) => ({
+    const persistentEdges = edges.filter(edge => !edge.id.startsWith("overview-")).map((e) => ({
       sourceNodeId: e.source,
       targetNodeId: e.target,
       edgeType: "PARENT_CHILD" as const,
@@ -635,12 +682,13 @@ function PlanCanvasBuilderInner({
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] rounded-3xl overflow-hidden border border-beat-gold/30 bg-white shadow-xl relative">
+    <div className="relative flex h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-2xl border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
       {/* Canvas Top Bar */}
       <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-4 bg-white border-b border-beat-border z-10 shrink-0">
         <div className="flex items-center gap-3">
           <Link
             href="/trainer/plans"
+            aria-label="Back to training plans"
             className="flex items-center justify-center h-9 w-9 rounded-xl border border-beat-border hover:bg-beat-canvas text-beat-maroon transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -686,7 +734,7 @@ function PlanCanvasBuilderInner({
         </div>
 
         {/* Toolbar Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {saveMessage && (
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 animate-in fade-in">
               {saveMessage}
@@ -726,9 +774,11 @@ function PlanCanvasBuilderInner({
           <button
             type="button"
             onClick={() => setIsLibraryOpen((v) => !v)}
+            aria-expanded={isLibraryOpen}
+            aria-controls="plan-milestone-library"
             className={`flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-xs font-bold transition-all cursor-pointer ${
               isLibraryOpen
-                ? "bg-beat-gold text-white border-beat-gold shadow-sm"
+                ? "bg-beat-maroon text-white border-beat-maroon"
                 : "bg-beat-canvas border-beat-border text-beat-maroon hover:bg-beat-gold/20"
             }`}
           >
@@ -778,9 +828,15 @@ function PlanCanvasBuilderInner({
         </div>
       </header>
 
+      <nav aria-label="Focus development path" className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
+        <button type="button" aria-pressed={focusedPath === null} onClick={() => { setViewMode("canvas"); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
+        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { setViewMode("canvas"); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
+      </nav>
+
       {/* Main Viewport: Canvas vs Tree View */}
+      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       {viewMode === "tree" ? (
-        <div className="flex-1 w-full h-full bg-beat-canvas/30 relative overflow-y-auto">
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-beat-canvas/30">
           <PlanTreeView
             nodes={nodes}
             onDeleteNode={handleDeleteNode}
@@ -790,7 +846,7 @@ function PlanCanvasBuilderInner({
         </div>
       ) : (
         <div
-          className="flex-1 w-full h-full beat-canvas relative"
+          className="beat-canvas relative min-h-0 min-w-0 flex-1"
           onDragOver={onDragOver}
           onDrop={onDrop}
         >
@@ -812,32 +868,40 @@ function PlanCanvasBuilderInner({
             onConnect={onConnect}
             isValidConnection={isValidConnection}
             fitView
-            fitViewOptions={{ padding: 0.2 }}
+            fitViewOptions={{ padding: 0.25, maxZoom: 0.95, nodes: focusedPath ? augmentedNodes.filter(node => node.data.path === focusedPath || (focusedPath === DevelopmentPath.ONBOARDING && node.type === "planOverview")).map(node => ({ id: node.id })) : undefined }}
             minZoom={0.2}
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={20} size={1.5} color="#C29B38" />
-            <Controls showInteractive={false} className="!m-4" />
+            <Controls position="bottom-right" showInteractive={false} className="!m-4" />
             <MiniMap
+              position="bottom-left"
+              pannable
+              zoomable
+              ariaLabel="Training plan overview"
+              style={{ width: 160, height: 100 }}
               className="!m-4"
               nodeColor={(n) => (n.type === "pathRoot" ? "#5C1D24" : "#C29B38")}
               maskColor="rgba(250, 248, 244, 0.7)"
             />
-            <Panel position="bottom-center" className="bg-white/90 backdrop-blur-xs px-4 py-1.5 rounded-full border border-beat-gold/30 text-[11px] font-semibold text-beat-maroon shadow-xs">
-              💡 Two-tier hierarchy: connect Path Root Hubs to child milestones in the same category
+            <Panel position="top-left" className="rounded-lg border border-beat-gold/20 bg-white px-3 py-2 text-[11px] text-beat-maroon/70">
+              Drop a milestone to add it to its path and focus it.
             </Panel>
           </ReactFlow>
         </div>
       )}
 
-      {/* Milestone Library Slide-Over Drawer */}
+      {/* Docked milestone library */}
       <MilestoneLibraryDrawer
         isOpen={isLibraryOpen}
         onClose={() => setIsLibraryOpen(false)}
         milestones={libraryMilestones}
         placedCodes={placedCodes}
+        onAddMilestone={addLibraryMilestone}
+        className="flex min-h-0 max-h-[45%] w-full shrink-0 flex-col border-t border-beat-gold/25 bg-white text-beat-maroon md:max-h-none md:w-72 md:border-l md:border-t-0 lg:w-80"
       />
+      </div>
 
       {/* Custom Milestone Creation Modal */}
       <CreateMilestoneModal

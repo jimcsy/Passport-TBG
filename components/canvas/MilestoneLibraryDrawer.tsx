@@ -31,6 +31,7 @@ interface MilestoneLibraryDrawerProps {
   milestones: LibraryMilestone[];
   placedCodes: Set<string>;
   className?: string;
+  onAddMilestone?: (milestone: LibraryMilestone) => void;
 }
 
 const PATH_TABS: { label: string; path?: DevelopmentPath }[] = [
@@ -48,6 +49,7 @@ export function MilestoneLibraryDrawer({
   milestones,
   placedCodes,
   className,
+  onAddMilestone,
 }: MilestoneLibraryDrawerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPath, setSelectedPath] = useState<DevelopmentPath | undefined>(undefined);
@@ -75,6 +77,7 @@ export function MilestoneLibraryDrawer({
 
   return (
     <aside
+      id="plan-milestone-library"
       aria-label="BEAT Milestone Library"
       className={
         className ||
@@ -100,6 +103,7 @@ export function MilestoneLibraryDrawer({
         <button
           type="button"
           onClick={onClose}
+          aria-label="Close milestone library"
           className="rounded-full p-1.5 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
         >
           <X className="h-5 w-5" />
@@ -112,6 +116,7 @@ export function MilestoneLibraryDrawer({
           <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-beat-maroon/40" />
           <input
             type="text"
+            aria-label="Search milestone library"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search competencies or code (e.g. COMM-01)..."
@@ -143,7 +148,7 @@ export function MilestoneLibraryDrawer({
 
       {/* Drag Instruction Banner */}
       <div className="bg-beat-gold/10 px-4 py-2 border-b border-beat-gold/20 flex items-center justify-between text-[11px] text-beat-maroon">
-        <span className="font-semibold">💡 Drag a card onto the canvas to link it</span>
+        <span className="font-semibold">Drag onto the canvas or select Add</span>
         <span className="font-mono text-[10px] text-beat-muted">
           {filteredMilestones.length} available
         </span>
@@ -166,7 +171,7 @@ export function MilestoneLibraryDrawer({
                 onDragStart={(e) => onDragStart(e, milestone)}
                 className={`group relative rounded-2xl border p-3.5 transition-all select-none ${
                   isPlaced
-                    ? "border-emerald-200 bg-emerald-50/40 opacity-70 cursor-not-allowed"
+                    ? "border-beat-gold/30 bg-beat-canvas opacity-70"
                     : "border-beat-border bg-white hover:border-beat-gold hover:shadow-md cursor-grab active:cursor-grabbing"
                 }`}
               >
@@ -181,9 +186,9 @@ export function MilestoneLibraryDrawer({
                   </div>
 
                   {isPlaced ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-800 border border-emerald-300">
+                    <span className="inline-flex items-center gap-1 rounded-full border border-beat-gold/30 bg-beat-gold/15 px-2 py-0.5 text-[9px] font-bold text-beat-maroon">
                       <Check className="h-2.5 w-2.5" />
-                      <span>Placed on Canvas</span>
+                      <span>Added</span>
                     </span>
                   ) : (
                     <span className="text-[9px] font-bold uppercase tracking-wider text-beat-gold">
@@ -198,6 +203,7 @@ export function MilestoneLibraryDrawer({
                 <p className="text-[11px] text-beat-muted line-clamp-2 mt-1 leading-relaxed">
                   {milestone.description}
                 </p>
+                {onAddMilestone && !isPlaced && <button type="button" aria-label={`Add ${milestone.title} to its development path`} onClick={() => onAddMilestone(milestone)} className="mt-3 min-h-8 rounded-md border border-beat-gold/30 bg-beat-canvas px-3 text-xs font-semibold text-beat-maroon hover:border-beat-gold">Add to plan</button>}
               </div>
             );
           })

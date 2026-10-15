@@ -5,11 +5,13 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
+  getBezierPath,
   type EdgeProps,
 } from "@xyflow/react";
 import { X } from "lucide-react";
 
 export interface BeatEdgeData {
+  branch?: boolean;
   onDeleteEdge?: (id: string) => void;
 }
 
@@ -26,17 +28,18 @@ function BeatEdgeComponent({
   data,
   selected,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
+  const edgeData = data as BeatEdgeData | undefined;
+  const pathOptions = {
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 16,
-  });
-
-  const edgeData = data as BeatEdgeData | undefined;
+  };
+  const [edgePath, labelX, labelY] = edgeData?.branch
+    ? getBezierPath({ ...pathOptions, curvature: 0.35 })
+    : getSmoothStepPath({ ...pathOptions, borderRadius: 16 });
 
   return (
     <>
