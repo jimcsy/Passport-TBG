@@ -163,12 +163,14 @@ export async function reconcileTraineeToPlanVersion(
   }
 
   // 4. Switch assignment pointers
-  if (activeAssignment && activeAssignment.planVersionId !== newPlanVersionId) {
-    await db.traineePlanAssignment.update({
-      where: { id: activeAssignment.id },
-      data: { status: "SUPERSEDED" },
-    });
-  }
+  await db.traineePlanAssignment.updateMany({
+    where: {
+      traineeId,
+      status: "ACTIVE",
+      planVersionId: { not: newPlanVersionId },
+    },
+    data: { status: "SUPERSEDED" },
+  });
 
   await db.traineePlanAssignment.upsert({
     where: {

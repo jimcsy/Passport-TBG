@@ -68,4 +68,5 @@ Milestone statuses:
 - **Zero Mock Fallbacks in Production Code**: Keep Prisma models clean and strongly typed.
 - **Type Safety**: Strictly typed server actions and API route handlers using Zod validation.
 - **Clean DB Abstraction**: Keep all database queries in `/lib/db/` or dedicated repository functions to ensure moving from SQLite to Supabase PostgreSQL later is a drop-in change.
+- **Maintain Schema Documentation**: Whenever any model, relation, or field is added or modified in `prisma/schema.prisma`, you MUST simultaneously update `DATABASE_SCHEMA.md` and its visual Mermaid ER diagram.
 - **Preserve Brand Tokens**: Never use default generic blue or purple buttons; always use Brand Maroon `#5C1D24` and Brand Gold `#C29B38`.

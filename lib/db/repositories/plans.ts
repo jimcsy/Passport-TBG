@@ -71,7 +71,11 @@ export async function getTrainingPlanById(id: string) {
             select: { id: true, fullName: true },
           },
           _count: {
-            select: { assignments: true },
+            select: {
+              assignments: {
+                where: { status: "ACTIVE" },
+              },
+            },
           },
         },
       },
@@ -126,7 +130,12 @@ export async function listTrainingPlans(filters?: {
         orderBy: { versionNumber: "desc" },
         include: {
           _count: {
-            select: { nodes: true, assignments: true },
+            select: {
+              nodes: true,
+              assignments: {
+                where: { status: "ACTIVE" },
+              },
+            },
           },
         },
       },
@@ -375,6 +384,16 @@ export async function publishPlanVersion(
         );
       }
     }
+
+    // Mark previous published versions as SUPERSEDED
+    await tx.planVersion.updateMany({
+      where: {
+        planId: version.planId,
+        id: { not: validated.versionId },
+        status: "PUBLISHED",
+      },
+      data: { status: "SUPERSEDED" },
+    });
 
     return {
       version: updatedVersion,

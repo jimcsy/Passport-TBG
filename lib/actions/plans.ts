@@ -502,7 +502,13 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
           nodes: true,
           edges: true,
           publishedBy: { select: { fullName: true } },
-          _count: { select: { assignments: true } },
+          _count: {
+            select: {
+              assignments: {
+                where: { status: "ACTIVE" },
+              },
+            },
+          },
         },
       });
     });

@@ -349,18 +349,24 @@ const CORPORATE_TRACKS: CorporateTrackDefinition[] = [
 async function main() {
   console.log("🌱 Seeding The Bistro Group Growth Passport Database (Corporate Support Edition)...");
 
-  // 1. Wipe all test records, stale plans, nodes, and assignments for full clean reset
-  console.log("🧹 Cleaning up old test data, stale plans, and non-Juan trainees...");
-  await prisma.traineeProgress.deleteMany({});
-  await prisma.traineePlanAssignment.deleteMany({});
-  await prisma.trainee.deleteMany({
-    where: { traineeCode: { not: "TBG-2024-001" } },
-  });
-  await prisma.planEdge.deleteMany({});
-  await prisma.planNode.deleteMany({});
-  await prisma.planVersion.deleteMany({});
-  await prisma.trainingPlan.deleteMany({});
-  console.log("✓ Cleaned up old database records.");
+  const isForceReset = process.env.FORCE_RESET === "true";
+
+  // 1. Wipe records ONLY if FORCE_RESET=true is explicitly requested
+  if (isForceReset) {
+    console.log("⚠️ FORCE_RESET detected: Performing complete database wipe and fresh re-initialization...");
+    await prisma.traineeProgress.deleteMany({});
+    await prisma.traineePlanAssignment.deleteMany({});
+    await prisma.trainee.deleteMany({
+      where: { traineeCode: { not: "TBG-2024-001" } },
+    });
+    await prisma.planEdge.deleteMany({});
+    await prisma.planNode.deleteMany({});
+    await prisma.planVersion.deleteMany({});
+    await prisma.trainingPlan.deleteMany({});
+    console.log("✓ Cleaned up old database records.");
+  } else {
+    console.log("🛡️ Running in Safe Idempotent Mode: Preserving existing versions, custom drafts, and trainee progress.");
+  }
 
   // 2. Seed Admin Trainer
   const passwordHash = await bcrypt.hash("password123", 10);
@@ -544,61 +550,85 @@ async function main() {
   }
   console.log("✓ Seeded 5 ready-made corporate tracks (IT, HR, Finance, Marketing, Supply Chain).");
 
-  // 7. Assign Juan Dela Cruz to IT & Tech Support Track
-  console.log("⏳ Assigning Juan Dela Cruz to IT & Tech Support Track...");
-  await prisma.traineePlanAssignment.upsert({
-    where: {
-      traineeId_planVersionId: {
+  // 7. Assign Juan Dela Cruz to IT & Tech Support Track (Safe Idempotent)
+  console.log("⏳ Checking Juan Dela Cruz plan assignment...");
+  const existingAssignment = await prisma.traineePlanAssignment.findFirst({
+    where: { traineeId: trainee.id, status: "ACTIVE" },
+  });
+
+  const activePlanVersionId = existingAssignment?.planVersionId || itSupportPlanVersionId;
+
+  if (!existingAssignment) {
+    await prisma.traineePlanAssignment.create({
+      data: {
+        id: `assign_${trainee.id}`,
         traineeId: trainee.id,
         planVersionId: itSupportPlanVersionId,
+        assignedById: trainer.id,
+        status: "ACTIVE",
       },
-    },
-    update: { status: "ACTIVE" },
-    create: {
-      id: `assign_${trainee.id}`,
-      traineeId: trainee.id,
-      planVersionId: itSupportPlanVersionId,
-      assignedById: trainer.id,
-      status: "ACTIVE",
-    },
-  });
+    });
+    console.log("✓ Assigned Juan Dela Cruz to IT & Tech Support Track (v1).");
+  } else {
+    console.log(`✓ Preserved existing assignment for Juan Dela Cruz (Version: ${existingAssignment.planVersionId}).`);
+  }
 
-  // Remove any stale assignments to old plans
-  await prisma.traineePlanAssignment.deleteMany({
-    where: {
-      traineeId: trainee.id,
-      planVersionId: { not: itSupportPlanVersionId },
-    },
-  });
-
-  // 8. Initialize Fresh Clean Progress for Juan Dela Cruz (All IN_PROGRESS)
-  console.log("⏳ Initializing fresh clean progress state (all IN_PROGRESS)...");
-  // Delete all existing progress records for Juan to clear any prior stamps/reviews
-  await prisma.traineeProgress.deleteMany({
-    where: { traineeId: trainee.id },
-  });
-
-  const itNodes = await prisma.planNode.findMany({
-    where: { planVersionId: itSupportPlanVersionId },
-    orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
-  });
-
-  for (const node of itNodes) {
-    await prisma.traineeProgress.create({
-      data: {
+  if (isForceReset) {
+    await prisma.traineePlanAssignment.deleteMany({
+      where: {
         traineeId: trainee.id,
-        planNodeId: node.id,
-        status: MilestoneStatus.IN_PROGRESS,
-        verifiedBy: null,
-        verifiedAt: null,
-        traineeNote: null,
-        requestedAt: null,
-        isArchived: false,
+        planVersionId: { not: itSupportPlanVersionId },
       },
     });
   }
 
-  console.log(`✓ Initialized ${itNodes.length} milestones for Juan Dela Cruz in fresh IN_PROGRESS state.`);
+  // 8. Progress State for Juan Dela Cruz (Preserving stamps unless FORCE_RESET)
+  console.log("⏳ Syncing progress state for Juan Dela Cruz...");
+  if (isForceReset) {
+    await prisma.traineeProgress.deleteMany({
+      where: { traineeId: trainee.id },
+    });
+  }
+
+  const assignedNodes = await prisma.planNode.findMany({
+    where: { planVersionId: activePlanVersionId },
+    orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+  });
+
+  let initializedCount = 0;
+  for (const node of assignedNodes) {
+    const existingProgress = await prisma.traineeProgress.findUnique({
+      where: {
+        traineeId_planNodeId: {
+          traineeId: trainee.id,
+          planNodeId: node.id,
+        },
+      },
+    });
+
+    if (!existingProgress) {
+      await prisma.traineeProgress.create({
+        data: {
+          traineeId: trainee.id,
+          planNodeId: node.id,
+          status: MilestoneStatus.IN_PROGRESS,
+          verifiedBy: null,
+          verifiedAt: null,
+          traineeNote: null,
+          requestedAt: null,
+          isArchived: false,
+        },
+      });
+      initializedCount++;
+    }
+  }
+
+  if (initializedCount > 0) {
+    console.log(`✓ Initialized ${initializedCount} missing milestone progress records for Juan Dela Cruz.`);
+  } else {
+    console.log(`✓ Preserved all existing stamps and verification progress for Juan Dela Cruz.`);
+  }
+
   console.log("✨ Seeding completed successfully!");
 }
 
