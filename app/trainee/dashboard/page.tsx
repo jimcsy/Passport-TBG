@@ -13,7 +13,7 @@ export default async function PassportPage() {
   const data = await getTraineePassportData(session.id);
 
   if (!data) {
-    redirect("/trainee");
+    redirect("/auth/trainee-session-expired");
   }
 
   return (
