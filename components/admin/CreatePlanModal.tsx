@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, X, GitBranch } from "lucide-react";
 import { createPlanAction } from "@/lib/actions/plans";
@@ -16,8 +16,16 @@ const BRANDS = [
   "Buffalo Wild Wings",
 ];
 
-export function CreatePlanModal() {
-  const [isOpen, setIsOpen] = useState(false);
+export function CreatePlanModal({ initiallyOpen = false }: { initiallyOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(initiallyOpen);
+  useEffect(() => {
+    if (initiallyOpen) {
+      setIsOpen(true);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("create");
+      window.history.replaceState(null, "", url.pathname + url.search);
+    }
+  }, [initiallyOpen]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();

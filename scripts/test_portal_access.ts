@@ -21,7 +21,12 @@ async function main() {
   await check("/trainee", null);
   await check("/trainer/queue", null, `beat_admin_session=${trainerToken}`);
   await check("/trainee/dashboard", null, `beat_trainee_session=${traineeToken}`);
-  await check("/trainer", "/trainer/queue", `beat_admin_session=${trainerToken}`);
+  await check("/trainer", null, `beat_admin_session=${trainerToken}`);
+  await check("/trainer/login", "/trainer", `beat_admin_session=${trainerToken}`);
+  await check("/trainer", "/trainer/login");
+  for (const path of ["/trainer/plans", "/trainer/trainees", "/trainer/trainees/new", "/trainer/batch"]) {
+    await check(path, null, `beat_admin_session=${trainerToken}`);
+  }
   await check("/trainee", "/trainee/dashboard", `beat_trainee_session=${traineeToken}`);
   await check("/trainer/queue", "/trainer/login", `beat_trainee_session=${traineeToken}`);
   await check("/trainer/queue", "/trainer/login", `beat_admin_session=${traineeToken}`);

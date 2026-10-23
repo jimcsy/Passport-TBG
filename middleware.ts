@@ -19,8 +19,8 @@ export async function middleware(request: NextRequest) {
   if (!valid && pathname !== entrance) {
     return NextResponse.redirect(new URL(entrance, request.url));
   }
-  if (valid && (pathname === entrance || pathname === "/trainer")) {
-    return NextResponse.redirect(new URL(trainer ? "/trainer/queue" : "/trainee/dashboard", request.url));
+  if (valid && pathname === entrance) {
+    return NextResponse.redirect(new URL(trainer ? "/trainer" : "/trainee/dashboard", request.url));
   }
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-portal-path", pathname);

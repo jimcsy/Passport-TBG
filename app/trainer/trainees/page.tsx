@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
-export default async function TraineesDirectoryPage() {
+export default async function TraineesDirectoryPage({ searchParams }: { searchParams?: { brand?: string; cohort?: string } }) {
   const [trainees, publishedPlans] = await Promise.all([
     getTraineeDirectory(),
     prisma.trainingPlan.findMany({
@@ -75,7 +75,7 @@ export default async function TraineesDirectoryPage() {
       </div>
 
       {/* Directory Filter Table */}
-      <TraineeFilterTable trainees={trainees} availablePlans={availablePlans} />
+      <TraineeFilterTable trainees={trainees} availablePlans={availablePlans} initialBrand={searchParams?.brand} initialCohort={searchParams?.cohort} />
     </div>
   );
 }

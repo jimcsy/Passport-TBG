@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -20,6 +21,8 @@ interface QueueItemCardProps {
 
 export function QueueItemCard({ item }: QueueItemCardProps) {
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [trainerNote, setTrainerNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -35,12 +38,14 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
     : "Recently";
 
   const handleVerify = () => {
+    setError(null);
     startTransition(async () => {
       const res = await verifyMilestone(
         item.traineeId,
         item.milestoneId,
         trainerNote
       );
+      if (!res.success) setError(res.error || "Unable to verify milestone. Please try again.");
       if (res.success) {
         setIsVerified(true);
         setTimeout(() => {
@@ -101,6 +106,9 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
         </div>
       </div>
 
+      <button type="button" aria-expanded={expanded} aria-controls={`queue-detail-${item.id}`} onClick={() => setExpanded(value => !value)} className="flex min-h-11 w-full items-center justify-between text-left text-sm font-semibold text-beat-maroon"><span>{item.milestone.code}: {item.milestone.title}</span><span>{expanded ? "− Hide details" : "+ Review details"}</span></button>
+      {expanded && <div id={`queue-detail-${item.id}`} className="space-y-4">
+      <div className="flex flex-wrap justify-between gap-3 text-xs text-beat-muted"><span>{item.trainee.email} · {item.trainee.cohortBatch}</span><Link href={`/trainer/trainees/${item.traineeId}`} className="font-semibold text-beat-maroon underline">View passport</Link></div>
       {/* Middle: Milestone Details */}
       <div className="space-y-1.5">
         <div className="flex items-center gap-2">
@@ -153,6 +161,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
         )}
       </div>
 
+      {error && <p role="alert" className="text-sm text-beat-maroon">{error}</p>}
       {/* Action Row */}
       <div className="flex items-center justify-between pt-2 border-t border-beat-border">
         <button
@@ -182,6 +191,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
           )}
         </button>
       </div>
+      </div>}
     </div>
   );
 }

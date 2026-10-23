@@ -51,7 +51,7 @@ export async function loginAdmin(
       role: admin.role,
     });
 
-    return { success: true, redirectTo: "/trainer/queue" };
+    return { success: true, redirectTo: "/trainer" };
   } catch (error) {
     console.error("Admin login error:", error);
     return { success: false, error: "An unexpected error occurred. Please try again." };

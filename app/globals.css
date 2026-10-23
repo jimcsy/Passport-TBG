@@ -158,3 +158,12 @@ body {
   border-color: #C29B38;
   box-shadow: 0 0 0 3px rgb(194 155 56 / 20%);
 }
+
+@keyframes trainer-quick-action-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.trainer-quick-action { animation: trainer-quick-action-enter 180ms ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .trainer-quick-action { animation: none; }
+}

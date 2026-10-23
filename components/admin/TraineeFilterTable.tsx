@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Fragment, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -21,13 +21,17 @@ import { AssignPlanModal, type AvailablePlanOption } from "./AssignPlanModal";
 interface TraineeFilterTableProps {
   trainees: TraineeDirectoryItem[];
   availablePlans?: AvailablePlanOption[];
+  initialBrand?: string;
+  initialCohort?: string;
 }
 
-export function TraineeFilterTable({ trainees, availablePlans = [] }: TraineeFilterTableProps) {
+export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand = "ALL", initialCohort = "ALL" }: TraineeFilterTableProps) {
   const [search, setSearch] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("ALL");
+  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
   const [selectedBranch, setSelectedBranch] = useState("ALL");
-  const [selectedCohort, setSelectedCohort] = useState("ALL");
+  const [selectedCohort, setSelectedCohort] = useState(initialCohort);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  useEffect(() => { setSelectedBrand(initialBrand); setSelectedCohort(initialCohort); }, [initialBrand, initialCohort]);
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -277,8 +281,8 @@ export function TraineeFilterTable({ trainees, availablePlans = [] }: TraineeFil
                 filteredTrainees.map((t) => {
                   const isSelected = selectedIds.has(t.id);
                   return (
-                    <tr
-                      key={t.id}
+                    <Fragment key={t.id}><tr
+                      onClick={(event) => { if (!(event.target as HTMLElement).closest("button, a, input, select")) setExpandedId(expandedId === t.id ? null : t.id); }}
                       className={`hover:bg-beat-canvas/40 transition-colors group ${
                         isSelected ? "bg-beat-gold/5" : ""
                       }`}
@@ -306,7 +310,7 @@ export function TraineeFilterTable({ trainees, availablePlans = [] }: TraineeFil
                           </div>
                           <div>
                             <p className="font-semibold text-beat-maroon text-sm leading-tight">
-                              {t.fullName}
+                              <button type="button" aria-expanded={expandedId === t.id} aria-controls={`trainee-detail-${t.id}`} onClick={() => setExpandedId(expandedId === t.id ? null : t.id)} className="min-h-11 text-left hover:underline">{t.fullName} {expandedId === t.id ? "−" : "+"}</button>
                             </p>
                             <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                               <span className="font-mono text-[10px] font-bold text-beat-gold bg-beat-maroon/5 px-1.5 py-0.2 rounded border border-beat-border">
@@ -432,6 +436,8 @@ export function TraineeFilterTable({ trainees, availablePlans = [] }: TraineeFil
                         </Link>
                       </td>
                     </tr>
+                    {expandedId === t.id && <tr id={`trainee-detail-${t.id}`}><td colSpan={9} className="bg-beat-canvas p-5 text-sm text-beat-maroon"><div className="flex flex-wrap items-start justify-between gap-4"><dl className="grid gap-2 sm:grid-cols-2"><div><dt className="font-semibold">Email</dt><dd>{t.email}</dd></div><div><dt className="font-semibold">Role</dt><dd>{t.jobRole || "Not specified"}</dd></div><div><dt className="font-semibold">Hired</dt><dd>{new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", dateStyle: "medium" }).format(new Date(t.hireDate))}</dd></div><div><dt className="font-semibold">Training</dt><dd>{t.planTitle || "Unassigned"} · {t.verifiedCount}/{t.totalMilestones} verified · {t.readyForReviewCount} in review</dd></div></dl><div className="flex flex-wrap gap-3"><button type="button" className="beat-control" onClick={() => handleOpenSingleModal(t)}>Assign / change plan</button><Link className="beat-control" href={`/trainer/trainees/${t.id}`}>View passport</Link><Link className="beat-control" href="/trainer/queue">Review submissions</Link></div></div></td></tr>}
+                    </Fragment>
                   );
                 })
               )}

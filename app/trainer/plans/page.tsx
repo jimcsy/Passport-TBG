@@ -5,14 +5,14 @@ import { ArrowRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function TrainingPlansPage() {
+export default async function TrainingPlansPage({ searchParams }: { searchParams?: { create?: string } }) {
   const plans = await listTrainingPlans();
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-beat-border pb-5">
         <div><h1 className="text-2xl font-semibold tracking-tight text-beat-maroon">Training plans</h1><p className="mt-2 text-sm text-beat-maroon/60">Build role-based plans and manage their draft and published versions.</p></div>
-        <CreatePlanModal />
+        <CreatePlanModal initiallyOpen={searchParams?.create === "1"} />
       </header>
       {plans.length === 0 ? (
         <div className="rounded-lg border border-beat-border bg-white px-6 py-12 text-center"><h2 className="text-base font-semibold text-beat-maroon">No training plans yet</h2><p className="mt-2 text-sm text-beat-maroon/60">Create a plan to start adding milestones.</p></div>
