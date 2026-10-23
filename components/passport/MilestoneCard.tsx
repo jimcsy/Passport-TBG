@@ -1,3 +1,4 @@
+import { PassportStamp } from "./PassportStamp";
 import { CheckCircle2, Clock, Lock, Send, UserCheck } from "lucide-react";
 import { MilestoneStatus } from "@/lib/types/models";
 import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
@@ -13,17 +14,10 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
   const isLocked = milestone.status === MilestoneStatus.LOCKED;
   const isInProgress = milestone.status === MilestoneStatus.IN_PROGRESS;
 
-  const formattedVerifiedDate = milestone.verifiedAt
-    ? new Intl.DateTimeFormat("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }).format(new Date(milestone.verifiedAt))
-    : null;
 
   return (
     <div id={`milestone-${milestone.id}`} tabIndex={-1}
-      className={`relative overflow-hidden rounded-lg p-5 transition-all border ${
+      className={`relative rounded-lg p-5 transition-all border ${
         isVerified
           ? "bg-white border-beat-gold/40 shadow-sm ring-1 ring-beat-gold/20"
           : isReadyForReview
@@ -98,24 +92,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
 
         {/* Right: Gold Stamp OR Action Button */}
         <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0">
-          {isVerified && (
-            <div className="flex flex-col items-end text-right">
-              {/* Official Gold Stamp Seal */}
-              <div className="passport-stamp px-3 py-1 text-[11px] bg-beat-gold/5 shadow-inner">
-                <div className="flex flex-col items-center text-center">
-                  <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-semibold">
-                    BEAT verified
-                  </span>
-                  <span className="text-[10px] font-semibold text-beat-maroon">
-                    {milestone.trainerName || "BEAT Trainer"}
-                  </span>
-                  <span className="text-[8px] font-semibold text-beat-muted">
-                    {formattedVerifiedDate}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          <PassportStamp milestone={milestone} />
 
           {isReadyForReview && (
             <div className="text-xs text-beat-maroon flex items-center gap-1 font-semibold">

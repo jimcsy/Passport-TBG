@@ -1,3 +1,4 @@
+import { StampNotificationToast } from "@/components/trainee/StampNotificationToast";
 import { getTraineeSession } from "@/lib/auth/session";
 import { getTraineePassportData } from "@/lib/db/repositories/trainee";
 import { TraineeDashboard } from "@/components/trainee/TraineeDashboard";
@@ -10,6 +11,7 @@ export default async function PassportPage() {
     redirect("/trainee");
   }
 
+  const stampCursor = new Date().toISOString();
   const data = await getTraineePassportData(session.id);
 
   if (!data) {
@@ -18,6 +20,7 @@ export default async function PassportPage() {
 
   return (
       <div className="space-y-8">
+        <StampNotificationToast initialTimestamp={stampCursor} />
         <TraineeDashboard data={data} />
 
         {/* Footer */}

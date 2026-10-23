@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveStampDesign } from "@/lib/stamps/catalog";
+
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -86,6 +88,7 @@ function buildGraphForVersionData(
     orderIndex: number;
     posX?: number | null;
     posY?: number | null;
+    stampDesign?: string;
     isCustom?: boolean;
     libraryMilestoneId?: string | null;
   }>,
@@ -125,6 +128,7 @@ function buildGraphForVersionData(
       description: n.description,
       path: n.path as DevelopmentPath,
       orderIndex: n.orderIndex,
+      stampDesign: resolveStampDesign(n.stampDesign, n.path),
       isCustom: n.isCustom ?? false,
       libraryMilestoneId: n.libraryMilestoneId ?? null,
     },
@@ -197,6 +201,7 @@ export interface PlanCanvasBuilderProps {
       orderIndex: number;
       posX: number;
       posY: number;
+      stampDesign?: string;
       isCustom: boolean;
       libraryMilestoneId: string | null;
     }>;
@@ -378,6 +383,7 @@ function PlanCanvasBuilderInner({
             orderIndex: number;
             posX: number;
             posY: number;
+            stampDesign?: string;
             isCustom: boolean;
             libraryMilestoneId: string | null;
           }>;
@@ -875,6 +881,8 @@ function PlanCanvasBuilderInner({
         title: node.data.title as string,
         description: node.data.description as string,
         path: node.data.path as DevelopmentPath,
+        stampDesign: resolveStampDesign(node.data.stampDesign as string, node.data.path as string),
+        designOnly: !node.data.isCustom,
       });
     },
     [nodes]
@@ -914,10 +922,13 @@ function PlanCanvasBuilderInner({
               title: updated.title,
               description: updated.description,
               path: updated.path,
+              stampDesign: updated.stampDesign,
             },
           };
         })
       );
+
+      if (updated.designOnly) { setHasUnsavedChanges(true); return; }
 
       // 2. Update matching item in availableMilestones list
       setAvailableMilestones((prev) =>
@@ -1032,7 +1043,7 @@ function PlanCanvasBuilderInner({
             readOnly: isViewingReadOnly,
             versionTag,
             versionTooltip,
-            onEdit: !isViewingReadOnly && node.data.isCustom ? () => handleEditNode(node.id) : undefined,
+            onEdit: !isViewingReadOnly ? () => handleEditNode(node.id) : undefined,
             onDelete: !isViewingReadOnly ? handleDeleteNode : undefined,
           },
         };
@@ -1093,6 +1104,7 @@ function PlanCanvasBuilderInner({
         title: n.data.title as string,
         description: n.data.description as string,
         orderIndex: (n.data.orderIndex as number) || index + 1,
+        stampDesign: resolveStampDesign(n.data.stampDesign as string, n.data.path as string),
         posX: Math.round(n.position.x),
         posY: Math.round(n.position.y),
         isCustom: (n.data.isCustom as boolean) ?? true,
@@ -1147,6 +1159,7 @@ function PlanCanvasBuilderInner({
         title: n.data.title as string,
         description: n.data.description as string,
         orderIndex: (n.data.orderIndex as number) || index + 1,
+        stampDesign: resolveStampDesign(n.data.stampDesign as string, n.data.path as string),
         posX: Math.round(n.position.x),
         posY: Math.round(n.position.y),
         isCustom: (n.data.isCustom as boolean) ?? true,

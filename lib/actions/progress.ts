@@ -1,5 +1,6 @@
 "use server";
 
+import { verificationData } from "@/lib/stamps/hash";
 import { revalidatePath } from "next/cache";
 import { prisma } from "../db/prisma";
 import { getTraineeSession, getAdminSession } from "../auth/session";
@@ -28,7 +29,7 @@ export async function submitMilestoneForReview(
     const result = await queueMilestoneForReview(traineeSession.id, milestoneId, traineeNote);
     if (!result.success) return result;
 
-    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainee/dashboard", "layout");
     revalidatePath("/trainee/dashboard/booklet");
     revalidatePath(`/trainee/dashboard/modules/${milestoneId}`);
     revalidatePath("/trainer/queue");
@@ -63,6 +64,8 @@ export async function verifyMilestone(
       if (fallback) targetNodeId = fallback.id;
     }
 
+    const verifiedAt = new Date();
+    const approval = verificationData(traineeId, targetNodeId, adminSession.id, verifiedAt, trainerNote);
     await prisma.traineeProgress.upsert({
       where: {
         traineeId_planNodeId: {
@@ -70,23 +73,11 @@ export async function verifyMilestone(
           planNodeId: targetNodeId,
         },
       },
-      update: {
-        status: MilestoneStatus.VERIFIED,
-        verifiedBy: adminSession.id,
-        verifiedAt: new Date(),
-        trainerNote: trainerNote?.trim() || null,
-      },
-      create: {
-        traineeId,
-        planNodeId: targetNodeId,
-        status: MilestoneStatus.VERIFIED,
-        verifiedBy: adminSession.id,
-        verifiedAt: new Date(),
-        trainerNote: trainerNote?.trim() || null,
-      },
+      update: approval,
+      create: { traineeId, planNodeId: targetNodeId, ...approval },
     });
 
-    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainee/dashboard", "layout");
     revalidatePath("/trainer/queue");
     revalidatePath(`/trainer/trainees/${traineeId}`);
     revalidatePath("/trainer/trainees");
@@ -138,6 +129,7 @@ export async function bulkVerifyMilestones(
             status: MilestoneStatus.VERIFIED,
             verifiedBy: adminSession.id,
             verifiedAt: now,
+            verificationHash: verificationData(traineeId, targetNodeId, adminSession.id, now).verificationHash,
             trainerNote: trainerNote?.trim() || null,
           },
           create: {
@@ -146,13 +138,14 @@ export async function bulkVerifyMilestones(
             status: MilestoneStatus.VERIFIED,
             verifiedBy: adminSession.id,
             verifiedAt: now,
+            verificationHash: verificationData(traineeId, targetNodeId, adminSession.id, now).verificationHash,
             trainerNote: trainerNote?.trim() || null,
           },
         })
       )
     );
 
-    revalidatePath("/trainee/dashboard");
+    revalidatePath("/trainee/dashboard", "layout");
     revalidatePath("/trainer/queue");
     revalidatePath("/trainer/trainees");
     revalidatePath("/trainer/batch");
@@ -162,4 +155,22 @@ export async function bulkVerifyMilestones(
     console.error("Error during bulk verification:", error);
     return { success: false, error: "Failed to execute bulk verification." };
   }
+}
+
+/** Poll only the authenticated trainee's active, non-archived stamps. */
+export async function checkForNewStampsAction(since: string): Promise<{ hasNew: boolean; checkedAt: string }> {
+  const session = await getTraineeSession();
+  if (!session) throw new Error("Unauthorized trainee session");
+  const after = new Date(since);
+  if (!Number.isFinite(after.getTime())) throw new Error("Invalid stamp cursor");
+  // Capture the upper bound before reading so approvals during the query cannot be skipped.
+  const checkedAt = new Date();
+  const count = await prisma.traineeProgress.count({
+    where: {
+      traineeId: session.id, isArchived: false, status: "VERIFIED",
+      verifiedAt: { gt: after, lte: checkedAt },
+      planNode: { planVersion: { assignments: { some: { traineeId: session.id, status: "ACTIVE" } } } },
+    },
+  });
+  return { hasNew: count > 0, checkedAt: checkedAt.toISOString() };
 }

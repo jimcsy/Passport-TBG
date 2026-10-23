@@ -1,3 +1,4 @@
+import { STAMP_DESIGNS } from "@/lib/stamps/catalog";
 import { z } from "zod";
 import { DevelopmentPath } from "@/lib/types/models";
 
@@ -34,6 +35,7 @@ export const PlanNodeInputSchema = z.object({
   orderIndex: z.number().int().nonnegative().default(1),
   posX: z.number().default(0),
   posY: z.number().default(0),
+  stampDesign: z.string().refine(value => Object.prototype.hasOwnProperty.call(STAMP_DESIGNS, value), "Invalid stamp design").optional(),
   isCustom: z.boolean().default(false),
 });
 export type PlanNodeInput = z.infer<typeof PlanNodeInputSchema>;

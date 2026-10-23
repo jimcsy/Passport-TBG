@@ -102,6 +102,7 @@ erDiagram
         int orderIndex "Sequence index in path"
         float posX "Canvas coordinate X"
         float posY "Canvas coordinate Y"
+        string stampDesign "SVG stamp design key; defaults to ONBOARDING_SEAL"
         boolean isCustom "True if created directly in canvas"
         datetime createdAt
     }
@@ -131,6 +132,7 @@ erDiagram
         string traineeNote "Trainee reflection note"
         datetime requestedAt "When submitted for review"
         string verifiedBy FK "AdminUser.id"
+        string verificationHash "Optional SHA-256 approval fingerprint"
         datetime verifiedAt "When approved & stamped"
         string trainerNote "Trainer feedback / comments"
         boolean isArchived "Safe reconciliation flag"
@@ -195,3 +197,7 @@ erDiagram
 | `TraineePlanAssignment` | `@@unique([traineeId, planVersionId])` | Trainee cannot be assigned to the same version twice |
 | `TraineeProgress` | `@@unique([traineeId, planNodeId])` | Guarantees strictly 1 progress record per trainee per node |
 | `TraineeProgress` | `@@index([status])` | Instant query speed for Trainer Review Queue (`READY_FOR_REVIEW`) |
+
+### Stamp audit fields
+
+`PlanNode.stampDesign` persists the selected SVG design in each immutable version. New nodes default by development path in application persistence; the database fallback is `ONBOARDING_SEAL`. `TraineeProgress.verificationHash` records the SHA-256 fingerprint of trainee ID, original approved plan node ID, trainer ID, and the exact approval timestamp. Legacy approvals remain nullable. Reconciliation copies this original fingerprint without generating a new approval; it is a fingerprint, not a digital signature or proof against database tampering.

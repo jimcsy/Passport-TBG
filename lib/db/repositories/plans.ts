@@ -1,3 +1,4 @@
+import { resolveStampDesign } from "@/lib/stamps/catalog";
 import { prisma } from "../prisma";
 import {
   CreateTrainingPlanSchema,
@@ -275,6 +276,7 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
           orderIndex: node.orderIndex,
           posX: node.posX,
           posY: node.posY,
+          stampDesign: resolveStampDesign(node.stampDesign, node.path),
           isCustom: node.isCustom,
         },
       });

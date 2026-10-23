@@ -13,6 +13,8 @@ export interface EnrichedMilestone {
   traineeNote?: string | null;
   requestedAt?: Date | null;
   verifiedAt?: Date | null;
+  verificationHash?: string | null;
+  stampDesign?: string;
   trainerName?: string | null;
   trainerEmployeeId?: string | null;
   trainerNote?: string | null;
@@ -214,6 +216,8 @@ export async function getTraineePassportData(
         traineeNote: prog?.traineeNote,
         requestedAt: prog?.requestedAt,
         verifiedAt: prog?.verifiedAt,
+        verificationHash: prog?.verificationHash,
+        stampDesign: node.stampDesign,
         trainerName: prog?.verifier?.fullName,
         trainerEmployeeId: prog?.verifier?.employeeId,
         trainerNote: prog?.trainerNote,
@@ -253,6 +257,8 @@ export async function getTraineePassportData(
     traineeNote: prog.traineeNote,
     requestedAt: prog.requestedAt,
     verifiedAt: prog.verifiedAt,
+    verificationHash: prog.verificationHash,
+    stampDesign: prog.planNode.stampDesign,
     trainerName: prog.verifier?.fullName,
     trainerEmployeeId: prog.verifier?.employeeId,
     trainerNote: prog.trainerNote,

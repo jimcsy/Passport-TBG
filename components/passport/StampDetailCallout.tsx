@@ -1,5 +1,6 @@
 "use client";
 
+import { PassportStampSVG } from "./PassportStampSVG";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Award, Check, Clock, Loader2, MessageSquareText, Send, Stamp } from "lucide-react";
@@ -57,7 +58,7 @@ export function StampDetailCallout({ milestone, id, onSubmittingChange, onQueued
       ) : (
         <div className="grid items-start gap-5 sm:grid-cols-[112px_1fr] lg:grid-cols-[112px_1fr_1fr]">
           <div role="img" aria-label={`${status} stamp: ${milestone.code}`} className={`flex h-24 w-24 shrink-0 flex-col items-center justify-center rounded-full border-2 sm:h-28 sm:w-28 ${verified ? "border-beat-gold bg-beat-maroon text-beat-gold ring-4 ring-beat-gold/10" : "border-dashed border-beat-gold/50 bg-beat-canvas text-beat-maroon"}`}>
-            {verified ? <Check className="h-9 w-9" /> : inReview ? <Clock className="h-8 w-8 text-beat-gold" /> : <Stamp className="h-8 w-8 text-beat-gold" />}
+            <PassportStampSVG design={milestone.stampDesign} path={milestone.path} verified={verified} className="h-14 w-14" />
             <span className="mt-1 text-xs font-bold">{milestone.code}</span>
             <span className="mt-1 text-[8px] font-bold uppercase tracking-widest">{verified ? "BEAT verified" : inReview ? "In review" : "Incomplete"}</span>
           </div>
@@ -69,6 +70,8 @@ export function StampDetailCallout({ milestone, id, onSubmittingChange, onQueued
               <dl className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
                 <div><dt className="text-[10px] font-bold uppercase tracking-wide text-beat-maroon/60">Trainer name</dt><dd className="mt-1 font-semibold">{milestone.trainerName || "Not recorded"}</dd></div>
                 <div><dt className="text-[10px] font-bold uppercase tracking-wide text-beat-maroon/60">Date approved</dt><dd className="mt-1 font-semibold">{milestone.verifiedAt ? new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" }).format(new Date(milestone.verifiedAt)) : "Not recorded"}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase tracking-wide text-beat-maroon/60">Verification hash</dt><dd className="mt-1 font-mono">{milestone.verificationHash?.slice(0, 8) || "Not recorded"}</dd></div>
+                {milestone.trainerNote && <div><dt className="text-[10px] font-bold uppercase tracking-wide text-beat-maroon/60">Trainer feedback</dt><dd className="mt-1">{milestone.trainerNote}</dd></div>}
                 <div className="sm:col-span-2"><dt className="text-[10px] font-bold uppercase tracking-wide text-beat-maroon/60">Signature · digital approval</dt><dd className="mt-1 border-b border-beat-gold/30 pb-2 text-base font-semibold italic">{milestone.trainerName || "Not recorded"}</dd>{milestone.trainerEmployeeId && <dd className="mt-1 text-[10px] text-beat-maroon/60">{milestone.trainerEmployeeId}</dd>}</div>
               </dl>
             ) : <p className="mt-4 text-xs text-beat-maroon/70">{inReview ? "Awaiting your trainer’s verification and stamp." : "Trainer approval will appear here once this milestone is verified."}</p>}

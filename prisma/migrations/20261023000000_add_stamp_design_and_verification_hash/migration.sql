@@ -1,0 +1,11 @@
+ALTER TABLE "PlanNode" ADD COLUMN "stampDesign" TEXT NOT NULL DEFAULT 'ONBOARDING_SEAL';
+ALTER TABLE "TraineeProgress" ADD COLUMN "verificationHash" TEXT;
+
+-- Give existing nodes the same path-derived defaults as new canvas nodes.
+UPDATE "PlanNode" SET "stampDesign" = CASE "path"
+  WHEN 'COMMUNICATION' THEN 'COMMUNICATION_BADGE'
+  WHEN 'TECHNICAL' THEN 'TECHNICAL_GEAR'
+  WHEN 'CULTURE' THEN 'CULTURE_STAR'
+  WHEN 'LEADERSHIP' THEN 'LEADERSHIP_CREST'
+  ELSE 'ONBOARDING_SEAL'
+END;

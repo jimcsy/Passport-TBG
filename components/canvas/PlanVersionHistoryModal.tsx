@@ -24,6 +24,7 @@ export interface PlanVersionSummary {
     orderIndex: number;
     posX: number;
     posY: number;
+    stampDesign?: string;
     isCustom: boolean;
     libraryMilestoneId: string | null;
   }>;

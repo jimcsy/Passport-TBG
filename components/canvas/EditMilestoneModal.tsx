@@ -1,5 +1,7 @@
 "use client";
 
+import { resolveStampDesign, type StampDesignKey } from "@/lib/stamps/catalog";
+import { StampDesignPicker } from "./StampDesignPicker";
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { X, Check, AlertCircle, Edit3 } from "lucide-react";
@@ -27,6 +29,8 @@ export type EditCustomMilestoneForm = z.infer<typeof EditCustomMilestoneSchema>;
 export interface EditableMilestoneTarget {
   id?: string;
   nodeId?: string;
+  stampDesign?: StampDesignKey;
+  designOnly?: boolean;
   code: string;
   title: string;
   description: string;
@@ -56,6 +60,7 @@ export function EditMilestoneModal({
   existingCodes,
   onSave,
 }: EditMilestoneModalProps) {
+  const [stampDesign, setStampDesign] = useState<StampDesignKey>("ONBOARDING_SEAL");
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -64,6 +69,7 @@ export function EditMilestoneModal({
 
   useEffect(() => {
     if (milestone && isOpen) {
+      setStampDesign(resolveStampDesign(milestone.stampDesign, milestone.path));
       setCode(milestone.code);
       setTitle(milestone.title);
       setDescription(milestone.description);
@@ -77,6 +83,8 @@ export function EditMilestoneModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    if (milestone.designOnly) { onSave({ ...milestone, stampDesign }); onClose(); return; }
 
     const result = EditCustomMilestoneSchema.safeParse({
       code: code.trim().toUpperCase(),
@@ -108,6 +116,8 @@ export function EditMilestoneModal({
       title: result.data.title,
       description: result.data.description,
       path: result.data.path,
+      stampDesign,
+      designOnly: milestone.designOnly,
     });
 
     onClose();
@@ -150,6 +160,8 @@ export function EditMilestoneModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          <StampDesignPicker value={stampDesign} onChange={setStampDesign} />
+          <fieldset disabled={milestone.designOnly} className="space-y-4 disabled:opacity-60">
           {/* Target Track */}
           <div>
             <label htmlFor="editMilestonePath" className="block text-xs font-bold text-beat-maroon mb-1">
@@ -158,7 +170,7 @@ export function EditMilestoneModal({
             <select
               id="editMilestonePath"
               value={path}
-              onChange={(e) => setPath(e.target.value as DevelopmentPath)}
+              onChange={(e) => { setPath(e.target.value as DevelopmentPath); setStampDesign(resolveStampDesign(undefined, e.target.value)); }}
               className="w-full rounded-md border border-beat-border bg-white px-3.5 py-2.5 text-xs font-medium text-beat-maroon focus:border-beat-gold focus:outline-hidden cursor-pointer"
             >
               {PATH_OPTIONS.map((opt) => (
@@ -241,6 +253,7 @@ export function EditMilestoneModal({
             )}
           </div>
 
+          </fieldset>
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button

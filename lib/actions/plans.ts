@@ -291,6 +291,7 @@ export interface PublishPlanCanvasInput {
     orderIndex: number;
     posX: number;
     posY: number;
+    stampDesign?: string;
     isCustom: boolean;
   }>;
   edges: Array<{
@@ -472,6 +473,7 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
               orderIndex: node.orderIndex,
               posX: node.posX,
               posY: node.posY,
+              stampDesign: node.stampDesign,
               isCustom: node.isCustom,
               libraryMilestoneId: node.libraryMilestoneId,
             },
