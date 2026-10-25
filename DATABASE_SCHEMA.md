@@ -84,6 +84,7 @@ erDiagram
     }
 
     PlanVersion {
+        json pathTitles "Optional version-specific path display names"
         string id PK "e.g. plan-it-tech-support-v1"
         string planId FK "TrainingPlan.id"
         int versionNumber "1, 2, 3..."
@@ -228,3 +229,7 @@ bucket, not PostgreSQL. Metadata is created only after object confirmation.
 Removing a library milestone cascades material metadata; application material
 deletion removes Storage first, then metadata, preserving a retry path if Storage
 fails. See `prisma/SUPABASE.md` for setup and orphan cleanup details.
+
+### Version-specific path names
+
+`PlanVersion.pathTitles` is nullable JSON mapping canonical path keys to editable display names (1–80 trimmed characters). Legacy versions fall back to canonical titles. Keeping names on the version preserves renamed empty paths, immutable published labels, library grouping and stamp defaults. `PlanNode.path` stays canonical. Reconciliation remaps retained progress in place; removed records remain soft-archived with their approval provenance. Sync covers all older active versions of the plan.

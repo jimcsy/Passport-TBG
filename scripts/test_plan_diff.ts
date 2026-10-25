@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { computePlanVersionDiff, matchPlanNodes } from "../lib/canvas/diff";
+const old = [{ code: "A-01", title: "First", path: "TECHNICAL", orderIndex: 1, libraryMilestoneId: "lib-a" }, { code: "B-01", title: "Second", path: "TECHNICAL", orderIndex: 2, hasProgress: true }];
+const next = [{ ...old[0], code: "a-01", orderIndex: 2 }, { code: "NEW-01", title: "New", path: "TECHNICAL", orderIndex: 3 }];
+const diff = computePlanVersionDiff(old, next, {}, { TECHNICAL: "Operations", LEADERSHIP: "Empty renamed path" });
+assert.equal(diff.addedMilestones.length, 1); assert.equal(diff.removedMilestones[0].hasProgress, true); assert.equal(diff.reorderedMilestones[0].newIndex, 2); assert.equal(diff.renamedPaths.length, 2); assert.equal(diff.renamedPaths.find(path => path.newPath === "Empty renamed path")?.nodeCount, 0);
+assert.equal(matchPlanNodes([old[0]], [{ ...old[0], code: "CHANGED" }]).size, 1);
+const cross = [{ ...old[0], code: "A-01", libraryMilestoneId: "other" }, { ...old[0], code: "X-01" }];
+assert.equal(matchPlanNodes([old[0]], cross).get(old[0])?.code, "A-01");
+assert.equal(new Set(matchPlanNodes([old[0], { ...old[0], code: "X-01" }], [old[0]]).values()).size, 1);
+assert.deepEqual(computePlanVersionDiff([], []), { renamedPaths: [], addedMilestones: [], removedMilestones: [], reorderedMilestones: [] });
+console.log("Plan diff checks passed: code priority, library fallback, one-to-one identity, archived warnings, renames including empty paths, additions, removals and order changes.");

@@ -1,5 +1,7 @@
 "use client";
 
+import type { PlanVersionDiff } from "@/lib/canvas/diff";
+import { pathTitle, type PathTitles } from "@/lib/plans/paths";
 import { useState } from "react";
 import {
   X,
@@ -30,6 +32,8 @@ interface PublishPlanModalProps {
   roleIdentifier: string;
   restaurantBrand: string | null;
   versionNumber: number;
+  diff?: PlanVersionDiff;
+  pathTitles?: PathTitles;
   nodeCounts: Record<string, number>;
   totalMilestones: number;
   activeTraineeCount: number;
@@ -44,6 +48,8 @@ export function PublishPlanModal({
   roleIdentifier,
   restaurantBrand,
   versionNumber,
+  diff,
+  pathTitles,
   nodeCounts,
   totalMilestones,
   activeTraineeCount,
@@ -125,7 +131,7 @@ export function PublishPlanModal({
               {Object.values(DevelopmentPath).map((path) => {
                 const count = nodeCounts[path] || 0;
                 const Icon = PATH_ICONS[path];
-                const title = DEVELOPMENT_PATHS[path]?.title || path;
+                const title = pathTitle(path, pathTitles);
 
                 return (
                   <div
@@ -145,6 +151,13 @@ export function PublishPlanModal({
             </div>
           </div>
 
+          {diff && <section aria-label="Version edit summary" className="space-y-3 rounded-lg border border-beat-gold/30 p-3 text-xs text-beat-maroon">
+            <h4 className="font-semibold">Version edit summary</h4>
+            <div><p className="font-semibold">Renamed paths ({diff.renamedPaths.length})</p>{diff.renamedPaths.map(item => <p key={item.oldPath}>{item.oldPath} → {item.newPath} · {item.nodeCount} milestones</p>)}</div>
+            <div><p className="font-semibold">Added milestones ({diff.addedMilestones.length})</p>{diff.addedMilestones.map(item => <p key={item.code}>{item.code}: {item.title}</p>)}</div>
+            <div><p className="font-semibold">Removed milestones ({diff.removedMilestones.length})</p>{diff.removedMilestones.map(item => <p key={item.code}>{item.code}: {item.title}{item.hasProgress ? " — existing progress will be archived when synced" : " — any existing progress will be preserved in the archive"}</p>)}</div>
+            <div><p className="font-semibold">Reordered milestones ({diff.reorderedMilestones.length})</p>{diff.reorderedMilestones.map(item => <p key={item.code}>{item.code}: {item.title} · {item.oldIndex} → {item.newIndex}</p>)}</div>
+          </section>}
           {/* Changelog Input */}
           <div>
             <label htmlFor="changelog" className="block text-xs font-bold text-beat-maroon mb-1">

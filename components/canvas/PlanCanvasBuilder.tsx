@@ -1,5 +1,8 @@
 "use client";
 
+import { computePlanVersionDiff } from "@/lib/canvas/diff";
+import { pathTitle, readPathTitles, type PathTitles } from "@/lib/plans/paths";
+import { useRouter } from "next/navigation";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { resolveStampDesign } from "@/lib/stamps/catalog";
 
@@ -52,6 +55,7 @@ import { DevelopmentPath } from "@/lib/types/models";
 import {
   savePlanVersionAction,
   publishPlanCanvasAction,
+  getMilestoneProgressCountAction,
   createDraftVersionAction,
   createCustomLibraryMilestoneAction,
   updateCustomLibraryMilestoneAction,
@@ -102,7 +106,8 @@ function buildGraphForVersionData(
     edgeType: string;
   }>,
   planTitle: string,
-  roleIdentifier: string
+  roleIdentifier: string,
+  titles: PathTitles = {}
 ) {
   const counts: Record<string, number> = {};
   versionNodes.forEach((n) => {
@@ -114,7 +119,7 @@ function buildGraphForVersionData(
     type: "pathRoot",
     position: { x: root.x, y: root.y },
     data: {
-      title: root.title,
+      title: pathTitle(root.path, titles),
       path: root.path,
       childCount: counts[root.path] || 0,
     },
@@ -193,6 +198,7 @@ export interface PlanCanvasBuilderProps {
     status: string;
   };
   initialVersion: {
+    pathTitles?: PathTitles;
     id: string;
     versionNumber: number;
     status: string;
@@ -219,6 +225,7 @@ export interface PlanCanvasBuilderProps {
     }>;
   };
   libraryMilestones?: LibraryMilestone[];
+  progressCounts?: Record<string, number>;
   activeTraineeCount?: number;
   publishedVersionNumber?: number | null;
   versions?: PlanVersionSummary[];
@@ -236,10 +243,12 @@ function PlanCanvasBuilderInner({
   plan,
   initialVersion,
   libraryMilestones = [],
+  progressCounts = {},
   activeTraineeCount = 0,
   publishedVersionNumber = null,
   versions = [],
 }: PlanCanvasBuilderProps) {
+  const router = useRouter();
   const [availableMilestones, setAvailableMilestones] = useState<LibraryMilestone[]>(libraryMilestones);
 
   useEffect(() => {
@@ -313,9 +322,10 @@ function PlanCanvasBuilderInner({
         initialVersion.nodes,
         initialVersion.edges,
         plan.title,
-        plan.roleIdentifier
+        plan.roleIdentifier,
+        readPathTitles(initialVersion.pathTitles)
       ),
-    [initialVersion.nodes, initialVersion.edges, plan.title, plan.roleIdentifier]
+    [initialVersion.nodes, initialVersion.edges, initialVersion.pathTitles, plan.title, plan.roleIdentifier]
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialTree.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialTree.edges);
@@ -347,9 +357,9 @@ function PlanCanvasBuilderInner({
     return Math.max(...numbers, publishedVersion?.versionNumber || 1) + 1;
   }, [allVersions, publishedVersion]);
 
-  const isViewingReadOnly = Boolean(
-    publishedVersion && effectiveVersionNumber === publishedVersion.versionNumber
-  );
+  const viewedStatus = allVersions.find(version => version.versionNumber === effectiveVersionNumber)?.status
+    || (effectiveVersionNumber === currentVersion.versionNumber ? currentVersion.status : "PUBLISHED");
+  const isViewingReadOnly = viewedStatus !== "DRAFT" || (effectiveVersionNumber === currentVersion.versionNumber && currentVersion.status === "PUBLISHED");
 
   const draftGraphRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
 
@@ -413,7 +423,8 @@ function PlanCanvasBuilderInner({
             newDraft.nodes,
             newDraft.edges,
             plan.title,
-            plan.roleIdentifier
+            plan.roleIdentifier,
+            readPathTitles(newDraft.pathTitles)
           );
           setNodes(layouted.nodes);
           setEdges(layouted.edges);
@@ -459,7 +470,8 @@ function PlanCanvasBuilderInner({
           targetVer.nodes,
           targetVer.edges,
           plan.title,
-          plan.roleIdentifier
+          plan.roleIdentifier,
+          readPathTitles(targetVer.pathTitles)
         );
         setNodes(layouted.nodes);
         setEdges(layouted.edges);
@@ -495,7 +507,8 @@ function PlanCanvasBuilderInner({
           targetVer.nodes,
           targetVer.edges,
           plan.title,
-          plan.roleIdentifier
+          plan.roleIdentifier,
+          readPathTitles(targetVer.pathTitles)
         );
         setNodes(layouted.nodes);
         setEdges(layouted.edges);
@@ -530,7 +543,8 @@ function PlanCanvasBuilderInner({
           targetVer.nodes,
           targetVer.edges,
           plan.title,
-          plan.roleIdentifier
+          plan.roleIdentifier,
+          readPathTitles(targetVer.pathTitles)
         );
         setNodes(layouted.nodes);
         setEdges(layouted.edges);
@@ -655,16 +669,38 @@ function PlanCanvasBuilderInner({
     [isViewingReadOnly, libraryMilestones, availableMilestones, addLibraryMilestone, showWarning]
   );
 
+  const [progressOverrides, setProgressOverrides] = useState<Record<string, number>>({});
+  const deleting = useRef(new Set<string>());
+  const handleRenamePath = useCallback((path: DevelopmentPath, title: string) => {
+    if (isViewingReadOnly || !title.trim() || title.trim().length > 80) return;
+    setNodes(previous => previous.map(node => node.type === "pathRoot" && node.data.path === path ? { ...node, data: { ...node.data, title: title.trim() } } : node));
+    setHasUnsavedChanges(true);
+  }, [isViewingReadOnly, setNodes]);
+  const currentPathTitles = useMemo(() => readPathTitles(Object.fromEntries(nodes.filter(node => node.type === "pathRoot").map(node => [String(node.data.path), String(node.data.title)]))), [nodes]);
+  const versionDiff = useMemo(() => computePlanVersionDiff(
+    (publishedVersion?.nodes || []).map(node => ({ ...node, hasProgress: Math.max(progressCounts[`code:${node.code.toUpperCase()}`] || 0, progressCounts[`library:${node.libraryMilestoneId}`] || 0, progressOverrides[node.code] || 0) > 0 })),
+    nodes.filter(node => node.type === "milestone").map(node => ({ code: String(node.data.code), title: String(node.data.title), path: String(node.data.path), orderIndex: Number(node.data.orderIndex), libraryMilestoneId: node.data.libraryMilestoneId as string | null })),
+    publishedVersion?.pathTitles, currentPathTitles
+  ), [publishedVersion, nodes, progressCounts, progressOverrides, currentPathTitles]);
+
   // Callbacks for node/edge actions
-  const handleDeleteNode = useCallback(
-    (nodeId: string) => {
-      if (isViewingReadOnly) return;
-      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+  const handleDeleteNode = useCallback(async (nodeId: string) => {
+    if (isViewingReadOnly || deleting.current.has(nodeId)) return;
+    const node = nodes.find(node => node.id === nodeId && node.type === "milestone");
+    if (!node) return;
+    deleting.current.add(nodeId);
+    try {
+      const result = await getMilestoneProgressCountAction(plan.id, String(node.data.code), node.data.libraryMilestoneId as string | null);
+      if (!result.success) { showWarning(result.error); return; }
+      const count = result.data.traineeCount;
+      setProgressOverrides(previous => ({ ...previous, [String(node.data.code)]: count }));
+      if (count && !window.confirm(`${count} trainees have progress on this milestone. Their completed stamps will be preserved in archived status when this version is published. Remove this milestone?`)) return;
+      setNodes(previous => previous.filter(node => node.id !== nodeId));
+      setEdges(previous => previous.filter(edge => edge.source !== nodeId && edge.target !== nodeId));
       setHasUnsavedChanges(true);
-    },
-    [isViewingReadOnly, setNodes, setEdges]
-  );
+    } catch { showWarning("Could not check milestone progress. Please retry."); }
+    finally { deleting.current.delete(nodeId); }
+  }, [isViewingReadOnly, nodes, plan.id, setNodes, setEdges, showWarning]);
 
   const handleDeleteEdge = useCallback(
     (edgeId: string) => {
@@ -816,7 +852,7 @@ function PlanCanvasBuilderInner({
           title: form.title,
           description: form.description,
           path: form.path,
-          orderIndex: (nodeCountMap[form.path] || 0) + 1,
+          orderIndex: Math.max(0, ...nodes.filter(node => node.type === "milestone" && node.data.path === form.path).map(node => Number(node.data.orderIndex))) + 1,
           isCustom: true,
           libraryMilestoneId: null,
         },
@@ -846,7 +882,7 @@ function PlanCanvasBuilderInner({
           title: form.title,
           description: form.description,
           path: form.path,
-          orderIndex: (nodeCountMap[form.path] || 0) + 1,
+          orderIndex: Math.max(0, ...nodes.filter(node => node.type === "milestone" && node.data.path === form.path).map(node => Number(node.data.orderIndex))) + 1,
           isStandard: false,
         };
         setAvailableMilestones((prev) => {
@@ -1015,6 +1051,7 @@ function PlanCanvasBuilderInner({
           ...node,
           data: {
             ...node.data,
+            onRename: !isViewingReadOnly ? handleRenamePath : undefined,
             childCount: nodeCountMap[pathKey] || 0,
             onAddMilestone: !isViewingReadOnly
               ? (targetPath: DevelopmentPath) => {
@@ -1067,6 +1104,7 @@ function PlanCanvasBuilderInner({
     publishedNodeCodes,
     currentVersion.versionNumber,
     handleDeleteNode,
+    handleRenamePath,
     handleEditNode,
     setAddingToPath,
   ]);
@@ -1105,7 +1143,7 @@ function PlanCanvasBuilderInner({
     const persistentNodes = nodes
       .filter((n) => n.type === "milestone")
       .map((n, index) => ({
-        id: n.id.startsWith("temp-") || n.id.startsWith("node-") ? undefined : n.id,
+        id: n.id,
         libraryMilestoneId: (n.data.libraryMilestoneId as string) || null,
         path: n.data.path as DevelopmentPath,
         code: n.data.code as string,
@@ -1127,6 +1165,7 @@ function PlanCanvasBuilderInner({
     try {
       const res = await savePlanVersionAction({
         planId: plan.id,
+        pathTitles: currentPathTitles,
         publishedById: "",
         status: "DRAFT",
         changelog: `Saved canvas draft for version ${currentVersion.versionNumber}`,
@@ -1160,7 +1199,7 @@ function PlanCanvasBuilderInner({
     const persistentNodes = nodes
       .filter((n) => n.type === "milestone")
       .map((n, index) => ({
-        id: n.id.startsWith("temp-") || n.id.startsWith("node-") ? undefined : n.id,
+        id: n.id,
         libraryMilestoneId: (n.data.libraryMilestoneId as string) || null,
         path: n.data.path as DevelopmentPath,
         code: n.data.code as string,
@@ -1181,6 +1220,7 @@ function PlanCanvasBuilderInner({
 
     const res = await publishPlanCanvasAction({
       planId: plan.id,
+      pathTitles: currentPathTitles,
       syncTrainees,
       changelog,
       nodes: persistentNodes,
@@ -1200,18 +1240,19 @@ function PlanCanvasBuilderInner({
       const resData = res.data as {
         reconcileResult?: {
           migratedTraineesCount: number;
-          preservedCount: number;
-          archivedCount: number;
-          injectedCount: number;
+          preservedProgressCount: number;
+          archivedProgressCount: number;
+          injectedProgressCount: number;
         } | null;
       };
 
       const syncResult = resData?.reconcileResult;
       const syncInfo = syncResult
-        ? ` (${syncResult.migratedTraineesCount} trainees migrated: ${syncResult.preservedCount} preserved, ${syncResult.injectedCount} added)`
+        ? ` (${syncResult.migratedTraineesCount} trainees migrated: ${syncResult.preservedProgressCount} preserved, ${syncResult.injectedProgressCount} added)`
         : "";
 
       setSaveMessage(`Version ${currentVersion.versionNumber} published!${syncInfo}`);
+      router.refresh();
 
     } else {
       showWarning(res.error || "Failed to publish plan version.");
@@ -1433,7 +1474,7 @@ function PlanCanvasBuilderInner({
 
       <nav aria-label="Focus development path" className="hidden md:flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
         <button type="button" aria-pressed={focusedPath === null} onClick={() => { openCanvas(); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
-        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { openCanvas(); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
+        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { openCanvas(); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{currentPathTitles[root.path] || root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
       </nav>
 
       {/* Main Viewport: Canvas vs Tree View */}
@@ -1442,6 +1483,7 @@ function PlanCanvasBuilderInner({
         <div className="relative min-h-0 min-w-0 flex-1 bg-beat-canvas/30 md:overflow-y-auto">
           <PlanTreeView
             nodes={nodes}
+            onRenamePath={handleRenamePath}
             readOnly={isViewingReadOnly}
             onEditNode={handleEditNode}
             onUpdateNode={(id, data) => { if (isViewingReadOnly) return; setNodes(previous => previous.map(node => node.id === id && node.data.isCustom ? { ...node, data: { ...node.data, ...data } } : node)); setHasUnsavedChanges(true); }}
@@ -1460,9 +1502,19 @@ function PlanCanvasBuilderInner({
           <ReactFlow
             nodes={augmentedNodes}
             edges={augmentedEdges}
+            deleteKeyCode={null}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
             onNodesChange={onNodesChange}
+            onNodeDragStop={(_, moved) => {
+              if (isViewingReadOnly || moved.type !== "milestone") return;
+              const path = moved.data.path;
+              const draftNodes = nodes.map(node => node.id === moved.id ? { ...node, position: moved.position } : node);
+              const ordered = draftNodes.filter(node => node.type === "milestone" && node.data.path === path).sort((a, b) => a.position.y - b.position.y || a.position.x - b.position.x || a.id.localeCompare(b.id));
+              const indices = new Map(ordered.map((node, index) => [node.id, index + 1]));
+              const layout = getLayoutedElements(draftNodes.map(node => indices.has(node.id) ? { ...node, data: { ...node.data, orderIndex: indices.get(node.id) } } : node), edges, { direction: "TB" });
+              setNodes(layout.nodes); setEdges(layout.edges); setHasUnsavedChanges(true);
+            }}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             isValidConnection={isValidConnection}
@@ -1516,6 +1568,7 @@ function PlanCanvasBuilderInner({
         isOpen={addingToPath !== null}
         onClose={() => setAddingToPath(null)}
         path={addingToPath}
+        pathDisplayName={addingToPath ? pathTitle(addingToPath, currentPathTitles) : undefined}
         roleIdentifier={plan.roleIdentifier}
         existingCodes={placedCodes}
         onSubmit={handleCreateCustomMilestone}
@@ -1539,6 +1592,8 @@ function PlanCanvasBuilderInner({
         roleIdentifier={plan.roleIdentifier}
         restaurantBrand={plan.restaurantBrand}
         versionNumber={currentVersion.versionNumber}
+        diff={versionDiff}
+        pathTitles={currentPathTitles}
         nodeCounts={nodeCountMap}
         totalMilestones={nodes.filter((n) => n.type === "milestone").length}
         activeTraineeCount={activeTraineeCount}

@@ -1,5 +1,6 @@
+import { readPathTitles } from "@/lib/plans/paths";
 import { notFound } from "next/navigation";
-import { getTrainingPlanById, getLibraryMilestones } from "@/lib/db/repositories/plans";
+import { getTrainingPlanById, getLibraryMilestones, getPlanMilestoneProgressCounts } from "@/lib/db/repositories/plans";
 import { PlanCanvasBuilder } from "@/components/canvas/PlanCanvasBuilder";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +12,10 @@ interface BuilderPageProps {
 }
 
 export default async function PlanBuilderPage({ params }: BuilderPageProps) {
-  const [plan, libraryMilestones] = await Promise.all([
+  const [plan, libraryMilestones, progressCounts] = await Promise.all([
     getTrainingPlanById(params.id),
     getLibraryMilestones(),
+    getPlanMilestoneProgressCounts(params.id),
   ]);
 
   if (!plan) {
@@ -42,6 +44,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
         }}
         initialVersion={{
           id: latestVersion.id,
+          pathTitles: readPathTitles(latestVersion.pathTitles),
           versionNumber: latestVersion.versionNumber,
           status: latestVersion.status,
           nodes: latestVersion.nodes.map((n) => ({
@@ -65,11 +68,13 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
             edgeType: e.edgeType,
           })),
         }}
+        progressCounts={progressCounts}
         libraryMilestones={libraryMilestones}
         activeTraineeCount={plan.activeAssignmentsCount || 0}
         publishedVersionNumber={publishedVersion?.versionNumber ?? null}
         versions={plan.versions.map((v) => ({
           id: v.id,
+          pathTitles: readPathTitles(v.pathTitles),
           versionNumber: v.versionNumber,
           status: v.status,
           changelog: v.changelog,

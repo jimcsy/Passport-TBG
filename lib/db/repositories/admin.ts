@@ -31,6 +31,7 @@ export async function getReviewQueueItems(): Promise<ReviewQueueItem[]> {
   const items = await prisma.traineeProgress.findMany({
     where: {
       status: MilestoneStatus.READY_FOR_REVIEW,
+      isArchived: false,
     },
     include: {
       trainee: {

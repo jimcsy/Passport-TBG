@@ -45,6 +45,7 @@ interface CreateMilestoneModalProps {
   isOpen: boolean;
   onClose: () => void;
   path: DevelopmentPath | null;
+  pathDisplayName?: string;
   roleIdentifier: string;
   existingCodes: Set<string>;
   onSubmit: (data: CreateCustomMilestoneForm) => void;
@@ -54,6 +55,7 @@ export function CreateMilestoneModal({
   isOpen,
   onClose,
   path,
+  pathDisplayName,
   roleIdentifier,
   existingCodes,
   onSubmit,
@@ -163,7 +165,7 @@ export function CreateMilestoneModal({
               Assigned Path:
             </span>
             <span className="text-xs font-bold text-beat-maroon">
-              {DEVELOPMENT_PATHS[path]?.title || path}
+              {pathDisplayName || DEVELOPMENT_PATHS[path]?.title || path}
             </span>
             <span className="ml-auto font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
               Role: {roleIdentifier}

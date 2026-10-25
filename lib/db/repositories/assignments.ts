@@ -36,7 +36,7 @@ export async function assignPlanToTrainee(input: AssignPlanInput) {
     });
 
     return { assignment, reconcileStats: res };
-  });
+  }, { timeout: 60_000 });
 }
 
 /**
@@ -58,7 +58,7 @@ export async function bulkAssignPlanToCohort(input: BulkAssignPlanInput) {
     }
 
     return { assignedCount: successCount };
-  });
+  }, { timeout: 60_000 });
 }
 
 /**
@@ -118,5 +118,5 @@ export async function changeTraineePlan(
     });
 
     return { assignment, reconcileStats: res };
-  });
+  }, { timeout: 60_000 });
 }

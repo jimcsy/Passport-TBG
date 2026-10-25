@@ -1,3 +1,4 @@
+import { readPathTitles, pathTitle } from "@/lib/plans/paths";
 import { prisma } from "../prisma";
 import { DevelopmentPath, MilestoneStatus, DEVELOPMENT_PATHS } from "@/lib/types/models";
 
@@ -160,8 +161,8 @@ export async function getTraineePassportData(
   }
 
   // Separate active progress from archived progress
-  const activeRecords = trainee.progressRecords.filter((p) => !p.isArchived);
-  const archivedRecords = trainee.progressRecords.filter((p) => p.isArchived);
+  const activeRecords = trainee.progressRecords.filter((p) => !p.isArchived && p.planNode.planVersionId === activeAssignment?.planVersionId);
+  const archivedRecords = trainee.progressRecords.filter((p) => p.isArchived && p.archivedReason === "REMOVED_FROM_UPDATED_PLAN");
 
   // Fast lookups for active trainee progress
   const activeProgressByNodeId = new Map(activeRecords.map((p) => [p.planNodeId, p]));
@@ -234,7 +235,7 @@ export async function getTraineePassportData(
 
     return {
       path: pathKey,
-      title: meta.title,
+      title: pathTitle(pathKey, readPathTitles(activeAssignment?.planVersion.pathTitles)),
       description: meta.description,
       color: meta.color,
       total: totalInPath,

@@ -47,12 +47,30 @@ export const PlanEdgeInputSchema = z.object({
 });
 export type PlanEdgeInput = z.infer<typeof PlanEdgeInputSchema>;
 
+const PathTitlesSchema = z.object({
+  ONBOARDING: z.string().trim().min(1).max(80).optional(),
+  COMMUNICATION: z.string().trim().min(1).max(80).optional(),
+  TECHNICAL: z.string().trim().min(1).max(80).optional(),
+  CULTURE: z.string().trim().min(1).max(80).optional(),
+  LEADERSHIP: z.string().trim().min(1).max(80).optional(),
+}).strict();
 export const SavePlanVersionSchema = z.object({
   planId: z.string().min(1, "Plan ID is required"),
   publishedById: z.string().min(1, "User ID is required"),
   changelog: z.string().trim().max(500).nullable().optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED"),
-  nodes: z.array(PlanNodeInputSchema),
+  pathTitles: PathTitlesSchema.optional(),
+  nodes: z.array(PlanNodeInputSchema).superRefine((nodes, context) => {
+    const codes = new Set<string>(); const libraryIds = new Set<string>();
+    nodes.forEach((node, index) => {
+      if (codes.has(node.code.toUpperCase())) context.addIssue({ code: "custom", message: "Milestone codes must be unique in a version", path: [index, "code"] });
+      codes.add(node.code.toUpperCase());
+      if (node.libraryMilestoneId) {
+        if (libraryIds.has(node.libraryMilestoneId)) context.addIssue({ code: "custom", message: "A library milestone can appear only once per version", path: [index, "libraryMilestoneId"] });
+        libraryIds.add(node.libraryMilestoneId);
+      }
+    });
+  }),
   edges: z.array(PlanEdgeInputSchema).default([]),
 });
 export type SavePlanVersionInput = z.infer<typeof SavePlanVersionSchema>;

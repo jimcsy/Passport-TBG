@@ -1,4 +1,5 @@
 "use client";
+import { PathTitleEditor } from "./PathTitleEditor";
 import { useRef } from "react";
 import type { Node } from "@xyflow/react";
 import { ArrowUp, ArrowDown, GripVertical, Plus, Trash2 } from "lucide-react";
@@ -7,6 +8,7 @@ import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
 interface PlanTreeViewProps {
   nodes: Node[];
   readOnly?: boolean;
+  onRenamePath?: (path: DevelopmentPath, title: string) => void;
   onDeleteNode: (id: string) => void;
   onAddMilestone: (path: DevelopmentPath) => void;
   onEditNode?: (id: string) => void;
@@ -14,15 +16,16 @@ interface PlanTreeViewProps {
   onReorderMilestones: (path: DevelopmentPath, sourceIndex: number, targetIndex: number) => void;
 }
 
-export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMilestone, onEditNode, onUpdateNode, onReorderMilestones }: PlanTreeViewProps) {
+export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMilestone, onEditNode, onUpdateNode, onRenamePath, onReorderMilestones }: PlanTreeViewProps) {
   const dragging = useRef<{ path: DevelopmentPath; index: number } | null>(null);
   return <div aria-label="Learning path outline" className="min-w-0 space-y-4 p-3 md:p-5">
     <header><h3 className="text-sm font-semibold text-beat-maroon">Structured Path Outline</h3><p className="mt-1 text-xs text-beat-muted">Expand a milestone to inspect or edit it. Drag its handle or use the move buttons to reorder.</p></header>
     {Object.values(DevelopmentPath).map(path => {
       const items = nodes.filter(node => node.type === "milestone" && node.data.path === path).sort((a, b) => Number(a.data.orderIndex) - Number(b.data.orderIndex));
       return <details key={path} open className="rounded-lg border border-beat-border bg-white">
-        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg bg-beat-canvas p-3 text-sm font-semibold text-beat-maroon"><span>{DEVELOPMENT_PATHS[path].title}</span><span className="text-xs">{items.length} milestones · Expand / collapse</span></summary>
+        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg bg-beat-canvas p-3 text-sm font-semibold text-beat-maroon"><span>{String(nodes.find(node => node.type === "pathRoot" && node.data.path === path)?.data.title || DEVELOPMENT_PATHS[path].title)}</span><span className="text-xs">{items.length} milestones · Expand / collapse</span></summary>
         <div className="space-y-3 p-3">
+          <div className="text-sm font-semibold text-beat-maroon"><PathTitleEditor title={String(nodes.find(node => node.type === "pathRoot" && node.data.path === path)?.data.title || DEVELOPMENT_PATHS[path].title)} onRename={!readOnly && onRenamePath ? title => onRenamePath(path, title) : undefined} /></div>
           {items.length === 0 && <p className="py-3 text-xs text-beat-muted">No milestones in this path.</p>}
           {items.map((node, index) => <article key={node.id} data-milestone-index={index} data-path={path} className="min-w-0 rounded-lg border border-beat-border bg-beat-canvas/20 p-3">
             <div className="flex min-w-0 items-start gap-2">

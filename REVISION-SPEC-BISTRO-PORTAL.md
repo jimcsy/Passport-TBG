@@ -277,16 +277,13 @@ function generateVerificationHash(
 ---
 
 ### ADR-11: Path Rename — Progress Preservation via Node Identity Matching
-**Decision:** Path renames are inherently safe. No schema changes needed.
+**Implementation amendment (2026-10-25):** Keep the five canonical `PlanNode.path` identifiers stable and store editable display names in nullable `PlanVersion.pathTitles` JSON. This additive field is needed to persist names for empty paths as well as populated paths; the original no-schema-change assumption did not account for empty paths and fixed-key validation/rendering.
 
-**Why it works:** The existing [`reconcileTraineeToPlanVersion`](file:///Users/genesisjim/Codes/Passport-TBG/lib/db/services/reconcile.ts#L18-L196) matches nodes by:
-1. `libraryMilestoneId` (FK to the shared milestone catalog), OR
-2. `code` (string match, case-insensitive)
+Both canvas hubs and the mobile outline edit these version-specific display names. Published snapshots retain their own names. Passport summaries render the active version's display names while the category keys still drive ordering, styles, library filtering and stamp defaults.
 
-Path names (`path` field on `PlanNode`) are **not used** for identity matching. Renaming "TECHNICAL" to "OPERATIONS" in a new plan version simply changes the label on the new version's nodes — the reconcile engine finds the same node by its code/library ID and preserves all progress.
+Progress identity matches case-insensitive `code` first and `libraryMilestoneId` second, one to one. Neither display names nor order are identity inputs. Matched progress is remapped **in place**, preserving its ID, creation time, statuses, notes, approval dates and original verification hash. Removed milestones are soft-archived with `REMOVED_FROM_UPDATED_PLAN`; progress records are never deleted by reconciliation.
 
-**Archived progress** for deleted nodes is also preserved with `isArchived: true` and `archivedReason: "REMOVED_FROM_UPDATED_PLAN"`.
-
+Publishing with sync includes active subscribers on every older version of the plan, including versions left behind by an earlier publish without sync. The publish and reconciliation operation is transactional.
 ---
 
 ### ADR-12: Mobile Responsiveness — Tailwind Default Breakpoints
@@ -744,7 +741,7 @@ The system's progress preservation guarantee is enforced at multiple levels:
 2. **Soft Archival**: Deleted nodes get `isArchived: true` — never hard-deleted from `TraineeProgress`.
 3. **Immutable Versions**: Each edit creates a new `PlanVersion`. Old versions are marked `SUPERSEDED`, never deleted.
 4. **Assignment Chain**: `TraineePlanAssignment` tracks version history with `ACTIVE` → `SUPERSEDED` transitions.
-5. **Path Rename Safety**: Path labels are cosmetic on `PlanNode` — reconcile ignores them entirely.
+5. **Path Rename Safety**: Version-specific labels live in `PlanVersion.pathTitles`; canonical `PlanNode.path` keys remain stable and reconciliation ignores display names.
 
 ---
 

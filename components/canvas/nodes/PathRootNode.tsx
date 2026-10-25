@@ -1,5 +1,6 @@
 "use client";
 
+import { PathTitleEditor } from "../PathTitleEditor";
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
 import {
@@ -19,6 +20,7 @@ export interface PathRootNodeData {
   path: DevelopmentPath;
   title: string;
   childCount?: number;
+  onRename?: (path: DevelopmentPath, title: string) => void;
   onAddMilestone?: (path: DevelopmentPath) => void;
 }
 
@@ -45,7 +47,7 @@ function PathRootNodeComponent({ data }: { data: PathRootNodeData }) {
       <div className="flex items-center gap-3">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold leading-snug text-white">
-            {data.title}
+            <PathTitleEditor title={data.title} onRename={data.onRename ? title => data.onRename?.(data.path, title) : undefined} />
           </h4>
           <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-white/70">
             {DEVELOPMENT_PATHS[data.path]?.description}

@@ -1,3 +1,4 @@
+import { readPathTitles } from "@/lib/plans/paths";
 import { resolveStampDesign } from "@/lib/stamps/catalog";
 import { prisma } from "../prisma";
 import {
@@ -217,6 +218,7 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
       await tx.planVersion.update({
         where: { id: targetVersionId },
         data: {
+          pathTitles: validated.pathTitles ?? readPathTitles(latest?.pathTitles),
           status: validated.status,
           changelog: validated.changelog || latest.changelog,
           publishedById: validated.publishedById,
@@ -229,6 +231,7 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
         data: {
           planId: validated.planId,
           versionNumber: targetVersionNumber,
+          pathTitles: validated.pathTitles ?? readPathTitles(latest?.pathTitles),
           status: validated.status,
           changelog: validated.changelog || `Version ${targetVersionNumber}`,
           publishedById: validated.publishedById,
@@ -365,23 +368,18 @@ export async function publishPlanVersion(
     let reconcileResult: ReconcileResult | null = null;
 
     if (validated.syncTrainees) {
-      // Find the previous published version of this plan
-      const previousVersion = await tx.planVersion.findFirst({
-        where: {
-          planId: version.planId,
-          versionNumber: { lt: version.versionNumber },
-          status: "PUBLISHED",
-        },
-        orderBy: { versionNumber: "desc" },
+      // Include subscribers left on any older version after an earlier publish without sync.
+      const sourceVersions = await tx.traineePlanAssignment.findMany({
+        where: { status: "ACTIVE", planVersion: { planId: version.planId }, planVersionId: { not: version.id } },
+        select: { planVersionId: true }, distinct: ["planVersionId"],
       });
-
-      if (previousVersion) {
-        reconcileResult = await reconcilePlanVersionSubscribers(
-          previousVersion.id,
-          updatedVersion.id,
-          effectivePublishedById,
-          tx
-        );
+      reconcileResult = { migratedTraineesCount: 0, preservedProgressCount: 0, archivedProgressCount: 0, injectedProgressCount: 0 };
+      for (const source of sourceVersions) {
+        const result = await reconcilePlanVersionSubscribers(source.planVersionId, version.id, effectivePublishedById, tx);
+        reconcileResult.migratedTraineesCount += result.migratedTraineesCount;
+        reconcileResult.preservedProgressCount += result.preservedProgressCount;
+        reconcileResult.archivedProgressCount += result.archivedProgressCount;
+        reconcileResult.injectedProgressCount += result.injectedProgressCount;
       }
     }
 
@@ -399,7 +397,7 @@ export async function publishPlanVersion(
       version: updatedVersion,
       reconcileResult,
     };
-  });
+  }, { timeout: 60_000 });
 }
 
 /**
@@ -423,4 +421,16 @@ export async function getLibraryMilestones(pathFilter?: string) {
     where,
     orderBy: [{ isStandard: "desc" }, { path: "asc" }, { orderIndex: "asc" }],
   });
+}
+
+export async function getPlanMilestoneProgressCounts(planId: string) {
+  const records = await prisma.traineeProgress.findMany({
+    where: { isArchived: false, planNode: { planVersion: { planId } }, trainee: { planAssignments: { some: { status: "ACTIVE", planVersion: { planId } } } } },
+    select: { traineeId: true, planNode: { select: { code: true, libraryMilestoneId: true } } },
+  });
+  const groups = new Map<string, Set<string>>();
+  for (const record of records) for (const key of [`code:${record.planNode.code.toUpperCase()}`, ...(record.planNode.libraryMilestoneId ? [`library:${record.planNode.libraryMilestoneId}`] : [])]) {
+    const group = groups.get(key) || new Set<string>(); group.add(record.traineeId); groups.set(key, group);
+  }
+  return Object.fromEntries(Array.from(groups.entries()).map(([key, trainees]) => [key, trainees.size]));
 }

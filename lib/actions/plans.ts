@@ -221,6 +221,7 @@ export async function updateCustomLibraryMilestoneAction(
     // Also update any plan nodes matching this milestone definition
     await prisma.planNode.updateMany({
       where: {
+        planVersion: { status: "DRAFT" },
         OR: [
           { libraryMilestoneId: existing.id },
           { code: existing.code, isCustom: true },
@@ -288,6 +289,7 @@ export async function deleteCustomLibraryMilestoneAction(
 
 export interface PublishPlanCanvasInput {
   planId: string;
+  pathTitles?: import("@/lib/plans/paths").PathTitles;
   syncTrainees: boolean;
   changelog?: string | null;
   nodes: Array<{
@@ -320,6 +322,7 @@ export async function publishPlanCanvasAction(input: PublishPlanCanvasInput): Pr
   try {
     const saved = await savePlanVersion({
       planId: input.planId,
+      pathTitles: input.pathTitles,
       publishedById: admin.id,
       status: "DRAFT",
       changelog: input.changelog || "Published canvas version",
@@ -460,6 +463,7 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
       const createdVersion = await tx.planVersion.create({
         data: {
           planId,
+          pathTitles: (await import("@/lib/plans/paths")).readPathTitles(latest?.pathTitles),
           versionNumber: newVersionNumber,
           status: "DRAFT",
           changelog: `Draft version ${newVersionNumber} cloned from v${latest?.versionNumber || 1}`,
@@ -522,7 +526,7 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
           },
         },
       });
-    });
+    }, { timeout: 30_000 });
 
     revalidatePath(`/trainer/plans/${planId}/builder`);
     revalidatePath("/trainer/plans");
@@ -535,3 +539,14 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
 
 
 
+
+export async function getMilestoneProgressCountAction(planId: string, code: string, libraryMilestoneId?: string | null) {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false as const, error: "Unauthorized trainer session" };
+  const { prisma } = await import("@/lib/db/prisma");
+  const records = await prisma.traineeProgress.findMany({
+    where: { isArchived: false, planNode: { planVersion: { planId }, OR: [{ code: { equals: code, mode: "insensitive" } }, ...(libraryMilestoneId ? [{ libraryMilestoneId }] : [])] }, trainee: { planAssignments: { some: { status: "ACTIVE", planVersion: { planId } } } } },
+    select: { traineeId: true }, distinct: ["traineeId"],
+  });
+  return { success: true as const, data: { traineeCount: records.length } };
+}

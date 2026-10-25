@@ -1,240 +1,68 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "../prisma";
-import { MilestoneStatus } from "@/lib/types/models";
-
+import { matchPlanNodes } from "@/lib/canvas/diff";
 export interface ReconcileResult {
   migratedTraineesCount: number;
   preservedProgressCount: number;
   archivedProgressCount: number;
   injectedProgressCount: number;
 }
-
 type DbClient = PrismaClient | Prisma.TransactionClient;
+const statusRank: Record<string, number> = { LOCKED: 0, IN_PROGRESS: 1, READY_FOR_REVIEW: 2, VERIFIED: 3 };
 
-/**
- * Reconciles a single trainee from their current active plan version to a new plan version.
- * Preserves completed/in-review milestones, archives deleted milestones, and injects new ones.
- */
-export async function reconcileTraineeToPlanVersion(
-  traineeId: string,
-  newPlanVersionId: string,
-  assignedById: string,
-  db: DbClient = prisma
-): Promise<{
-  preserved: number;
-  archived: number;
-  injected: number;
-}> {
-  // 1. Fetch current active plan assignment
-  const activeAssignment = await db.traineePlanAssignment.findFirst({
-    where: { traineeId, status: "ACTIVE" },
-    include: {
-      planVersion: {
-        include: { nodes: true },
-      },
-    },
-  });
-
-  // 2. Fetch new plan version with nodes
-  const newVersion = await db.planVersion.findUnique({
-    where: { id: newPlanVersionId },
-    include: { nodes: true, plan: true },
-  });
-
-  if (!newVersion) {
-    throw new Error(`Target PlanVersion ${newPlanVersionId} not found.`);
-  }
-
-  const validAssignedById =
-    assignedById ||
-    newVersion.publishedById ||
-    newVersion.plan?.createdById ||
-    activeAssignment?.assignedById ||
-    "system";
-
+/** Remap progress in place, preserve verification provenance, and archive removals. Never delete progress. */
+export async function reconcileTraineeToPlanVersion(traineeId: string, newPlanVersionId: string, assignedById: string, db: DbClient = prisma): Promise<{ preserved: number; archived: number; injected: number }> {
+  if (db === prisma) return prisma.$transaction(tx => reconcileTraineeToPlanVersion(traineeId, newPlanVersionId, assignedById, tx), { timeout: 60_000 });
+  const activeAssignment = await db.traineePlanAssignment.findFirst({ where: { traineeId, status: "ACTIVE" }, orderBy: { assignedAt: "desc" }, include: { planVersion: { include: { nodes: true } } } });
+  const newVersion = await db.planVersion.findUnique({ where: { id: newPlanVersionId }, include: { nodes: true, plan: true } });
+  if (!newVersion) throw new Error(`Target PlanVersion ${newPlanVersionId} not found.`);
+  if (activeAssignment?.planVersionId === newPlanVersionId) return { preserved: 0, archived: 0, injected: 0 };
+  const validAssignedById = assignedById || newVersion.publishedById || newVersion.plan.createdById;
   const oldNodes = activeAssignment?.planVersion.nodes || [];
-  const newNodes = newVersion.nodes;
-
-  // Build match map: oldNode.id -> newNode
-  const matchMap = new Map<string, typeof newNodes[0]>();
-  for (const oldNode of oldNodes) {
-    const matched = newNodes.find(
-      (n) =>
-        (oldNode.libraryMilestoneId && n.libraryMilestoneId === oldNode.libraryMilestoneId) ||
-        n.code.toUpperCase() === oldNode.code.toUpperCase()
-    );
-    if (matched) {
-      matchMap.set(oldNode.id, matched);
-    }
-  }
-
-  // 3. Fetch existing progress records for the trainee
-  const existingProgress = await db.traineeProgress.findMany({
-    where: { traineeId },
-  });
-  const progressByNodeId = new Map(existingProgress.map((p) => [p.planNodeId, p]));
-
+  const matches = matchPlanNodes(oldNodes, newVersion.nodes);
+  const progress = await db.traineeProgress.findMany({ where: { traineeId } });
+  const byNode = new Map(progress.map(record => [record.planNodeId, record]));
+  const handled = new Set<string>();
+  const removals: string[] = [];
   let preserved = 0;
-  let archived = 0;
-  let injected = 0;
-
-  // Process matched nodes and remapped progress
-  const handledNewNodeIds = new Set<string>();
-
-  for (const oldNode of oldNodes) {
-    const prog = progressByNodeId.get(oldNode.id);
-    if (!prog) continue;
-
-    const matchedNewNode = matchMap.get(oldNode.id);
-
-    if (matchedNewNode) {
-      handledNewNodeIds.add(matchedNewNode.id);
-      // Remap progress to new node if different node id
-      if (oldNode.id !== matchedNewNode.id) {
-        await db.traineeProgress.upsert({
-          where: {
-            traineeId_planNodeId: {
-              traineeId,
-              planNodeId: matchedNewNode.id,
-            },
-          },
-          update: {
-            status: prog.status,
-            traineeNote: prog.traineeNote,
-            requestedAt: prog.requestedAt,
-            verifiedBy: prog.verifiedBy,
-            verifiedAt: prog.verifiedAt,
-            verificationHash: prog.verificationHash,
-            trainerNote: prog.trainerNote,
-            isArchived: false,
-            archivedReason: null,
-          },
-          create: {
-            traineeId,
-            planNodeId: matchedNewNode.id,
-            status: prog.status,
-            traineeNote: prog.traineeNote,
-            requestedAt: prog.requestedAt,
-            verifiedBy: prog.verifiedBy,
-            verifiedAt: prog.verifiedAt,
-            verificationHash: prog.verificationHash,
-            trainerNote: prog.trainerNote,
-            isArchived: false,
-          },
-        });
-
-        // Clean up old version node progress now that state is remapped to new version
-        await db.traineeProgress.delete({
-          where: { id: prog.id },
-        });
-
-        preserved++;
-      }
+  for (const old of oldNodes) {
+    const record = byNode.get(old.id);
+    if (!record) continue;
+    const next = matches.get(old);
+    if (!next) { if (!record.isArchived) removals.push(record.id); continue; }
+    handled.add(next.id);
+    const destination = byNode.get(next.id);
+    if (destination && destination.id !== record.id) {
+      // Rejoining a prior version must not overwrite a stronger existing approval.
+      const winner = (statusRank[record.status] ?? 0) >= (statusRank[destination.status] ?? 0) ? record : destination;
+      await db.traineeProgress.update({ where: { id: destination.id }, data: {
+        status: winner.status, traineeNote: winner.traineeNote, requestedAt: winner.requestedAt,
+        verifiedBy: winner.verifiedBy, verifiedAt: winner.verifiedAt, verificationHash: winner.verificationHash,
+        trainerNote: winner.trainerNote, isArchived: false, archivedReason: null,
+      } });
+      await db.traineeProgress.update({ where: { id: record.id }, data: { isArchived: true, archivedReason: "REMAPPED_TO_UPDATED_PLAN" } });
     } else {
-      // Node was deleted/removed in the new version
-      // Preserve record by soft-archiving without losing verification audit logs
-      if (!prog.isArchived) {
-        await db.traineeProgress.update({
-          where: { id: prog.id },
-          data: {
-            isArchived: true,
-            archivedReason: "REMOVED_FROM_UPDATED_PLAN",
-          },
-        });
-        archived++;
-      }
+      // Updating the FK retains the progress ID, createdAt, status, notes, dates and original hash.
+      await db.traineeProgress.update({ where: { id: record.id }, data: { planNodeId: next.id, isArchived: false, archivedReason: null } });
     }
+    preserved++;
   }
-
-  // Inject newly added nodes into progress as IN_PROGRESS
-  for (const newNode of newNodes) {
-    if (handledNewNodeIds.has(newNode.id)) continue;
-
-    const alreadyExists = progressByNodeId.has(newNode.id);
-    if (!alreadyExists) {
-      await db.traineeProgress.create({
-        data: {
-          traineeId,
-          planNodeId: newNode.id,
-          status: MilestoneStatus.IN_PROGRESS,
-          isArchived: false,
-        },
-      });
-      injected++;
-    }
-  }
-
-  // 4. Switch assignment pointers
-  await db.traineePlanAssignment.updateMany({
-    where: {
-      traineeId,
-      status: "ACTIVE",
-      planVersionId: { not: newPlanVersionId },
-    },
-    data: { status: "SUPERSEDED" },
-  });
-
-  await db.traineePlanAssignment.upsert({
-    where: {
-      traineeId_planVersionId: {
-        traineeId,
-        planVersionId: newPlanVersionId,
-      },
-    },
-    update: {
-      status: "ACTIVE",
-      assignedById: validAssignedById,
-      assignedAt: new Date(),
-    },
-    create: {
-      traineeId,
-      planVersionId: newPlanVersionId,
-      assignedById: validAssignedById,
-      status: "ACTIVE",
-    },
-  });
-
+  const archived = removals.length ? (await db.traineeProgress.updateMany({ where: { id: { in: removals } }, data: { isArchived: true, archivedReason: "REMOVED_FROM_UPDATED_PLAN" } })).count : 0;
+  const additions = newVersion.nodes.filter(node => !handled.has(node.id) && !byNode.has(node.id));
+  const injected = additions.length ? (await db.traineeProgress.createMany({ data: additions.map(node => ({ traineeId, planNodeId: node.id, status: "IN_PROGRESS", isArchived: false })), skipDuplicates: true })).count : 0;
+  await db.traineePlanAssignment.updateMany({ where: { traineeId, status: "ACTIVE", planVersionId: { not: newPlanVersionId } }, data: { status: "SUPERSEDED" } });
+  await db.traineePlanAssignment.upsert({ where: { traineeId_planVersionId: { traineeId, planVersionId: newPlanVersionId } }, update: { status: "ACTIVE", assignedById: validAssignedById, assignedAt: new Date() }, create: { traineeId, planVersionId: newPlanVersionId, assignedById: validAssignedById, status: "ACTIVE" } });
   return { preserved, archived, injected };
 }
-
-/**
- * Reconciles all trainees currently assigned to an old version of a plan to its newly published version.
- */
-export async function reconcilePlanVersionSubscribers(
-  oldPlanVersionId: string,
-  newPlanVersionId: string,
-  assignedById: string,
-  db: DbClient = prisma
-): Promise<ReconcileResult> {
-  // Find all active subscribers of the old version
-  const activeAssignments = await db.traineePlanAssignment.findMany({
-    where: {
-      planVersionId: oldPlanVersionId,
-      status: "ACTIVE",
-    },
-    select: { traineeId: true },
-  });
-
-  let preservedProgressCount = 0;
-  let archivedProgressCount = 0;
-  let injectedProgressCount = 0;
-
-  for (const assignment of activeAssignments) {
-    const res = await reconcileTraineeToPlanVersion(
-      assignment.traineeId,
-      newPlanVersionId,
-      assignedById,
-      db
-    );
-    preservedProgressCount += res.preserved;
-    archivedProgressCount += res.archived;
-    injectedProgressCount += res.injected;
+export async function reconcilePlanVersionSubscribers(oldPlanVersionId: string, newPlanVersionId: string, assignedById: string, db: DbClient = prisma): Promise<ReconcileResult> {
+  if (db === prisma) return prisma.$transaction(tx => reconcilePlanVersionSubscribers(oldPlanVersionId, newPlanVersionId, assignedById, tx), { timeout: 60_000 });
+  const assignments = await db.traineePlanAssignment.findMany({ where: { planVersionId: oldPlanVersionId, status: "ACTIVE" }, select: { traineeId: true } });
+  const result: ReconcileResult = { migratedTraineesCount: assignments.length, preservedProgressCount: 0, archivedProgressCount: 0, injectedProgressCount: 0 };
+  for (const assignment of assignments) {
+    const stats = await reconcileTraineeToPlanVersion(assignment.traineeId, newPlanVersionId, assignedById, db);
+    result.preservedProgressCount += stats.preserved;
+    result.archivedProgressCount += stats.archived;
+    result.injectedProgressCount += stats.injected;
   }
-
-  return {
-    migratedTraineesCount: activeAssignments.length,
-    preservedProgressCount,
-    archivedProgressCount,
-    injectedProgressCount,
-  };
+  return result;
 }

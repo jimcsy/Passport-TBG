@@ -6,6 +6,7 @@ import { X, Plus } from "lucide-react";
 export interface PlanVersionSummary {
   id: string;
   versionNumber: number;
+  pathTitles?: import("@/lib/plans/paths").PathTitles;
   status: string;
   changelog: string | null;
   publishedAt: Date | string | null;

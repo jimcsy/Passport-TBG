@@ -82,6 +82,7 @@ model PlanVersion {
   id              String      @id @default(cuid())
   planId          String
   versionNumber   Int         // 1, 2, 3...
+  pathTitles      Json?       // Version-specific display names, including empty paths
   status          String      @default("PUBLISHED") // "DRAFT" | "PUBLISHED" | "SUPERSEDED"
   changelog       String?
   publishedById   String
