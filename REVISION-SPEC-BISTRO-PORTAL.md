@@ -116,11 +116,13 @@ sequenceDiagram
 
 **File Validation Gates (dual-enforced client + server):**
 
+Amended 2026-10-25: use Supabase Free with a 50 MB per-file limit for all three types, replacing the original 500 MB video / 100 MB presentation limits.
+
 | File Type | MIME Types | Max Size |
 |-----------|-----------|----------|
-| MP4 Video | `video/mp4` | 500 MB |
+| MP4 Video | `video/mp4` | 50 MB |
 | PDF Document | `application/pdf` | 50 MB |
-| PPTX Presentation | `application/vnd.openxmlformats-officedocument.presentationml.presentation` | 100 MB |
+| PPTX Presentation | `application/vnd.openxmlformats-officedocument.presentationml.presentation` | 50 MB |
 
 ---
 
@@ -699,7 +701,7 @@ export const supabaseAdmin = createClient(
 // lib/validations/materials.ts
 export const MATERIAL_LIMITS = {
   VIDEO: {
-    maxBytes: 500 * 1024 * 1024,     // 500 MB
+    maxBytes: 50 * 1024 * 1024,      // 50 MB
     mimeTypes: ["video/mp4"],
     label: "MP4 Video",
   },
@@ -709,7 +711,7 @@ export const MATERIAL_LIMITS = {
     label: "PDF Document",
   },
   PRESENTATION: {
-    maxBytes: 100 * 1024 * 1024,     // 100 MB
+    maxBytes: 50 * 1024 * 1024,      // 50 MB
     mimeTypes: [
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ],

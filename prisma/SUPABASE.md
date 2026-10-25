@@ -37,3 +37,43 @@ was generated from the existing Prisma models; it does not migrate SQLite data.
 Keep database credentials server-side. Configure Supabase Data API access before
 exposing these tables: existing application sessions do not establish Supabase
 Auth identities or RLS policies. If the Data API is unused, disable it in Supabase.
+
+## Course material storage (issue #32)
+
+Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and
+`SUPABASE_SERVICE_ROLE_KEY` in `.env` and the deployment environment. Copy keys
+from the same Supabase project as the database. Never expose the service role key
+in browser code or give it a `NEXT_PUBLIC_` prefix. Restart/rebuild after setting
+public environment variables.
+
+Apply the additive CourseMaterial migration using `npx prisma migrate deploy`.
+In Supabase Storage create a **private** bucket named `course-materials`, with
+allowed MIME types `video/mp4`, `application/pdf`, and
+`application/vnd.openxmlformats-officedocument.presentationml.presentation`.
+Set its file limit to 52428800 bytes (50 MiB), matching the project's global
+Storage limit on Supabase Free. The user-approved 2026-10-25 amendment caps MP4,
+PDF, and PPTX files at 50 MB each in both client and server validation.
+
+Do not add public read/write policies for the bucket. Application sessions are
+not Supabase Auth sessions: trainer actions create signed upload URLs, and
+server actions authorize active trainee assignments before issuing signed
+one-hour viewing/download URLs. Browser uploads use the signed URL directly.
+Files are stored under `{milestoneCode}/{materialId}/{sanitizedFilename}`.
+
+Upload confirmation checks the object exists and its size/content type match the
+trainer-bound signed upload ticket. Cancelled/failed uploads attempt object
+cleanup; a network failure during cleanup can leave an unlisted object. Periodic
+maintenance can remove objects with no matching CourseMaterial record after
+allowing at least the two-hour upload authorization window. Deletion removes the
+object first and retains metadata on Storage failure to allow retry.
+
+Materials belong to the shared milestone catalog and become available to all
+active plans referencing that milestone immediately. Deleting a library milestone through the application removes its Storage objects
+first, then its material metadata. Direct database deletion cascades only metadata;
+remove Storage objects first when maintaining the catalog outside the application.
+
+Validation before closing #32: run the file validation/repository scripts, then
+exercise actual signed upload → confirmation → preview/download → deletion for
+MP4/PDF/PPTX, sequential uploads, upload cancellation, progress, and denied access
+for trainees without an active assignment. Do not close on mocked Storage tests
+alone.

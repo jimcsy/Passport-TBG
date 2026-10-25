@@ -265,6 +265,15 @@ export async function deleteCustomLibraryMilestoneAction(
       return { success: false, error: "Standard BEAT canonical milestones cannot be deleted." };
     }
 
+    const materials = await prisma.courseMaterial.findMany({ where: { milestoneId: existing.id }, select: { id: true } });
+    if (materials.length) {
+      const { deleteMaterialAction } = await import("./materials");
+      for (const material of materials) {
+        const result = await deleteMaterialAction(material.id);
+        if (!result.success) return { success: false, error: result.error };
+      }
+    }
+
     await prisma.milestoneDefinition.delete({
       where: { id: existing.id },
     });
@@ -501,7 +510,7 @@ export async function createDraftVersionAction(planId: string): Promise<PlanActi
       return tx.planVersion.findUnique({
         where: { id: createdVersion.id },
         include: {
-          nodes: true,
+          nodes: { include: { libraryMilestone: { select: { _count: { select: { materials: true } } } } } },
           edges: true,
           publishedBy: { select: { fullName: true } },
           _count: {

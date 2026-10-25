@@ -14,6 +14,8 @@ erDiagram
     AdminUser ||--o{ TrainingPlan : "authors (createdById)"
     AdminUser ||--o{ PlanVersion : "publishes (publishedById)"
     AdminUser ||--o{ TraineePlanAssignment : "assigns (assignedById)"
+    AdminUser ||--o{ CourseMaterial : "uploads"
+    MilestoneDefinition ||--o{ CourseMaterial : "provides materials"
     AdminUser ||--o{ TraineeProgress : "verifies (verifiedBy)"
     
     TrainingPlan ||--|{ PlanVersion : "has versions (planId)"
@@ -89,6 +91,20 @@ erDiagram
         string changelog "Summary of changes"
         string publishedById FK "AdminUser.id"
         datetime publishedAt
+    }
+
+    CourseMaterial {
+        string id PK
+        string milestoneId FK
+        string fileName
+        string fileType "VIDEO | PDF | PRESENTATION"
+        string mimeType
+        int fileSizeBytes
+        string storagePath UK
+        int displayOrder
+        string uploadedById FK
+        datetime createdAt
+        datetime updatedAt
     }
 
     PlanNode {
@@ -201,3 +217,14 @@ erDiagram
 ### Stamp audit fields
 
 `PlanNode.stampDesign` persists the selected SVG design in each immutable version. New nodes default by development path in application persistence; the database fallback is `ONBOARDING_SEAL`. `TraineeProgress.verificationHash` records the SHA-256 fingerprint of trainee ID, original approved plan node ID, trainer ID, and the exact approval timestamp. Legacy approvals remain nullable. Reconciliation copies this original fingerprint without generating a new approval; it is a fingerprint, not a digital signature or proof against database tampering.
+
+### CourseMaterial (shared milestone resources)
+
+`MilestoneDefinition.materials` and `AdminUser.uploadedMaterials` link reusable
+course resources to their library milestone and uploader. `storagePath` is unique;
+`milestoneId` is indexed. File bytes live in the private Supabase `course-materials`
+bucket, not PostgreSQL. Metadata is created only after object confirmation.
+`displayOrder` controls presentation order. Signed read URLs expire in one hour.
+Removing a library milestone cascades material metadata; application material
+deletion removes Storage first, then metadata, preserving a retry path if Storage
+fails. See `prisma/SUPABASE.md` for setup and orphan cleanup details.

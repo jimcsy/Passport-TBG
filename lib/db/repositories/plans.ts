@@ -66,6 +66,7 @@ export async function getTrainingPlanById(id: string) {
         include: {
           nodes: {
             orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
+            include: { libraryMilestone: { select: { _count: { select: { materials: true } } } } },
           },
           edges: true,
           publishedBy: {

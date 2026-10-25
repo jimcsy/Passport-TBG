@@ -88,6 +88,8 @@ function buildGraphForVersionData(
     orderIndex: number;
     posX?: number | null;
     posY?: number | null;
+    libraryMilestone?: { _count: { materials: number } } | null;
+    materialCount?: number;
     stampDesign?: string;
     isCustom?: boolean;
     libraryMilestoneId?: string | null;
@@ -128,6 +130,7 @@ function buildGraphForVersionData(
       description: n.description,
       path: n.path as DevelopmentPath,
       orderIndex: n.orderIndex,
+      materialCount: n.materialCount ?? n.libraryMilestone?._count.materials ?? 0,
       stampDesign: resolveStampDesign(n.stampDesign, n.path),
       isCustom: n.isCustom ?? false,
       libraryMilestoneId: n.libraryMilestoneId ?? null,
@@ -201,6 +204,8 @@ export interface PlanCanvasBuilderProps {
       orderIndex: number;
       posX: number;
       posY: number;
+      libraryMilestone?: { _count: { materials: number } } | null;
+      materialCount?: number;
       stampDesign?: string;
       isCustom: boolean;
       libraryMilestoneId: string | null;
@@ -383,7 +388,9 @@ function PlanCanvasBuilderInner({
             orderIndex: number;
             posX: number;
             posY: number;
-            stampDesign?: string;
+            libraryMilestone?: { _count: { materials: number } } | null;
+      materialCount?: number;
+      stampDesign?: string;
             isCustom: boolean;
             libraryMilestoneId: string | null;
           }>;
@@ -888,6 +895,11 @@ function PlanCanvasBuilderInner({
     [nodes]
   );
 
+  const handleMaterialCountChange = useCallback((count: number) => {
+    if (!editingMilestone?.nodeId) return;
+    setNodes(previous => previous.map(node => node.id === editingMilestone.nodeId ? { ...node, data: { ...node.data, materialCount: count } } : node));
+  }, [editingMilestone?.nodeId, setNodes]);
+
   // Handle editing custom milestone from library drawer
   const handleEditLibraryMilestone = useCallback(
     (milestone: LibraryMilestone) => {
@@ -1043,6 +1055,7 @@ function PlanCanvasBuilderInner({
             readOnly: isViewingReadOnly,
             versionTag,
             versionTooltip,
+            onAttachMaterials: !isViewingReadOnly ? () => handleEditNode(node.id) : undefined,
             onEdit: !isViewingReadOnly ? () => handleEditNode(node.id) : undefined,
             onDelete: !isViewingReadOnly ? handleDeleteNode : undefined,
           },
@@ -1517,6 +1530,7 @@ function PlanCanvasBuilderInner({
         milestone={editingMilestone}
         existingCodes={placedCodes}
         onSave={handleSaveEditedMilestone}
+        onMaterialCountChange={handleMaterialCountChange}
       />
 
       {/* Publish Plan Modal */}

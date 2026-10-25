@@ -12,6 +12,8 @@ export interface MilestoneNodeData {
   description: string;
   path: DevelopmentPath;
   orderIndex: number;
+  materialCount?: number;
+  onAttachMaterials?: (nodeId: string) => void;
   isCustom?: boolean;
   libraryMilestoneId?: string | null;
   versionTag?: "new" | "live" | "draft" | null;
@@ -86,9 +88,11 @@ function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeD
         {data.description}
       </p>
 
+      <div className="mt-2 flex items-center justify-between text-[10px]"><span>{data.materialCount ?? 0} materials</span>{data.onAttachMaterials && <button type="button" className="nodrag min-h-8 font-semibold text-beat-maroon underline" onClick={event => { event.stopPropagation(); data.onAttachMaterials?.(id); }}>Attach Materials</button>}</div>
+
       {/* Action Overlay on Hover (Hidden in read-only mode) */}
       {!data.readOnly && (data.onEdit || data.onDelete) && (
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center gap-1 bg-white p-1 rounded-md border border-beat-border z-10 shadow-xs">
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center gap-1 bg-white p-1 rounded-md border border-beat-border z-10 shadow-xs">
           {data.onEdit && (
             <button
               type="button"

@@ -18,6 +18,7 @@ model AdminUser {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  uploadedMaterials CourseMaterial[]
   verifications     TraineeProgress[]
   authoredPlans     TrainingPlan[]
   publishedVersions PlanVersion[]
@@ -55,6 +56,7 @@ model MilestoneDefinition {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @default(now()) @updatedAt
 
+  materials   CourseMaterial[]
   planNodes   PlanNode[]
 }
 
@@ -175,4 +177,21 @@ model TraineeProgress {
 
   @@unique([traineeId, planNodeId])
   @@index([status])
+}
+
+model CourseMaterial {
+  id            String @id @default(cuid())
+  milestoneId   String
+  fileName      String
+  fileType      String
+  mimeType      String
+  fileSizeBytes Int
+  storagePath   String @unique
+  displayOrder  Int @default(0)
+  uploadedById  String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  milestone     MilestoneDefinition @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  uploadedBy    AdminUser @relation(fields: [uploadedById], references: [id])
+  @@index([milestoneId])
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { MaterialListPanel } from "@/components/admin/MaterialListPanel";
 import { resolveStampDesign, type StampDesignKey } from "@/lib/stamps/catalog";
 import { StampDesignPicker } from "./StampDesignPicker";
 import { useEffect, useState } from "react";
@@ -43,6 +44,7 @@ interface EditMilestoneModalProps {
   milestone: EditableMilestoneTarget | null;
   existingCodes: Set<string>;
   onSave: (updated: EditableMilestoneTarget) => void;
+  onMaterialCountChange?: (count: number) => void;
 }
 
 const PATH_OPTIONS = [
@@ -59,6 +61,7 @@ export function EditMilestoneModal({
   milestone,
   existingCodes,
   onSave,
+  onMaterialCountChange,
 }: EditMilestoneModalProps) {
   const [stampDesign, setStampDesign] = useState<StampDesignKey>("ONBOARDING_SEAL");
   const [code, setCode] = useState("");
@@ -254,6 +257,7 @@ export function EditMilestoneModal({
           </div>
 
           </fieldset>
+          {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Save the draft and reload it before attaching materials to a new custom milestone.</p>}
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
