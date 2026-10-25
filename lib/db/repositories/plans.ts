@@ -289,16 +289,13 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
       nodeIdMap.set(node.code, createdNode.id);
     }
 
-    // Create edges with mapped node IDs
+    // Only connect nodes created in this version; canvas hubs are virtual.
+    const persistedNodeIds = new Set(nodeIdMap.values());
     for (const edge of validated.edges) {
       const sourceId = nodeIdMap.get(edge.sourceNodeId) || edge.sourceNodeId;
       const targetId = nodeIdMap.get(edge.targetNodeId) || edge.targetNodeId;
 
-      // Only insert if both source and target exist
-      const sourceExists = await tx.planNode.findUnique({ where: { id: sourceId } });
-      const targetExists = await tx.planNode.findUnique({ where: { id: targetId } });
-
-      if (sourceExists && targetExists) {
+      if (persistedNodeIds.has(sourceId) && persistedNodeIds.has(targetId)) {
         await tx.planEdge.create({
           data: {
             planVersionId: targetVersionId,
@@ -317,7 +314,7 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
         edges: true,
       },
     });
-  });
+  }, { timeout: 30_000 });
 }
 
 /**

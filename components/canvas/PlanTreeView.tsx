@@ -1,266 +1,52 @@
 "use client";
-
-import { useState } from "react";
-import { Node } from "@xyflow/react";
-import {
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
-  ShieldCheck,
-  MessagesSquare,
-  UtensilsCrossed,
-  HeartHandshake,
-  Award,
-  BookOpen,
-} from "lucide-react";
+import { useRef } from "react";
+import type { Node } from "@xyflow/react";
+import { ArrowUp, ArrowDown, GripVertical, Plus, Trash2 } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
-
-const PATH_ICONS: Record<DevelopmentPath, React.ComponentType<{ className?: string }>> = {
-  [DevelopmentPath.ONBOARDING]: ShieldCheck,
-  [DevelopmentPath.COMMUNICATION]: MessagesSquare,
-  [DevelopmentPath.TECHNICAL]: UtensilsCrossed,
-  [DevelopmentPath.CULTURE]: HeartHandshake,
-  [DevelopmentPath.LEADERSHIP]: Award,
-};
-
-const ORDERED_PATHS: DevelopmentPath[] = [
-  DevelopmentPath.ONBOARDING,
-  DevelopmentPath.COMMUNICATION,
-  DevelopmentPath.TECHNICAL,
-  DevelopmentPath.CULTURE,
-  DevelopmentPath.LEADERSHIP,
-];
 
 interface PlanTreeViewProps {
   nodes: Node[];
+  readOnly?: boolean;
   onDeleteNode: (id: string) => void;
   onAddMilestone: (path: DevelopmentPath) => void;
+  onEditNode?: (id: string) => void;
+  onUpdateNode?: (id: string, data: { title: string; description: string }) => void;
   onReorderMilestones: (path: DevelopmentPath, sourceIndex: number, targetIndex: number) => void;
 }
 
-export function PlanTreeView({
-  nodes,
-  onDeleteNode,
-  onAddMilestone,
-  onReorderMilestones,
-}: PlanTreeViewProps) {
-  // All accordion sections expanded by default
-  const [expandedPaths, setExpandedPaths] = useState<Record<string, boolean>>({
-    [DevelopmentPath.ONBOARDING]: true,
-    [DevelopmentPath.COMMUNICATION]: true,
-    [DevelopmentPath.TECHNICAL]: true,
-    [DevelopmentPath.CULTURE]: true,
-    [DevelopmentPath.LEADERSHIP]: true,
-  });
-
-  const togglePath = (path: DevelopmentPath) => {
-    setExpandedPaths((prev) => ({
-      ...prev,
-      [path]: !prev[path],
-    }));
-  };
-
-  // Group child milestone nodes by development path
-  const milestonesByPath: Record<DevelopmentPath, Node[]> = {
-    [DevelopmentPath.ONBOARDING]: [],
-    [DevelopmentPath.COMMUNICATION]: [],
-    [DevelopmentPath.TECHNICAL]: [],
-    [DevelopmentPath.CULTURE]: [],
-    [DevelopmentPath.LEADERSHIP]: [],
-  };
-
-  nodes.forEach((node) => {
-    if (node.type === "milestone" && node.data?.path) {
-      const p = node.data.path as DevelopmentPath;
-      if (milestonesByPath[p]) {
-        milestonesByPath[p].push(node);
-      }
-    }
-  });
-
-  // Sort milestones within each path by orderIndex
-  Object.keys(milestonesByPath).forEach((key) => {
-    const p = key as DevelopmentPath;
-    milestonesByPath[p].sort((a, b) => {
-      const ordA = (a.data.orderIndex as number) || 0;
-      const ordB = (b.data.orderIndex as number) || 0;
-      return ordA - ordB;
-    });
-  });
-
-  return (
-    <div className="flex flex-col gap-4 p-4 sm:p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
-      <div className="flex items-center justify-between pb-2 border-b border-beat-border">
-        <div>
-          <h3 className="text-sm font-semibold text-beat-maroon">Structured Path Outline</h3>
-          <p className="text-[11px] text-beat-muted">
-            Manage competencies per track in an accessible list layout.
-          </p>
+export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMilestone, onEditNode, onUpdateNode, onReorderMilestones }: PlanTreeViewProps) {
+  const dragging = useRef<{ path: DevelopmentPath; index: number } | null>(null);
+  return <div aria-label="Learning path outline" className="min-w-0 space-y-4 p-3 md:p-5">
+    <header><h3 className="text-sm font-semibold text-beat-maroon">Structured Path Outline</h3><p className="mt-1 text-xs text-beat-muted">Expand a milestone to inspect or edit it. Drag its handle or use the move buttons to reorder.</p></header>
+    {Object.values(DevelopmentPath).map(path => {
+      const items = nodes.filter(node => node.type === "milestone" && node.data.path === path).sort((a, b) => Number(a.data.orderIndex) - Number(b.data.orderIndex));
+      return <details key={path} open className="rounded-lg border border-beat-border bg-white">
+        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg bg-beat-canvas p-3 text-sm font-semibold text-beat-maroon"><span>{DEVELOPMENT_PATHS[path].title}</span><span className="text-xs">{items.length} milestones · Expand / collapse</span></summary>
+        <div className="space-y-3 p-3">
+          {items.length === 0 && <p className="py-3 text-xs text-beat-muted">No milestones in this path.</p>}
+          {items.map((node, index) => <article key={node.id} data-milestone-index={index} data-path={path} className="min-w-0 rounded-lg border border-beat-border bg-beat-canvas/20 p-3">
+            <div className="flex min-w-0 items-start gap-2">
+              {!readOnly && <button type="button" aria-label={`Drag ${node.data.code} to reorder`} className="flex h-11 w-11 shrink-0 touch-none items-center justify-center rounded text-beat-maroon"
+                onPointerDown={event => { event.preventDefault(); dragging.current = { path, index }; event.currentTarget.setPointerCapture(event.pointerId); }}
+                onPointerUp={event => { const source = dragging.current; dragging.current = null; const target = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-milestone-index]"); if (source && target?.dataset.path === source.path) onReorderMilestones(path, source.index, Number(target.dataset.milestoneIndex)); }}
+                onPointerCancel={() => { dragging.current = null; }}><GripVertical className="h-5 w-5" /></button>}
+              <details className="min-w-0 flex-1">
+                <summary className="cursor-pointer text-xs text-beat-maroon"><span className="block font-mono font-semibold">{String(node.data.code)}</span><span className="mt-1 block break-words font-semibold">{String(node.data.title)}</span><span className="mt-1 block text-[11px] text-beat-muted">Tap for details</span></summary>
+                <div className="mt-3 space-y-3">
+                  {!readOnly && node.data.isCustom && onUpdateNode ? <form key={`${node.data.title}:${node.data.description}`} onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); onUpdateNode(node.id, { title: String(form.get("title")).trim(), description: String(form.get("description")).trim() }); }} className="space-y-2">
+                    <label className="block text-xs">Milestone title<input aria-label={`Title for ${node.data.code}`} name="title" defaultValue={String(node.data.title)} required minLength={3} maxLength={100} className="mt-1 w-full rounded border border-beat-border bg-white p-2" /></label>
+                    <label className="block text-xs">Description<textarea aria-label={`Description for ${node.data.code}`} name="description" defaultValue={String(node.data.description)} required minLength={10} maxLength={500} rows={3} className="mt-1 w-full rounded border border-beat-border bg-white p-2" /></label>
+                    <button type="submit" className="beat-primary">Save milestone</button>
+                  </form> : <p className="break-words text-xs text-beat-muted">{String(node.data.description)}</p>}
+                  {!readOnly && onEditNode && <button type="button" onClick={() => onEditNode(node.id)} className="beat-control">Stamp design / materials</button>}
+                </div>
+              </details>
+            </div>
+            {!readOnly && <div className="mt-2 flex flex-wrap justify-end gap-2"><button type="button" aria-label={`Move ${node.data.code} up`} disabled={index === 0} onClick={() => onReorderMilestones(path, index, index - 1)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button type="button" aria-label={`Move ${node.data.code} down`} disabled={index === items.length - 1} onClick={() => onReorderMilestones(path, index, index + 1)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button type="button" aria-label={`Delete ${node.data.code}`} onClick={() => onDeleteNode(node.id)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border"><Trash2 className="h-4 w-4" /></button></div>}
+          </article>)}
+          {!readOnly && <button type="button" onClick={() => onAddMilestone(path)} className="beat-control"><Plus className="h-4 w-4" />Add Milestone</button>}
         </div>
-      </div>
-
-      <div className="space-y-4">
-        {ORDERED_PATHS.map((path, idx) => {
-          const isExpanded = !!expandedPaths[path];
-          const items = milestonesByPath[path];
-          const Icon = PATH_ICONS[path] || BookOpen;
-          const trackTitle = DEVELOPMENT_PATHS[path]?.title || path;
-
-          return (
-            <section
-              key={path}
-              className="rounded-lg border border-beat-border bg-white shadow-xs overflow-hidden transition-all"
-            >
-              {/* Accordion Track Header */}
-              <div
-                onClick={() => togglePath(path)}
-                className="flex items-center justify-between p-4 bg-beat-canvas/50 cursor-pointer hover:bg-beat-canvas transition-colors select-none"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold shadow-xs">
-                    <Icon className="h-4.5 w-4.5" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-beat-gold">
-                        Track 0{idx + 1}
-                      </span>
-                      <span className="font-mono text-[10px] font-bold px-2 py-0.2 rounded-full bg-beat-maroon/10 text-beat-maroon">
-                        {items.length} {items.length === 1 ? "milestone" : "milestones"}
-                      </span>
-                    </div>
-                    <h4 className="text-sm font-semibold text-beat-maroon">{trackTitle}</h4>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddMilestone(path);
-                    }}
-                    className="flex items-center gap-1 rounded-xl bg-beat-gold/20 px-2.5 py-1 text-[11px] font-bold text-beat-maroon hover:bg-beat-gold hover:text-white transition-all cursor-pointer border border-beat-gold/30"
-                  >
-                    <Plus className="h-3 w-3 stroke-[3]" />
-                    <span className="hidden sm:inline">Add</span>
-                  </button>
-
-                  <div className="p-1 text-beat-maroon/60">
-                    {isExpanded ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Accordion Content */}
-              {isExpanded && (
-                <div className="p-4 space-y-2.5 border-t border-beat-border bg-white">
-                  {items.length === 0 ? (
-                    <div className="py-6 text-center rounded-xl border border-dashed border-beat-border bg-beat-canvas/30">
-                      <p className="text-xs text-beat-muted font-medium">
-                        No competencies in this track yet.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => onAddMilestone(path)}
-                        className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-beat-maroon hover:text-beat-gold cursor-pointer"
-                      >
-                        <Plus className="h-3 w-3" />
-                        <span>Add First Milestone</span>
-                      </button>
-                    </div>
-                  ) : (
-                    items.map((milestone, itemIdx) => {
-                      const isCustom = milestone.data.isCustom as boolean;
-                      const isFirst = itemIdx === 0;
-                      const isLast = itemIdx === items.length - 1;
-
-                      return (
-                        <div
-                          key={milestone.id}
-                          className="flex items-start justify-between gap-3 p-3.5 rounded-xl border border-beat-border bg-beat-canvas/20 hover:border-beat-gold/50 transition-all"
-                        >
-                          {/* Order index & badge */}
-                          <div className="flex items-start gap-3 flex-1 min-w-0">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-beat-maroon/10 font-mono text-[10px] font-bold text-beat-maroon">
-                              {itemIdx + 1}
-                            </span>
-
-                            <div className="space-y-1 flex-1 min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-beat-maroon/10 text-beat-maroon border border-beat-maroon/20">
-                                  {milestone.data.code as string}
-                                </span>
-
-                                <span
-                                  className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                                    isCustom
-                                      ? "bg-beat-gold/10 text-beat-maroon border-beat-gold/30"
-                                      : "bg-beat-gold/20 text-beat-maroon border-beat-gold/40"
-                                  }`}
-                                >
-                                  {isCustom ? "Role Custom" : "BEAT Standard"}
-                                </span>
-                              </div>
-
-                              <h5 className="text-xs font-bold text-beat-maroon leading-snug">
-                                {milestone.data.title as string}
-                              </h5>
-
-                              <p className="text-[11px] text-beat-muted line-clamp-2 leading-relaxed">
-                                {milestone.data.description as string}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Reorder and Delete Actions */}
-                          <div className="flex items-center gap-1 shrink-0 pt-0.5">
-                            <button
-                              type="button"
-                              disabled={isFirst}
-                              onClick={() => onReorderMilestones(path, itemIdx, itemIdx - 1)}
-                              className="rounded-lg p-1.5 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon disabled:opacity-20 cursor-pointer transition-colors"
-                              title="Move Up"
-                            >
-                              <ArrowUp className="h-3.5 w-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              disabled={isLast}
-                              onClick={() => onReorderMilestones(path, itemIdx, itemIdx + 1)}
-                              className="rounded-lg p-1.5 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon disabled:opacity-20 cursor-pointer transition-colors"
-                              title="Move Down"
-                            >
-                              <ArrowDown className="h-3.5 w-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => onDeleteNode(milestone.id)}
-                              className="rounded-lg p-1.5 text-beat-maroon hover:bg-beat-maroon/5 hover:text-beat-maroon cursor-pointer transition-colors ml-1"
-                              title="Delete Milestone"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              )}
-            </section>
-          );
-        })}
-      </div>
-    </div>
-  );
+      </details>;
+    })}
+  </div>;
 }

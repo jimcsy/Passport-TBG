@@ -11,7 +11,7 @@ export default async function TrainingPlansPage({ searchParams }: { searchParams
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4 border-b border-beat-border pb-5">
-        <div><h1 className="text-2xl font-semibold tracking-tight text-beat-maroon">Training plans</h1><p className="mt-2 text-sm text-beat-maroon/60">Build role-based plans and manage their draft and published versions.</p></div>
+        <div><h1 className="text-xl md:text-2xl font-semibold tracking-tight text-beat-maroon">Training plans</h1><p className="mt-2 text-sm text-beat-maroon/60">Build role-based plans and manage their draft and published versions.</p></div>
         <CreatePlanModal initiallyOpen={searchParams?.create === "1"} />
       </header>
       {plans.length === 0 ? (

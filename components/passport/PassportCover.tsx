@@ -27,7 +27,7 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
   const strokeDashoffset = circumference - (stats.overallPercent / 100) * circumference;
 
   return (
-    <div className="relative overflow-hidden rounded-xl bg-beat-card p-6 sm:p-8 shadow-sm border border-beat-border">
+    <div className="relative overflow-hidden rounded-xl bg-beat-card p-3 md:p-5 shadow-sm border border-beat-border">
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         {/* Left: Trainee Profile Details */}
@@ -44,7 +44,7 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
                   </span>
                 )}
               </div>
-              <h2 className="mt-1 text-2xl sm:text-3xl font-semibold text-beat-maroon tracking-tight">
+              <h2 className="mt-1 text-xl md:text-2xl font-semibold text-beat-maroon tracking-tight">
                 {trainee.fullName}
               </h2>
             </div>
@@ -79,7 +79,7 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
         </div>
 
         {/* Right: Circular Progress Ring & Summary */}
-        <div className="flex items-center gap-6 sm:justify-end border-t md:border-t-0 md:border-l border-beat-border pt-4 md:pt-0 md:pl-8">
+        <div className="flex flex-wrap items-center gap-4 sm:justify-end border-t md:border-t-0 md:border-l border-beat-border pt-4 md:pt-0 md:pl-8">
           <div className="relative flex items-center justify-center">
             <svg role="img" aria-label={`${stats.overallPercent}% of milestones verified`} className="h-28 w-28 -rotate-90 transform" viewBox="0 0 96 96">
               {/* Background circle */}
@@ -114,7 +114,7 @@ export function PassportCover({ trainee, plan, stats }: PassportCoverProps) {
             </div>
           </div>
 
-          <div className="space-y-2 text-xs">
+          <div className="min-w-0 flex-1 space-y-2 text-xs">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-beat-gold" />
               <span className="font-semibold text-beat-maroon">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, CheckCircle2, Clock, GraduationCap, GitBranch, AlertCircle, Archive } from "lucide-react";
@@ -20,6 +21,7 @@ const upcomingCourses: UpcomingCourse[] = [
 ];
 
 export function TraineeDashboard({ data, courses = upcomingCourses }: { data: TraineePassportViewData; courses?: UpcomingCourse[] }) {
+  const desktop = useMediaQuery("(min-width: 768px)");
   const [showAllModules, setShowAllModules] = useState(false);
   const [activePath, setActivePath] = useState(data.paths[0]?.path);
   const selectedPath = data.paths.find(path => path.path === activePath);
@@ -33,7 +35,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-beat-maroon">Learning overview</h1>
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-beat-maroon">Learning overview</h1>
           <p className="mt-2 text-sm text-beat-maroon/70">Track your milestones and submit completed work for review.</p>
         </div>
         <Link href="/trainee/dashboard/booklet" className="inline-flex items-center gap-2 rounded-xl bg-beat-maroon px-6 py-3 text-sm font-bold text-white shadow-sm shadow-beat-maroon/10 hover:bg-beat-maroon/90">
@@ -43,7 +45,10 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
         </Link>
       </div>
 
-      <PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} />
+      {desktop ? <PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} /> : <>
+        <details className="rounded-xl border border-beat-border bg-white p-3"><summary className="flex cursor-pointer items-center justify-between gap-3 font-semibold text-beat-maroon"><span className="min-w-0 break-words">{data.trainee.fullName}</span><span className="shrink-0 text-xs">Profile +</span></summary><div className="mt-3"><PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} /></div></details>
+        <div aria-label="Completion statistics" className="flex min-w-0 gap-3 overflow-x-auto pb-2 text-xs text-beat-maroon">{[`${data.stats.overallPercent}% complete`, `${data.stats.verifiedCount}/${data.stats.totalMilestones} verified`, `${data.stats.readyForReviewCount} in review`].map(stat => <span key={stat} className="shrink-0 rounded-full border border-beat-gold/30 bg-white px-4 py-3">{stat}</span>)}</div>
+      </>}
 
       {/* Plan Metadata Bar or Empty State */}
       {data.plan ? (

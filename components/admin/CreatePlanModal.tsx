@@ -67,10 +67,10 @@ export function CreatePlanModal({ initiallyOpen = false }: { initiallyOpen?: boo
       {isOpen && (
         <div
           role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          aria-modal="true" aria-label="Create training plan"
+          className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
         >
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-gold/40 text-beat-maroon">
+          <div className="portal-modal-panel w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-gold/40 text-beat-maroon">
             <div className="flex items-start justify-between pb-4 border-b border-beat-border">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-beat-maroon text-beat-gold">

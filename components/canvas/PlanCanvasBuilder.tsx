@@ -1,5 +1,6 @@
 "use client";
 
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { resolveStampDesign } from "@/lib/stamps/catalog";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -267,15 +268,8 @@ function PlanCanvasBuilderInner({
   const [focusRequest, setFocusRequest] = useState<{ ids: string[]; detail: boolean } | null>(null);
   const [focusedPath, setFocusedPath] = useState<DevelopmentPath | null>(DevelopmentPath.ONBOARDING);
 
-  // Auto-detect mobile screen (< 768px) and default to structured outline view
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        setViewMode("tree");
-      }
-    }
-  }, []);
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const effectiveViewMode = desktop ? viewMode : "tree";
 
   useEffect(() => {
     if (!libraryFocusRequested.current) return;
@@ -290,7 +284,7 @@ function PlanCanvasBuilderInner({
   }
 
   function openCanvas() {
-    if (viewMode !== "canvas") setIsLibraryOpen(true);
+    if (effectiveViewMode !== "canvas") setIsLibraryOpen(true);
     setViewMode("canvas");
   }
 
@@ -299,7 +293,7 @@ function PlanCanvasBuilderInner({
 
   // Wait for React Flow's node measurements instead of racing a timeout after drop.
   useEffect(() => {
-    if (!focusRequest || !viewportInitialized || !nodesInitialized || viewMode !== "canvas") return;
+    if (!focusRequest || !viewportInitialized || !nodesInitialized || effectiveViewMode !== "canvas") return;
     if (focusRequest.ids.some(id => !getNode(id)?.measured?.width)) return;
     void fitView({
       nodes: focusRequest.ids.map(id => ({ id })),
@@ -309,7 +303,7 @@ function PlanCanvasBuilderInner({
       duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450,
     });
     setFocusRequest(null);
-  }, [focusRequest, viewportInitialized, nodesInitialized, viewMode, fitView, getNode]);
+  }, [focusRequest, viewportInitialized, nodesInitialized, effectiveViewMode, fitView, getNode]);
 
   const showWarning = useCallback((message: string) => setNotice({ message, tone: "error" }), []);
 
@@ -683,6 +677,7 @@ function PlanCanvasBuilderInner({
   // Reorder milestones within a development path in Outline View
   const handleReorderMilestones = useCallback(
     (path: DevelopmentPath, sourceIndex: number, targetIndex: number) => {
+      if (isViewingReadOnly) return;
       const pathMilestones = nodes
         .filter((n) => n.type === "milestone" && n.data?.path === path)
         .sort((a, b) => ((a.data.orderIndex as number) || 0) - ((b.data.orderIndex as number) || 0));
@@ -721,7 +716,7 @@ function PlanCanvasBuilderInner({
       );
       setHasUnsavedChanges(true);
     },
-    [nodes, setNodes]
+    [nodes, setNodes, isViewingReadOnly]
   );
 
   // Recalculate child milestone counts on path hubs
@@ -1224,7 +1219,7 @@ function PlanCanvasBuilderInner({
   };
 
   return (
-    <div className="relative flex h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-lg border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
+    <div className="relative flex min-w-0 min-h-[640px] md:h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-lg border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
       <CanvasNotification notice={notice} onDismiss={dismissNotice} />
       {/* Canvas Top Bar */}
       <header className="z-10 grid shrink-0 grid-cols-1 items-center gap-4 border-b border-beat-border bg-white px-4 py-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_auto]">
@@ -1322,12 +1317,12 @@ function PlanCanvasBuilderInner({
         <div className="flex flex-wrap items-center gap-2">
 
           {/* View Mode Toggle (Canvas vs Outline) */}
-          <div role="group" className="inline-flex items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan view">
+          <div role="group" className="hidden md:inline-flex items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan view">
             <button
               type="button"
               onClick={openCanvas}
               className="beat-segment"
-              aria-pressed={viewMode === "canvas"}
+              aria-pressed={effectiveViewMode === "canvas"}
               aria-label="Canvas view"
               title="Interactive Canvas View"
             >
@@ -1338,7 +1333,7 @@ function PlanCanvasBuilderInner({
               type="button"
               onClick={() => setViewMode("tree")}
               className="beat-segment"
-              aria-pressed={viewMode === "tree"}
+              aria-pressed={effectiveViewMode === "tree"}
               aria-label="Outline view"
               title="Structured Outline View"
             >
@@ -1350,7 +1345,7 @@ function PlanCanvasBuilderInner({
           <button
             type="button"
             onClick={onLayout}
-            disabled={viewMode !== "canvas" || isSaving || isPublishing || isViewingReadOnly}
+            disabled={effectiveViewMode !== "canvas" || isSaving || isPublishing || isViewingReadOnly}
             title={
               isViewingReadOnly
                 ? "Layout cannot be changed on published version"
@@ -1436,17 +1431,20 @@ function PlanCanvasBuilderInner({
         )}
       </aside>
 
-      <nav aria-label="Focus development path" className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
+      <nav aria-label="Focus development path" className="hidden md:flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
         <button type="button" aria-pressed={focusedPath === null} onClick={() => { openCanvas(); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
         {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { openCanvas(); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
       </nav>
 
       {/* Main Viewport: Canvas vs Tree View */}
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-      {viewMode === "tree" ? (
-        <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-beat-canvas/30">
+      {effectiveViewMode === "tree" ? (
+        <div className="relative min-h-0 min-w-0 flex-1 bg-beat-canvas/30 md:overflow-y-auto">
           <PlanTreeView
             nodes={nodes}
+            readOnly={isViewingReadOnly}
+            onEditNode={handleEditNode}
+            onUpdateNode={(id, data) => { if (isViewingReadOnly) return; setNodes(previous => previous.map(node => node.id === id && node.data.isCustom ? { ...node, data: { ...node.data, ...data } } : node)); setHasUnsavedChanges(true); }}
             onDeleteNode={handleDeleteNode}
             onAddMilestone={(p) => setAddingToPath(p)}
             onReorderMilestones={handleReorderMilestones}

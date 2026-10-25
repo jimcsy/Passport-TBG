@@ -26,7 +26,7 @@ export function PassportStamp({ milestone, onInspect, detailPanelId }: { milesto
       </button>
       <span className="max-w-32 text-[11px] font-semibold leading-snug text-beat-maroon">{milestone.title}</span>
       {verified && open && (
-        <div id={id} role="tooltip" className="absolute top-12 z-30 w-52 rounded-xl border border-beat-gold bg-white p-4 text-left text-xs text-beat-maroon shadow-xl">
+        <div id={id} role="tooltip" className="fixed bottom-4 left-4 right-4 z-50 md:absolute md:bottom-auto md:left-auto md:right-auto md:top-12 md:w-52 rounded-xl border border-beat-gold bg-white p-4 text-left text-xs text-beat-maroon shadow-xl">
           <StampMetadata milestone={milestone} />
         </div>
       )}

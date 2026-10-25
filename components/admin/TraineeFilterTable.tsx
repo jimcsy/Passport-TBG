@@ -123,7 +123,7 @@ export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand
     <div className="space-y-4">
       {/* Search & Filter Bar */}
       <div className="rounded-xl bg-beat-card p-5 border border-beat-border shadow-xs space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-beat-muted" />
@@ -140,7 +140,7 @@ export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand
           <select
             value={selectedBrand}
             onChange={(e) => setSelectedBrand(e.target.value)}
-            className="rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
+            className="min-w-0 w-full rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
           >
             <option value="ALL">All Brands ({brands.length})</option>
             {brands.map((b) => (
@@ -154,7 +154,7 @@ export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
-            className="rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
+            className="min-w-0 w-full rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
           >
             <option value="ALL">All Branches ({branches.length})</option>
             {branches.map((b) => (
@@ -168,7 +168,7 @@ export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand
           <select
             value={selectedCohort}
             onChange={(e) => setSelectedCohort(e.target.value)}
-            className="rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
+            className="min-w-0 w-full rounded-lg border border-beat-border bg-beat-canvas px-3.5 py-2.5 text-xs font-semibold text-beat-maroon focus:border-beat-gold focus:outline-none focus:ring-1 focus:ring-beat-gold cursor-pointer"
           >
             <option value="ALL">All Cohorts ({cohorts.length})</option>
             {cohorts.map((c) => (
@@ -239,7 +239,14 @@ export function TraineeFilterTable({ trainees, availablePlans = [], initialBrand
       )}
 
       {/* Directory Table */}
-      <div className="overflow-hidden rounded-xl bg-beat-card border border-beat-border shadow-xs">
+      <div aria-label="Trainee cards" className="space-y-3 md:hidden">
+        {filteredTrainees.length === 0 && <p className="rounded-lg border border-beat-border bg-white p-5 text-sm text-beat-muted">No trainees match these filters.</p>}
+        {filteredTrainees.map(t => <article key={t.id} className="rounded-xl border border-beat-border bg-white p-3 text-beat-maroon">
+          <div className="flex min-w-0 items-start gap-3"><button type="button" aria-label={`Select ${t.fullName}`} aria-pressed={selectedIds.has(t.id)} onClick={() => toggleSelectOne(t.id)} className="flex h-11 w-11 shrink-0 items-center justify-center">{selectedIds.has(t.id) ? <CheckSquare className="h-5 w-5" /> : <Square className="h-5 w-5" />}</button><div className="min-w-0 flex-1"><button type="button" aria-expanded={expandedId === t.id} aria-controls={`mobile-trainee-${t.id}`} onClick={() => setExpandedId(expandedId === t.id ? null : t.id)} className="w-full break-words text-left text-sm font-semibold">{t.fullName} {expandedId === t.id ? "−" : "+"}</button><p className="text-xs">{t.traineeCode} · {t.restaurantBrand}</p><p className="mt-1 text-xs text-beat-muted">{t.progressPercent}% complete · {t.readyForReviewCount} in review</p></div></div>
+          {expandedId === t.id && <div id={`mobile-trainee-${t.id}`} className="mt-3 space-y-3 border-t border-beat-border pt-3 text-xs"><dl className="space-y-2">{[["Email", t.email], ["Role", t.jobRole || "Not specified"], ["Branch", t.branchLocation], ["Cohort", t.cohortBatch], ["Plan", t.planTitle || "Unassigned"]].map(([label, value]) => <div key={label}><dt className="font-semibold">{label}</dt><dd className="break-words">{value}</dd></div>)}</dl><div className="flex flex-wrap gap-2"><button type="button" onClick={() => handleOpenSingleModal(t)} className="beat-control">Assign / change plan</button><Link className="beat-control" href={`/trainer/trainees/${t.id}`}>View passport</Link><Link className="beat-control" href="/trainer/queue">Review submissions</Link></div></div>}
+        </article>)}
+      </div>
+      <div className="hidden md:block overflow-hidden rounded-xl bg-beat-card border border-beat-border shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>

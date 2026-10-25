@@ -79,10 +79,10 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
   }
 
   return (
-    <div className="rounded-xl bg-beat-card p-6 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all">
+    <div className="rounded-xl bg-beat-card p-3 md:p-5 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all">
       {/* Top Header: Trainee Identity & Submission Time */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-beat-border">
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
           <span className="font-mono text-xs font-semibold text-beat-gold bg-beat-maroon/5 px-2.5 py-0.5 rounded-md border border-beat-border">
             {item.trainee.traineeCode}
           </span>
@@ -163,7 +163,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
 
       {error && <p role="alert" className="text-sm text-beat-maroon">{error}</p>}
       {/* Action Row */}
-      <div className="flex items-center justify-between pt-2 border-t border-beat-border">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-beat-border">
         <button
           type="button"
           onClick={() => setShowNoteInput(!showNoteInput)}

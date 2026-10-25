@@ -1,5 +1,6 @@
 "use client";
 
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Award, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import type { EnrichedMilestone, TraineePassportViewData } from "@/lib/db/repositories/trainee";
@@ -56,9 +57,9 @@ function BookPage({
               ["Branch", data.trainee.branchLocation],
               ["Batch", data.trainee.cohortBatch],
             ].map(([label, value]) => (
-              <div key={label} className="flex justify-between border-b border-beat-gold/20 pb-1.5">
+              <div key={label} className="flex flex-wrap justify-between gap-2 border-b border-beat-gold/20 pb-1.5">
                 <dt className="text-beat-maroon/60">{label}</dt>
-                <dd className="font-semibold text-beat-maroon">{value}</dd>
+                <dd className="break-words font-semibold text-beat-maroon">{value}</dd>
               </div>
             ))}
           </dl>
@@ -118,6 +119,7 @@ function BookPage({
 }
 
 export function PassportBook({ data }: { data: TraineePassportViewData }) {
+  const desktop = useMediaQuery("(min-width: 768px)");
   const [queuedNotes, setQueuedNotes] = useState<Record<string, string>>({});
 
   const paths = useMemo(
@@ -172,6 +174,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
   useEffect(() => () => { clearTimeout(timer.current); }, []);
 
   function goTo(next: number) {
+    if (!desktop) { document.getElementById(`${detailPanelId}-page-${next * 2}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
     if (turnLock.current || reviewLock.current || next === spread || next < 0 || next >= totalSpreads)
       return;
     setSelectedStampId(null);
@@ -205,7 +208,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         aria-label="Digital passport reader"
         tabIndex={0}
         onKeyDown={(e) => {
-          if ((e.target as HTMLElement).tagName === "SELECT") return;
+          if (!desktop || e.target !== e.currentTarget) return;
           if (e.key === "ArrowRight") {
             e.preventDefault();
             goTo(spread + 1);
@@ -223,7 +226,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             {pages.length}-page growth passport
           </span>
           <span className="text-xs text-beat-maroon/60">
-            Use arrow keys or navigation controls to flip through pages
+            {desktop ? "Use arrow keys or navigation controls to flip through pages" : "Scroll through your passport. Tap a stamp to inspect it."}
           </span>
         </div>
 
@@ -289,9 +292,13 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
           )}
         </nav>
 
+        {!desktop && <div aria-label="Passport page cards" className="mobile-passport space-y-4">
+          {pages.map((page, index) => <div key={page.number} id={`${detailPanelId}-page-${index}`} className={`min-w-0 scroll-mt-4 rounded-xl border border-beat-gold/30 shadow-sm ${page.kind === "path" || page.kind === "exempt_stamp" ? "mobile-path-divider" : ""} ${page.kind === "cover" ? "mobile-passport-cover" : ""}`}><BookPage page={page} data={data} onInspect={inspectStamp} detailPanelId={detailPanelId} /></div>)}
+        </div>}
+        {desktop && <>
         {/* 3D Flip-Book Spreads Container */}
-        <div className="overflow-x-auto pb-5">
-          <div className="passport-spread relative grid min-w-[560px] grid-cols-2 rounded-lg border border-beat-gold/40 shadow-xl">
+        <div className="pb-5">
+          <div className="passport-spread relative grid min-w-0 grid-cols-2 rounded-lg border border-beat-gold/40 shadow-xl">
             <BookPage
               page={pages[spread * 2]}
               data={data}
@@ -334,9 +341,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
           </div>
         </div>
 
-        <p className="mb-3 text-center text-[11px] text-beat-maroon/70 sm:hidden">
-          Swipe horizontally to see both pages.
-        </p>
+
 
         {/* Spread Navigation Controls */}
         <nav aria-label="Passport pages" className="flex flex-wrap items-center justify-between gap-3">
@@ -380,6 +385,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         <p className="sr-only" aria-live="polite">
           Pages {spread * 2 + 1} and {spread * 2 + 2} of {pages.length}
         </p>
+        </>}
       </section>
 
       {/* Stamp Inspection Callout Panel */}

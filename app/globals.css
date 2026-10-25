@@ -167,3 +167,48 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .trainer-quick-action { animation: none; }
 }
+
+/* Mobile portal controls and sheets share the same 44px touch target. */
+@media (max-width: 767px) {
+  :where(button, a, input:not([type="hidden"]), select, summary, [role="button"]) {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  a:not(.sr-only) { align-items: center; }
+  a:not([class*="flex"]):not([class*="grid"]):not(.sr-only) { display: inline-flex; flex-wrap: wrap; }
+  :where(h1, h2, h3, h4, h5, p, dd) { overflow-wrap: anywhere; }
+  :where(main, form, section, article, fieldset) { min-width: 0; }
+  input, select, textarea { max-width: 100%; }
+  input[type="checkbox"], input[type="radio"] { width: 44px; height: 44px; flex-shrink: 0; }
+  .portal-modal-overlay { align-items: flex-end; padding: 0; }
+  .portal-modal-panel {
+    height: 100dvh;
+    max-height: 100dvh;
+    width: 100%;
+    max-width: none;
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    animation: portal-sheet-enter 180ms ease-out;
+  }
+  .portal-native-dialog {
+    inset: auto 0 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .mobile-passport .passport-page { min-height: 0; border-radius: 12px; padding: 16px; }
+  .mobile-passport-cover .passport-page > div { padding: 16px; }
+  .mobile-passport-cover h3 { font-size: 20px; }
+  .mobile-passport-cover :where(svg, .my-6, .mt-8) { display: none; }
+  .mobile-path-divider .passport-page { border-top: 6px solid #C29B38; }
+  .mobile-path-divider .passport-page :where(.my-8, .mt-8) { margin-top: 12px; margin-bottom: 12px; }
+}
+@keyframes portal-sheet-enter { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.portal-modal-panel { overflow-y: auto; }
+@media (min-width: 768px) { .portal-modal-panel { max-height: 90dvh; } }

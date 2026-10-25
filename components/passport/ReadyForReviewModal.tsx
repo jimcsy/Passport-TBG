@@ -42,8 +42,8 @@ export function ReadyForReviewModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-beat-maroon/60 backdrop-blur-xs animate-in fade-in">
-      <div className="relative w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-border animate-in zoom-in-95">
+    <div className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-beat-maroon/60 backdrop-blur-xs animate-in fade-in">
+      <div role="dialog" aria-modal="true" aria-label="Submit milestone for review" className="portal-modal-panel relative w-full max-w-lg rounded-xl bg-white p-6 sm:p-8 shadow-lg border border-beat-border animate-in zoom-in-95">
         {/* Close Button */}
         <button
           type="button"

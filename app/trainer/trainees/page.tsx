@@ -44,7 +44,7 @@ export default async function TraineesDirectoryPage({ searchParams }: { searchPa
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-beat-border">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold text-beat-maroon tracking-tight">
+            <h1 className="text-xl md:text-2xl font-semibold text-beat-maroon tracking-tight">
               Trainee Directory
             </h1>
             <span className="passport-stamp px-2.5 py-0.5 text-[9px] border-beat-gold text-beat-gold">

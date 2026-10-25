@@ -75,7 +75,7 @@ export default async function NewTraineePage() {
         <p className="text-xs font-bold uppercase tracking-wider text-beat-gold">
           Trainee registration
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-beat-maroon">
+        <h1 className="mt-2 text-xl md:text-2xl font-bold tracking-tight text-beat-maroon">
           Start a new Growth Passport
         </h1>
         <p className="mt-3 text-sm leading-6 text-beat-muted">

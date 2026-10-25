@@ -71,7 +71,7 @@ export function PlanVersionHistoryModal({
     <dialog ref={dialog} aria-labelledby="plan-version-history-title"
       onCancel={event => { event.preventDefault(); onClose(); }}
       onClick={event => { if (event.target === event.currentTarget) onClose(); }}
-      className="w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-xl border border-beat-border bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-beat-maroon/40 backdrop:backdrop-blur-sm">
+      className="portal-native-dialog w-[calc(100%-2rem)] max-w-lg overflow-hidden rounded-xl border border-beat-border bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-beat-maroon/40 backdrop:backdrop-blur-sm">
       <div className="flex max-h-[85dvh] flex-col">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-beat-border px-6 py-5">
           <div className="min-w-0"><h2 id="plan-version-history-title" className="text-base font-semibold">Version history</h2><p className="mt-1 truncate text-xs text-beat-maroon/60">{planTitle}</p></div>

@@ -35,7 +35,7 @@ export default async function AdminLayout({
       />
 
       {/* Main Content Area */}
-      <main id="trainer-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 pb-28 outline-none sm:px-8 sm:py-8 xl:px-0">
+      <main id="trainer-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 pb-28 outline-none sm:px-8 sm:pt-8 md:pb-28 xl:px-0">
         <div className="min-w-0 space-y-6">
           {children}
         </div>
