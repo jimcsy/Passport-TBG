@@ -52,6 +52,8 @@ export interface TraineePassportViewData {
     fullName: string;
     email: string;
     jobRole: string | null;
+    department?: string | null;
+    position?: string | null;
     restaurantBrand: string;
     branchLocation: string;
     cohortBatch: string;
@@ -289,6 +291,8 @@ export async function getTraineePassportData(
       fullName: trainee.fullName,
       email: trainee.email,
       jobRole: trainee.jobRole,
+      department: trainee.department,
+      position: trainee.position,
       restaurantBrand: trainee.restaurantBrand,
       branchLocation: trainee.branchLocation,
       cohortBatch: trainee.cohortBatch,

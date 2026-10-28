@@ -16,11 +16,6 @@ export async function registerTrainee(formData: FormData): Promise<RegistrationR
     ])
   ) as RegistrationInput;
 
-  const planVersionId = formData.get("planVersionId");
-  if (typeof planVersionId === "string" && planVersionId.trim()) {
-    input.planVersionId = planVersionId.trim();
-  }
-
   const result = await createRegisteredTrainee(input, undefined, session.id);
   if (result.success) {
     revalidatePath("/trainer/trainees");

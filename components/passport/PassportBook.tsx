@@ -52,7 +52,8 @@ function BookPage({
           <dl className="mt-6 space-y-3.5 text-xs">
             {[
               ["Employee ID", data.trainee.traineeCode],
-              ["Role", data.trainee.jobRole || "BEAT Trainee"],
+              ["Department", data.trainee.department || "Not specified"],
+              ["Position", data.trainee.position || data.trainee.jobRole || "BEAT Trainee"],
               ["Brand", data.trainee.restaurantBrand],
               ["Branch", data.trainee.branchLocation],
               ["Batch", data.trainee.cohortBatch],

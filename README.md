@@ -25,11 +25,11 @@ A lightweight, dual-access digital training portal for **The Bistro Group** that
    - 🤝 **Personal Effectiveness & Culture** (`CULTURE`): Core Bistro values, grooming standards, composure, peer recognition.
    - 🏆 **Leadership Skills** (`LEADERSHIP`): Peer mentoring, station supervision, huddle facilitation, capstone sign-off.
 
-4. **Seeded Role Templates**:
-   - ☕ **Specialty Barista** (`BARISTA`): 12 milestones focused on beverage prep, equipment calibration, guest greeting, and hygiene.
-   - 🍳 **Culinary & Kitchen Staff** (`KITCHEN_STAFF`): 12 milestones focused on recipe execution, station closing, HACCP safety, and rush coordination.
-   - 🍽️ **Dining Floor Server** (`FLOOR_SERVER`): 14 milestones focused on table service sequence, hospitality greeting, and LAST service recovery.
-   - 🎖️ **Store Supervisor** (`STORE_SUPERVISOR`): 20 milestones covering all 5 paths with advanced leadership, auditing, and capstone presentation.
+4. **Universal Corporate Foundation**:
+   - Every new trainee receives **Foundation Level 1: TBG Corporate Onboarding**, regardless of department or position.
+   - Five pillars appear in order: Onboarding, Communication Skills, Technical Skills, Personal Effectiveness & Culture, Leadership Skills. Each starts with four modules (20 total).
+   - Trainers may append position-specific modules through versioned Path Builder drafts. Registration uses the latest published foundation version, including those additions; drafts are never assigned.
+   - Existing specialist plans and trainee assignments remain intact. They are no longer registration defaults.
 
 ---
 
@@ -222,3 +222,25 @@ Validation: `npm run build`, `npx tsc --noEmit`, and
 not modify trainee records.
 `npx tsx scripts/test_review_submission.ts` verifies submission and state guards
 against a disposable SQLite database, without changing application records.
+
+## Corporate registration and safe seeding
+
+Register trainees at `/trainer/trainees/new`. Choose a Department, then a Position from that department. Position is disabled until a department is selected, and changing the department clears the position. Both values are required and checked again on the server against `lib/constants/tbg-org.ts` (18 departments). The trainee record stores `department` and `position`; `jobRole` mirrors position for existing passport/directory displays. Legacy records keep nullable organization fields rather than being guessed or overwritten.
+
+Apply the additive profile migration and seed the foundation:
+
+```bash
+npx prisma migrate deploy
+npm run db:seed
+```
+
+Normal seeding preserves existing credentials, profiles, published snapshots, drafts, assignments, progress, and awarded stamps. It creates the foundation only when absent, plus missing optional specialist library entries. It does not move existing trainees to the new foundation. Destructive `FORCE_RESET` seeding is rejected. If the foundation is missing, archived, or lacks its core 20 module codes in the correct pillars, registration fails without partial records instead of choosing an unrelated plan.
+
+Registration integration checks use a disposable PostgreSQL schema and remove it afterward (the configured database user needs CREATE SCHEMA permission):
+
+```bash
+node --env-file=.env --import tsx scripts/test_trainee_registration.ts
+npm run build
+```
+
+Manual check: open registration, confirm Position is initially disabled, select ICT Department → Application Developer, then switch to Finance Department. Position must clear and offer only Finance positions. Complete registration and inspect the trainee's foundation passport: five pillars with four initial modules each. A published appended custom module should appear for subsequent registrations; existing stamps must survive a normal seed rerun and version reconciliation.

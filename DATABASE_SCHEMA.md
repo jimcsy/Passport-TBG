@@ -52,7 +52,9 @@ erDiagram
         string restaurantBrand "e.g. TGI Fridays, Italiannis"
         string branchLocation "e.g. BGC, Greenbelt"
         string cohortBatch "e.g. Cohort-2024-Q4"
-        string jobRole "e.g. IT Support Specialist, Barista"
+        string department "Nullable for legacy profiles; required on registration"
+        string position "Required on registration; belongs to selected department"
+        string jobRole "Compatibility display alias of position for new profiles"
         datetime hireDate
         datetime createdAt
         datetime updatedAt
@@ -233,3 +235,11 @@ fails. See `prisma/SUPABASE.md` for setup and orphan cleanup details.
 ### Version-specific path names
 
 `PlanVersion.pathTitles` is nullable JSON mapping canonical path keys to editable display names (1–80 trimmed characters). Legacy versions fall back to canonical titles. Keeping names on the version preserves renamed empty paths, immutable published labels, library grouping and stamp defaults. `PlanNode.path` stays canonical. Reconciliation remaps retained progress in place; removed records remain soft-archived with their approval provenance. Sync covers all older active versions of the plan.
+
+### Corporate registration and foundation assignment
+
+`Trainee.department` and `Trainee.position` are additive nullable text columns for backward compatibility. New registrations require both strings and validate strict department/position membership against the shared TBG organization dictionary. No department is inferred for legacy profiles. `jobRole` mirrors the selected position for existing consumers.
+
+Registration creates the trainee, exactly one ACTIVE assignment, and IN_PROGRESS records for only the latest PUBLISHED version of `plan-tbg-corporate-foundation-l1` in one transaction. Neither submitted version IDs nor job-role/default-plan fallbacks override this policy. The initial foundation has 20 nodes, four per canonical pillar in the existing five-pillar sequence. Published custom additions are included; a missing core baseline blocks registration atomically.
+
+Seeding creates the foundation once, never mutates existing version nodes or trainees' progress, and preserves existing assignments. Awarded stamps are represented by verification fields on `TraineeProgress` (there is no separate `earned_stamps` table in this schema); those records and their original hashes remain intact through seed reruns and the existing reconciliation engine.

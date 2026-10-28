@@ -82,6 +82,8 @@ export interface TraineeDirectoryItem {
   fullName: string;
   email: string;
   jobRole: string | null;
+  department?: string | null;
+  position?: string | null;
   restaurantBrand: string;
   branchLocation: string;
   cohortBatch: string;
@@ -165,6 +167,8 @@ export async function getTraineeDirectory(filters?: {
       fullName: t.fullName,
       email: t.email,
       jobRole: t.jobRole,
+      department: t.department,
+      position: t.position,
       restaurantBrand: t.restaurantBrand,
       branchLocation: t.branchLocation,
       cohortBatch: t.cohortBatch,

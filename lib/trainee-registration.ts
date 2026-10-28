@@ -1,8 +1,11 @@
+import { isTbgDepartment, positionsForDepartment } from "@/lib/constants/tbg-org";
+
 export const REGISTRATION_FIELDS = [
   "traineeCode",
   "fullName",
   "email",
-  "jobRole",
+  "department",
+  "position",
   "restaurantBrand",
   "branchLocation",
   "cohortBatch",
@@ -11,6 +14,7 @@ export const REGISTRATION_FIELDS = [
 
 export type RegistrationField = (typeof REGISTRATION_FIELDS)[number];
 export type RegistrationInput = Record<RegistrationField, string> & {
+  /** Legacy callers cannot override universal foundation assignment. */
   planVersionId?: string;
 };
 export type RegistrationErrors = Partial<Record<RegistrationField, string>>;
@@ -18,15 +22,18 @@ export type RegistrationErrors = Partial<Record<RegistrationField, string>>;
 // Shared validation for individual registration and a future CSV importer.
 export function validateRegistration(input: RegistrationInput) {
   const values = Object.fromEntries(
-    REGISTRATION_FIELDS.map((field) => [field, (input[field] || "").trim()])
+    REGISTRATION_FIELDS.map((field) => [field, (typeof input[field] === "string" ? input[field] : "").trim()])
   ) as RegistrationInput;
-  if (input.planVersionId) {
-    values.planVersionId = input.planVersionId.trim();
-  }
 
   values.traineeCode = values.traineeCode.toUpperCase();
   values.email = values.email.toLowerCase();
   const errors: RegistrationErrors = {};
+  if (values.department && !isTbgDepartment(values.department)) {
+    errors.department = "Select a valid TBG department.";
+  }
+  if (values.position && !positionsForDepartment(values.department).includes(values.position)) {
+    errors.position = "Select a position belonging to the selected department.";
+  }
 
   for (const field of REGISTRATION_FIELDS) {
     if (!values[field]) {
