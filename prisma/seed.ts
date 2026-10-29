@@ -1,3 +1,4 @@
+import { createInstanceForVersion } from "../lib/db/services/learning-paths";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { seedFoundationPlan } from "../lib/db/repositories/foundation";
@@ -32,9 +33,10 @@ async function main() {
     const version = await tx.planVersion.findFirstOrThrow({ where: { planId: plan.id, status: "PUBLISHED" }, orderBy: { versionNumber: "desc" }, include: { nodes: true } });
     // Do not silently replace an existing trainee's historical assignment/progress.
     if (await tx.traineePlanAssignment.count({ where: { traineeId: trainee.id } }) || await tx.traineeProgress.count({ where: { traineeId: trainee.id } })) return;
-    await tx.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: version.id, assignedById: trainer.id } });
-    await tx.traineeProgress.createMany({ data: version.nodes.map(node => ({ traineeId: trainee.id, planNodeId: node.id, status: "IN_PROGRESS" })) });
-  }, { timeout: 30_000 });
+    const instance = await createInstanceForVersion(tx, trainee.id, version.id, trainer.id);
+    await tx.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: instance.id, assignedById: trainer.id } });
+    await tx.traineeProgress.createMany({ data: instance.nodes.map(node => ({ traineeId: trainee.id, planNodeId: node.id, status: "IN_PROGRESS" })) });
+  }, { timeout: 60_000 });
   console.log("Seed complete: universal foundation and optional specialist library available; existing profiles, versions, assignments and stamps preserved.");
 }
 main().catch(() => { console.error("Seed failed. Check database connectivity and seed configuration; no credentials are logged."); process.exitCode = 1; }).finally(() => prisma.$disconnect());

@@ -40,6 +40,7 @@ model Trainee {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  learningPaths   LearningPath[]
   planAssignments TraineePlanAssignment[]
   progressRecords TraineeProgress[]
 
@@ -74,6 +75,7 @@ model TrainingPlan {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  learningPath    LearningPath?
   createdBy       AdminUser     @relation(fields: [createdById], references: [id])
   versions        PlanVersion[]
 
@@ -197,4 +199,34 @@ model CourseMaterial {
   milestone     MilestoneDefinition @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
   uploadedBy    AdminUser @relation(fields: [uploadedById], references: [id])
   @@index([milestoneId])
+}
+
+enum LearningPathType {
+  MASTER
+  VARIANT
+  INSTANCE
+}
+
+// Hierarchy and catalog identity; TrainingPlan retains the immutable version graph.
+model LearningPath {
+  id               String @id @default(cuid())
+  planId           String @unique
+  type             LearningPathType
+  isTemplate       Boolean @default(false)
+  title            String
+  parentId         String?
+  targetDepartment String?
+  targetPosition   String?
+  traineeId        String?
+  sourceVersionId  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  plan     TrainingPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  parent   LearningPath? @relation("PathHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children LearningPath[] @relation("PathHierarchy")
+  trainee  Trainee? @relation(fields: [traineeId], references: [id], onDelete: SetNull)
+
+  @@index([parentId, type])
+  @@index([traineeId])
 }

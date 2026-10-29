@@ -1,6 +1,6 @@
 # The Bistro Group - Growth Passport Database Schema
 
-This document provides the complete structural reference, entity definitions, and interactive visual ER Diagram for the Growth Passport database (currently running on SQLite via Prisma, drop-in compatible with Supabase PostgreSQL).
+This document provides the complete structural reference, entity definitions, and interactive visual ER Diagram for the Growth Passport database (running on Supabase PostgreSQL via Prisma).
 
 > [!IMPORTANT]
 > **Maintainer Rule**: Whenever `prisma/schema.prisma` is modified (new models, altered fields, new relations), this file and the Mermaid diagram below MUST be updated immediately.
@@ -18,6 +18,9 @@ erDiagram
     MilestoneDefinition ||--o{ CourseMaterial : "provides materials"
     AdminUser ||--o{ TraineeProgress : "verifies (verifiedBy)"
     
+    TrainingPlan ||--o| LearningPath : "catalog or instance metadata"
+    LearningPath |o--o{ LearningPath : "parent hierarchy"
+    Trainee |o--o{ LearningPath : "owns private instances"
     TrainingPlan ||--|{ PlanVersion : "has versions (planId)"
     
     PlanVersion ||--|{ PlanNode : "contains nodes (planVersionId)"
@@ -81,6 +84,21 @@ erDiagram
         boolean isDefault "Default track for role"
         string status "DRAFT | PUBLISHED | ARCHIVED"
         string createdById FK "AdminUser.id"
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    LearningPath {
+        string id PK
+        string planId UK,FK
+        enum type "MASTER | VARIANT | INSTANCE"
+        boolean isTemplate
+        string title
+        string parentId FK "Master for variants; source template for instances"
+        string targetDepartment
+        string targetPosition
+        string traineeId FK "Instance owner; null for catalog paths"
+        string sourceVersionId "Snapshot provenance"
         datetime createdAt
         datetime updatedAt
     }
@@ -240,6 +258,22 @@ fails. See `prisma/SUPABASE.md` for setup and orphan cleanup details.
 
 `Trainee.department` and `Trainee.position` are additive nullable text columns for backward compatibility. New registrations require both strings and validate strict department/position membership against the shared TBG organization dictionary. No department is inferred for legacy profiles. `jobRole` mirrors the selected position for existing consumers.
 
-Registration creates the trainee, exactly one ACTIVE assignment, and IN_PROGRESS records for only the latest PUBLISHED version of `plan-tbg-corporate-foundation-l1` in one transaction. Neither submitted version IDs nor job-role/default-plan fallbacks override this policy. The initial foundation has 20 nodes, four per canonical pillar in the existing five-pillar sequence. Published custom additions are included; a missing core baseline blocks registration atomically.
+Registration creates the trainee, a private INSTANCE snapshot of the latest PUBLISHED `plan-tbg-corporate-foundation-l1` version, exactly one ACTIVE assignment to that instance, and IN_PROGRESS records for its nodes in one transaction. Neither submitted version IDs nor job-role/default-plan fallbacks override this policy. The initial foundation has 20 nodes, four per canonical pillar in the existing five-pillar sequence. Published custom additions are included; a missing core baseline blocks registration atomically.
 
 Seeding creates the foundation once, never mutates existing version nodes or trainees' progress, and preserves existing assignments. Awarded stamps are represented by verification fields on `TraineeProgress` (there is no separate `earned_stamps` table in this schema); those records and their original hashes remain intact through seed reruns and the existing reconciliation engine.
+
+### Learning path hierarchy and snapshot isolation
+
+`LearningPath` is linked one-to-one by `planId` to `TrainingPlan`, which remains the storage for immutable versions, nodes and edges. An enum restricts `type` to MASTER, VARIANT or INSTANCE; a PostgreSQL partial unique index enforces one MASTER. Self-referencing `parentId` links variants to the master and instances to their source catalog path. `traineeId` identifies an instance owner; `sourceVersionId` records which published graph was copied. Catalog metadata updates write both linked titles atomically and never touch instance titles or progress.
+
+Variant deletion is archival on the linked TrainingPlan, excluding it from the catalog and new assignments while retaining historical references. Promotion copies the active instance's graph into a new DRAFT VARIANT under the master; all node IDs and edges are remapped, with no copied trainee progress or stamps. Node editing through the variant modal uses the existing draft/version persistence engine in the same transaction as metadata changes.
+
+Legacy catalog metadata is backfilled by the additive migration. Existing assignment targets are left unchanged until an explicit per-trainee conversion (or approved bulk conversion). Conversion locks the trainee row, creates a snapshot and reconciles progress in place; the original approval hash remains tied to the original award event. New assignment operations also lock by trainee to serialize competing changes. Instances are excluded from catalog and assignment pickers.
+
+Trainer verification resolves each selected catalog/library milestone within the trainee's current active graph before writing `TraineeProgress`. Single/batch approvals therefore use private PlanNode IDs. Repeat approvals retain the original stamp; incompatible batches roll back atomically. Passport data reads are read-only and never create assignments for an unassigned trainee.
+
+### Reviewed publish scopes and shared distribution
+
+Individual-instance publishing accepts three explicit scopes. Personal publication leaves `LearningPath.parentId` and `sourceVersionId` unchanged. Curated-variant publication creates a new published VARIANT and changes only the current instance's parent/provenance and display title. Shared publication versions the parent variant and updates only explicitly selected enrolled trainees, retaining private graph customizations with a three-way merge. Updated instances advance `sourceVersionId` to the new variant version; unselected instances keep their earlier baseline and graph.
+
+The review token fingerprints submitted graph data and the relevant assignments, versions, catalog metadata and progress. Confirmation locks the selected trainee/plan rows and recomputes the fingerprint before writing. Publication and reconciliation run in one transaction across all selected recipients. Selected legacy direct assignments may be converted to instances inside that transaction; no unselected legacy enrollment is changed. No additional tables or columns are required.

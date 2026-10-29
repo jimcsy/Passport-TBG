@@ -8,6 +8,7 @@ import { seedFoundationPlan } from "../lib/db/repositories/foundation";
 import { validateRegistration } from "../lib/trainee-registration";
 import { TBG_ORG } from "../lib/constants/tbg-org";
 import { FOUNDATION_PLAN_ID, FOUNDATION_PLAN_TITLE, FOUNDATION_PILLARS } from "../lib/constants/foundation";
+import { assignPlanToTrainee } from "../lib/db/repositories/assignments";
 import { reconcileTraineeToPlanVersion } from "../lib/db/services/reconcile";
 
 async function main() {
@@ -59,14 +60,16 @@ async function main() {
     assert.equal(trainee.position, input.position);
     assert.equal(trainee.jobRole, input.position);
     assert.equal(trainee.planAssignments.length, 1);
-    assert.equal(trainee.planAssignments[0].planVersionId, version.id);
+    const instance = await db.learningPath.findFirstOrThrow({ where: { traineeId: trainee.id, type: "INSTANCE" } });
+    assert.equal(instance.parentId, FOUNDATION_PLAN_ID);
+    assert.notEqual(trainee.planAssignments[0].planVersionId, version.id);
     assert.equal(trainee.progressRecords.length, 20);
     assert(trainee.progressRecords.every(p => p.status === "IN_PROGRESS" && !p.verifiedBy && !p.isArchived));
     for (const [index, [department, positions]] of Object.entries(TBG_ORG).map((entry, index) => [index, entry] as const)) {
       const next = await createRegisteredTrainee({ ...input, traineeCode: `ORG-${index}`, department, position: positions[0] }, db);
       assert.equal(next.success, true);
     }
-    assert.equal(await db.traineePlanAssignment.count({ where: { planVersionId: version.id } }), 19);
+    assert.equal(await db.traineePlanAssignment.count({ where: { planVersion: { plan: { learningPath: { parentId: FOUNDATION_PLAN_ID, type: "INSTANCE" } } } } }), 19);
     assert.equal((await createRegisteredTrainee(input, db)).success, false);
     assert.equal((await createRegisteredTrainee({ ...input, traineeCode: "BAD-DEPT", position: "President" }, db)).success, false);
     assert.equal(await db.trainee.count(), 19);
@@ -92,8 +95,8 @@ async function main() {
     assert.equal(next.success, true);
     if (!next.success) throw new Error("Registration unexpectedly failed");
     assert.equal(await db.traineeProgress.count({ where: { traineeId: next.trainee.id } }), 21);
-    assert.equal((await db.traineePlanAssignment.findFirstOrThrow({ where: { traineeId: next.trainee.id } })).planVersionId, draft.id);
-    await reconcileTraineeToPlanVersion(trainee.id, draft.id, trainer.id, db);
+    assert.equal((await db.learningPath.findFirstOrThrow({ where: { traineeId: next.trainee.id } })).sourceVersionId, draft.id);
+    await assignPlanToTrainee({ traineeId: trainee.id, planVersionId: draft.id, assignedById: trainer.id }, db);
     const kept = await db.traineeProgress.findUniqueOrThrow({ where: { id: stamp.id } });
     assert.equal(kept.status, stamp.status); assert.equal(kept.verificationHash, stamp.verificationHash);
     assert.deepEqual(kept.verifiedAt, stamp.verifiedAt); assert.equal(kept.trainerNote, stamp.trainerNote);

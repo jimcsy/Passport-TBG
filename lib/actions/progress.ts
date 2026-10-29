@@ -1,10 +1,9 @@
 "use server";
 
-import { verificationData } from "@/lib/stamps/hash";
+import { verifyAssignedMilestones } from "../db/repositories/verification";
 import { revalidatePath } from "next/cache";
 import { prisma } from "../db/prisma";
 import { getTraineeSession, getAdminSession } from "../auth/session";
-import { MilestoneStatus } from "../types/models";
 import { queueMilestoneForReview } from "../db/repositories/progress";
 
 export interface ActionResult {
@@ -57,25 +56,7 @@ export async function verifyMilestone(
   }
 
   try {
-    let targetNodeId = milestoneId;
-    const node = await prisma.planNode.findUnique({ where: { id: milestoneId } });
-    if (!node) {
-      const fallback = await prisma.planNode.findFirst({ where: { libraryMilestoneId: milestoneId } });
-      if (fallback) targetNodeId = fallback.id;
-    }
-
-    const verifiedAt = new Date();
-    const approval = verificationData(traineeId, targetNodeId, adminSession.id, verifiedAt, trainerNote);
-    await prisma.traineeProgress.upsert({
-      where: {
-        traineeId_planNodeId: {
-          traineeId,
-          planNodeId: targetNodeId,
-        },
-      },
-      update: approval,
-      create: { traineeId, planNodeId: targetNodeId, ...approval },
-    });
+    await verifyAssignedMilestones([traineeId], milestoneId, adminSession.id, trainerNote);
 
     revalidatePath("/trainee/dashboard", "layout");
     revalidatePath("/trainer/queue");
@@ -108,42 +89,7 @@ export async function bulkVerifyMilestones(
   }
 
   try {
-    const now = new Date();
-    let targetNodeId = milestoneId;
-    const node = await prisma.planNode.findUnique({ where: { id: milestoneId } });
-    if (!node) {
-      const fallback = await prisma.planNode.findFirst({ where: { libraryMilestoneId: milestoneId } });
-      if (fallback) targetNodeId = fallback.id;
-    }
-
-    await prisma.$transaction(
-      traineeIds.map((traineeId) =>
-        prisma.traineeProgress.upsert({
-          where: {
-            traineeId_planNodeId: {
-              traineeId,
-              planNodeId: targetNodeId,
-            },
-          },
-          update: {
-            status: MilestoneStatus.VERIFIED,
-            verifiedBy: adminSession.id,
-            verifiedAt: now,
-            verificationHash: verificationData(traineeId, targetNodeId, adminSession.id, now).verificationHash,
-            trainerNote: trainerNote?.trim() || null,
-          },
-          create: {
-            traineeId,
-            planNodeId: targetNodeId,
-            status: MilestoneStatus.VERIFIED,
-            verifiedBy: adminSession.id,
-            verifiedAt: now,
-            verificationHash: verificationData(traineeId, targetNodeId, adminSession.id, now).verificationHash,
-            trainerNote: trainerNote?.trim() || null,
-          },
-        })
-      )
-    );
+    await verifyAssignedMilestones(traineeIds, milestoneId, adminSession.id, trainerNote);
 
     revalidatePath("/trainee/dashboard", "layout");
     revalidatePath("/trainer/queue");

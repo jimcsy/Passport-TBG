@@ -1,3 +1,5 @@
+import { ensureMasterPath } from "../services/learning-paths";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { readPathTitles } from "@/lib/plans/paths";
 import { resolveStampDesign } from "@/lib/stamps/catalog";
 import { prisma } from "../prisma";
@@ -18,6 +20,7 @@ export async function createTrainingPlan(input: CreateTrainingPlanInput) {
   const validated = CreateTrainingPlanSchema.parse(input);
 
   return prisma.$transaction(async (tx) => {
+    const master = await ensureMasterPath(tx);
     // If setting as default, clear previous default
     if (validated.isDefault) {
       await tx.trainingPlan.updateMany({
@@ -38,6 +41,7 @@ export async function createTrainingPlan(input: CreateTrainingPlanInput) {
       },
     });
 
+    await tx.learningPath.create({ data: { id: plan.id, planId: plan.id, type: "VARIANT", title: plan.title, parentId: master.id } });
     const version = await tx.planVersion.create({
       data: {
         planId: plan.id,
@@ -59,6 +63,7 @@ export async function getTrainingPlanById(id: string) {
   const plan = await prisma.trainingPlan.findUnique({
     where: { id },
     include: {
+      learningPath: true,
       createdBy: {
         select: { id: true, fullName: true, employeeId: true },
       },
@@ -181,10 +186,10 @@ export async function listTrainingPlans(filters?: {
  * If the latest version is a DRAFT with 0 active assignments, it updates that draft in place.
  * Otherwise, it creates a new version (v+1) to guarantee immutability of published snapshots.
  */
-export async function savePlanVersion(input: SavePlanVersionInput) {
+export async function savePlanVersion(input: SavePlanVersionInput, db: PrismaClient | Prisma.TransactionClient = prisma) {
   const validated = SavePlanVersionSchema.parse(input);
 
-  return prisma.$transaction(async (tx) => {
+  const save = async (tx: Prisma.TransactionClient) => {
     const plan = await tx.trainingPlan.findUnique({
       where: { id: validated.planId },
       include: {
@@ -198,7 +203,7 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
       },
     });
 
-    if (!plan) throw new Error("Training Plan not found.");
+    if (!plan || plan.status === "ARCHIVED") throw new Error("Training Plan is unavailable.");
 
     const latest = plan.versions[0];
     let targetVersionId: string;
@@ -249,14 +254,11 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
 
       // If it's a custom milestone, also upsert into MilestoneDefinition
       // so it is combined into the shared library across all training tracks
-      if (node.isCustom) {
+      if (node.isCustom && !libraryMilestoneId) {
         const customDef = await tx.milestoneDefinition.upsert({
           where: { code: node.code },
-          update: {
-            title: node.title,
-            description: node.description,
-            path: node.path,
-          },
+          // Node snapshots can diverge without renaming the shared library entry.
+          update: {},
           create: {
             code: node.code,
             title: node.title,
@@ -317,7 +319,8 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
         edges: true,
       },
     });
-  }, { timeout: 30_000 });
+  };
+  return "$transaction" in db ? (db as PrismaClient).$transaction(save, { timeout: 60_000 }) : save(db);
 }
 
 /**
@@ -325,7 +328,8 @@ export async function savePlanVersion(input: SavePlanVersionInput) {
  */
 export async function publishPlanVersion(
   input: PublishPlanVersionInput & { publishedById?: string },
-  publishedByIdArg?: string
+  publishedByIdArg?: string,
+  db: PrismaClient | Prisma.TransactionClient = prisma
 ): Promise<{
   version: unknown;
   reconcileResult: ReconcileResult | null;
@@ -333,13 +337,13 @@ export async function publishPlanVersion(
   const validated = PublishPlanVersionSchema.parse(input);
   const publisherId = publishedByIdArg || input.publishedById;
 
-  return prisma.$transaction(async (tx) => {
+  const publish = async (tx: Prisma.TransactionClient) => {
     const version = await tx.planVersion.findUnique({
       where: { id: validated.versionId },
       include: { plan: true },
     });
 
-    if (!version) throw new Error("Plan version not found.");
+    if (!version || version.plan.status === "ARCHIVED") throw new Error("Plan version is unavailable.");
 
     const effectivePublishedById =
       publisherId || version.publishedById || version.plan.createdById;
@@ -397,13 +401,16 @@ export async function publishPlanVersion(
       version: updatedVersion,
       reconcileResult,
     };
-  }, { timeout: 60_000 });
+  };
+  return "$transaction" in db ? (db as PrismaClient).$transaction(publish, { timeout: 60_000 }) : publish(db);
 }
 
 /**
  * Soft-archives a training plan.
  */
 export async function archiveTrainingPlan(id: string) {
+  const path = await prisma.learningPath.findUnique({ where: { planId: id } });
+  if (path && path.type !== "VARIANT") throw new Error("Only catalog variants may be archived.");
   return prisma.trainingPlan.update({
     where: { id },
     data: { status: "ARCHIVED" },

@@ -368,6 +368,7 @@ export async function assignPlanAction(traineeId: string, planVersionId: string)
       assignedById: admin.id,
     });
 
+    revalidatePath("/trainer/plans");
     revalidatePath("/trainer/trainees");
     revalidatePath(`/trainer/trainees/${traineeId}`);
     revalidatePath("/trainee/dashboard");
@@ -393,6 +394,7 @@ export async function bulkAssignPlanAction(traineeIds: string[], planVersionId: 
       assignedById: admin.id,
     });
 
+    revalidatePath("/trainer/plans");
     revalidatePath("/trainer/trainees");
     revalidatePath("/trainer/batch");
     revalidatePath("/trainee/dashboard");
@@ -414,6 +416,7 @@ export async function changeTraineePlanAction(traineeId: string, newPlanVersionI
   try {
     const res = await changeTraineePlan(traineeId, newPlanVersionId, admin.id);
 
+    revalidatePath("/trainer/plans");
     revalidatePath("/trainer/trainees");
     revalidatePath(`/trainer/trainees/${traineeId}`);
     revalidatePath("/trainee/dashboard");

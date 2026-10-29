@@ -41,6 +41,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
           roleIdentifier: plan.roleIdentifier,
           restaurantBrand: plan.restaurantBrand,
           status: plan.status,
+          isIndividualInstance: plan.learningPath?.type === "INSTANCE",
         }}
         initialVersion={{
           id: latestVersion.id,

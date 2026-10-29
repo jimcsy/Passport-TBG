@@ -1,3 +1,4 @@
+import { ensureMasterPath } from "../services/learning-paths";
 import type { PrismaClient } from "@prisma/client";
 import { FOUNDATION_MILESTONES, FOUNDATION_PILLARS, FOUNDATION_PLAN_ID, FOUNDATION_PLAN_TITLE, FOUNDATION_ROLE } from "@/lib/constants/foundation";
 import { resolveStampDesign } from "@/lib/stamps/catalog";
@@ -6,7 +7,7 @@ import { resolveStampDesign } from "@/lib/stamps/catalog";
 export async function seedFoundationPlan(db: PrismaClient, trainerId: string) {
   return db.$transaction(async tx => {
     const existing = await tx.trainingPlan.findUnique({ where: { id: FOUNDATION_PLAN_ID } });
-    if (existing) return existing;
+    if (existing) { await ensureMasterPath(tx); return existing; }
     const nodes = [];
     for (const module of FOUNDATION_MILESTONES) {
       const definition = await tx.milestoneDefinition.upsert({
@@ -24,6 +25,7 @@ export async function seedFoundationPlan(db: PrismaClient, trainerId: string) {
         changelog: "Initial universal foundation: five pillars with four modules each.", nodes: { create: nodes },
       } },
     } });
+    await ensureMasterPath(tx);
     return plan;
   }, { timeout: 60_000 });
 }

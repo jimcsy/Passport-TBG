@@ -1,3 +1,5 @@
+import type { PrismaClient } from "@prisma/client";
+import { createInstanceForVersion } from "../services/learning-paths";
 import { prisma } from "../prisma";
 import {
   AssignPlanSchema,
@@ -10,13 +12,14 @@ import { reconcileTraineeToPlanVersion } from "../services/reconcile";
 /**
  * Assigns a trainee to a specific plan version, safely reconciling existing progress.
  */
-export async function assignPlanToTrainee(input: AssignPlanInput) {
+export async function assignPlanToTrainee(input: AssignPlanInput, db: PrismaClient = prisma) {
   const validated = AssignPlanSchema.parse(input);
 
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
+    const instance = await createInstanceForVersion(tx, validated.traineeId, validated.planVersionId, validated.assignedById);
     const res = await reconcileTraineeToPlanVersion(
       validated.traineeId,
-      validated.planVersionId,
+      instance.id,
       validated.assignedById,
       tx
     );
@@ -25,7 +28,7 @@ export async function assignPlanToTrainee(input: AssignPlanInput) {
       where: {
         traineeId_planVersionId: {
           traineeId: validated.traineeId,
-          planVersionId: validated.planVersionId,
+          planVersionId: instance.id,
         },
       },
       include: {
@@ -42,15 +45,16 @@ export async function assignPlanToTrainee(input: AssignPlanInput) {
 /**
  * Bulk assigns a list of trainees to a plan version.
  */
-export async function bulkAssignPlanToCohort(input: BulkAssignPlanInput) {
+export async function bulkAssignPlanToCohort(input: BulkAssignPlanInput, db: PrismaClient = prisma) {
   const validated = BulkAssignPlanSchema.parse(input);
 
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
     let successCount = 0;
-    for (const traineeId of validated.traineeIds) {
+    for (const traineeId of [...validated.traineeIds].sort()) {
+      const instance = await createInstanceForVersion(tx, traineeId, validated.planVersionId, validated.assignedById);
       await reconcileTraineeToPlanVersion(
         traineeId,
-        validated.planVersionId,
+        instance.id,
         validated.assignedById,
         tx
       );
@@ -93,12 +97,14 @@ export async function getTraineeActivePlan(traineeId: string) {
 export async function changeTraineePlan(
   traineeId: string,
   newPlanVersionId: string,
-  assignedById: string
+  assignedById: string,
+  db: PrismaClient = prisma
 ) {
-  return prisma.$transaction(async (tx) => {
+  return db.$transaction(async (tx) => {
+    const instance = await createInstanceForVersion(tx, traineeId, newPlanVersionId, assignedById);
     const res = await reconcileTraineeToPlanVersion(
       traineeId,
-      newPlanVersionId,
+      instance.id,
       assignedById,
       tx
     );
@@ -107,7 +113,7 @@ export async function changeTraineePlan(
       where: {
         traineeId_planVersionId: {
           traineeId,
-          planVersionId: newPlanVersionId,
+          planVersionId: instance.id,
         },
       },
       include: {

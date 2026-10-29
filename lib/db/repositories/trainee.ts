@@ -1,3 +1,4 @@
+import type { PrismaClient } from "@prisma/client";
 import { readPathTitles, pathTitle } from "@/lib/plans/paths";
 import { prisma } from "../prisma";
 import { DevelopmentPath, MilestoneStatus, DEVELOPMENT_PATHS } from "@/lib/types/models";
@@ -71,9 +72,10 @@ export interface TraineePassportViewData {
 }
 
 export async function getTraineePassportData(
-  traineeId: string
+  traineeId: string,
+  db: PrismaClient = prisma
 ): Promise<TraineePassportViewData | null> {
-  const trainee = await prisma.trainee.findUnique({
+  const trainee = await db.trainee.findUnique({
     where: { id: traineeId },
     include: {
       planAssignments: {
@@ -107,60 +109,9 @@ export async function getTraineePassportData(
 
   if (!trainee) return null;
 
-  type ActiveAssignmentWithPlan = NonNullable<typeof trainee>["planAssignments"][number];
-  let activeAssignment: ActiveAssignmentWithPlan | null = trainee.planAssignments[0] || null;
-
-  // Fallback resilience: If no active assignment, auto-link to published default or role-matched plan
-  if (!activeAssignment) {
-    const fallbackPlan = await prisma.trainingPlan.findFirst({
-      where: {
-        OR: [
-          trainee.jobRole
-            ? { roleIdentifier: trainee.jobRole.toUpperCase(), status: "PUBLISHED" }
-            : {},
-          { isDefault: true, status: "PUBLISHED" },
-          { status: "PUBLISHED" },
-        ],
-      },
-      include: {
-        versions: {
-          where: { status: "PUBLISHED" },
-          orderBy: { versionNumber: "desc" },
-          take: 1,
-          include: {
-            plan: true,
-            nodes: {
-              orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
-            },
-          },
-        },
-      },
-    });
-
-    if (fallbackPlan?.versions[0]) {
-      const assignedById =
-        fallbackPlan.versions[0].publishedById || fallbackPlan.createdById;
-
-      activeAssignment = await prisma.traineePlanAssignment.create({
-        data: {
-          traineeId: trainee.id,
-          planVersionId: fallbackPlan.versions[0].id,
-          assignedById,
-          status: "ACTIVE",
-        },
-        include: {
-          planVersion: {
-            include: {
-              plan: true,
-              nodes: {
-                orderBy: [{ path: "asc" }, { orderIndex: "asc" }],
-              },
-            },
-          },
-        },
-      });
-    }
-  }
+  // Reads never assign arbitrary catalog paths or another trainee's private instance.
+  // Registration and explicit trainer assignment own all assignment mutations.
+  const activeAssignment = trainee.planAssignments[0] || null;
 
   // Separate active progress from archived progress
   const activeRecords = trainee.progressRecords.filter((p) => !p.isArchived && p.planNode.planVersionId === activeAssignment?.planVersionId);

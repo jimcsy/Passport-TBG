@@ -28,7 +28,7 @@ A lightweight, dual-access digital training portal for **The Bistro Group** that
 4. **Universal Corporate Foundation**:
    - Every new trainee receives **Foundation Level 1: TBG Corporate Onboarding**, regardless of department or position.
    - Five pillars appear in order: Onboarding, Communication Skills, Technical Skills, Personal Effectiveness & Culture, Leadership Skills. Each starts with four modules (20 total).
-   - Trainers may append position-specific modules through versioned Path Builder drafts. Registration uses the latest published foundation version, including those additions; drafts are never assigned.
+   - Trainers may append position-specific modules through versioned Path Builder drafts. Registration creates a private instance from the latest published foundation version, including those additions; drafts are never assigned.
    - Existing specialist plans and trainee assignments remain intact. They are no longer registration defaults.
 
 ---
@@ -244,3 +244,55 @@ npm run build
 ```
 
 Manual check: open registration, confirm Position is initially disabled, select ICT Department → Application Developer, then switch to Finance Department. Position must clear and offer only Finance positions. Complete registration and inspect the trainee's foundation passport: five pillars with four initial modules each. A published appended custom module should appear for subsequent registrations; existing stamps must survive a normal seed rerun and version reconciliation.
+
+## Master catalog, role variants and trainee instances
+
+`/trainer/plans` shows one **Foundation Level 1: TBG Corporate Onboarding** master card with an expandable Role Variants list. Create a variant inside the card, select its department/position tags, then use **Edit Variant** to rename, retag, reorder or append milestones. Node changes save to a draft. Use **Edit Nodes** / the full Path Builder to publish that draft before assigning it.
+
+`LearningPath` stores hierarchy metadata and links one-to-one to the existing `TrainingPlan` version graph:
+
+- MASTER: the universal foundation (`isTemplate: true`).
+- VARIANT: a reusable role track under the master, with title and department/position tags.
+- INSTANCE: a private copy of a published master/variant version owned by one trainee.
+
+New registrations still always begin with the corporate foundation, regardless of organizational tags. Trainer reassignment creates an independent instance of the selected published catalog path and safely reconciles progress. Another trainee's private instance cannot be assigned. Renaming or editing a catalog variant does not alter existing instances. **Delete Variant** archives the catalog entry; it preserves its versions, instance references, progress and stamps.
+
+At `/trainer/trainees/[id]`, use **Customize Individual Path** to edit that trainee's graph. Publish and sync the instance before **Promote to Reusable Variant**; promotion copies the active published graph (including node order, edges, stamp designs and path labels) into a new draft variant under the master. Progress records and awarded approvals are never copied into the catalog.
+
+The hierarchy migration adds metadata for existing plans without changing any assignment targets. Existing shared assignments remain shared until a trainer explicitly clicks **Create Individual Instance** on that trainee's profile. Simply opening a profile does not change records. A tested optional bulk converter exists at `scripts/backfill_path_instances.ts`; it changes assignment targets and should be run only after explicit approval for the configured database. Conversion retains original progress IDs, statuses, notes, approval timestamps and verification hashes and preserves old assignments as SUPERSEDED.
+
+Verification:
+
+```bash
+node --env-file=.env --import tsx scripts/test_learning_paths.ts
+node --env-file=.env --import tsx scripts/test_trainee_registration.ts
+npm run build
+```
+
+The database tests create/drop temporary PostgreSQL schemas. Chrome checks are in `scripts/test_learning_paths_browser.cjs` and `scripts/test_registration_browser.cjs` (see their header commands). They clean up their own fixtures.
+
+Trainer single/batch sign-off resolves the selected milestone by code/library identity inside each trainee's active instance. It never writes a catalog node's progress for an instance owner. Repeat sign-off preserves the original award, and selecting trainees without that milestone rejects the entire batch without partial approvals. Passport reads no longer auto-assign arbitrary published paths to unassigned trainees.
+
+Each role variant displays its enrolled-trainee count in the catalog. Counts include unique ACTIVE trainees on any private instance version derived from that variant, plus legacy direct assignments. Superseded assignments and historical inactive instances are excluded. Assignment and reassignment actions invalidate the catalog so the badge updates when trainers navigate back.
+
+## Publishing individual changes with an explicit scope
+
+Open a trainee's **Customize Individual Path**, create/edit a draft, then click **Publish**. The scope dialog always defaults to **Only this trainee**, even when a role variant has multiple enrolled trainees.
+
+- **Only this trainee:** publish and reconcile only this individual's instance; the shared variant and other trainees remain unchanged.
+- **Create a new reusable variant:** enter its title and department/position tags. Confirmation publishes the new reusable definition, links this trainee's instance to it, and moves their enrollment count. Other trainees remain on the original variant.
+- **Update the shared variant:** available only when the instance originates from an available role VARIANT (not the universal MASTER). The current trainee is always included; all other enrolled trainees start unchecked. Select exactly who should receive the published shared changes.
+
+Every choice requires **Review impact** before **Confirm and publish**. Preview shows affected names, milestone additions/removals/updates/reorders, path renames, connection changes, archive counts, and retained customizations. Shared distribution performs a three-way comparison against each instance's original catalog snapshot: individual extra nodes, customized values and milestone sequences, local removals, extra connections, and renamed paths are retained where they conflict with shared changes. The preview identifies those conflicts; it never silently overwrites them. Where a trainee customized the sequence or added individual nodes, new shared milestones append after their existing nodes to preserve that ordering. A selected trainee's unfinished draft blocks distribution until that trainee is deselected or their draft is resolved. An unfinished shared-variant draft must also be resolved first.
+
+Confirmation checks the reviewed plan/enrollment/progress fingerprint again under row locks. Changes after preview require a new review. Publishing the shared definition, all selected private snapshots, provenance updates, and progress reconciliation is atomic: failure rolls back the entire operation. Removed progress is archived and original award metadata/hashes are retained. Unselected trainees are never converted or updated. Snapshot saves do not rename shared milestone-library definitions; editing the library remains a separate explicit action.
+
+Checks:
+
+```bash
+node --import tsx scripts/test_path_merge.ts
+node --env-file=.env --import tsx scripts/test_individual_publish.ts
+npm run build
+```
+
+The integration script uses a disposable PostgreSQL schema, including a forced failure to verify all-or-nothing rollback. `scripts/test_individual_publish_browser.cjs` checks defaults, cancellation/reset, recipient selection, impact review, conflict retention, curated variants and mobile controls using its own self-cleaning fixtures. No schema migration is required for publish scopes.

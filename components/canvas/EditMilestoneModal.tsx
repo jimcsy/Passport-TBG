@@ -32,6 +32,7 @@ export interface EditableMilestoneTarget {
   nodeId?: string;
   stampDesign?: StampDesignKey;
   designOnly?: boolean;
+  libraryEdit?: boolean;
   code: string;
   title: string;
   description: string;
@@ -121,6 +122,7 @@ export function EditMilestoneModal({
       path: result.data.path,
       stampDesign,
       designOnly: milestone.designOnly,
+      libraryEdit: milestone.libraryEdit,
     });
 
     onClose();
@@ -143,7 +145,7 @@ export function EditMilestoneModal({
           <div className="flex items-center gap-2.5">
             <div>
               <h3 id="edit-milestone-heading" className="text-base font-semibold text-beat-maroon">
-                Edit milestone
+                {milestone.libraryEdit ? "Edit shared library milestone" : "Edit milestone in this draft"}
               </h3>
               <p className="text-xs text-beat-muted">
                 {milestone.code}

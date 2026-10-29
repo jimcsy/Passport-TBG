@@ -1,3 +1,6 @@
+import { prisma } from "@/lib/db/prisma";
+import { CreateIndividualPathButton } from "@/components/admin/CreateIndividualPathButton";
+import { VariantEditor } from "@/components/admin/VariantEditor";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getTraineePassportData } from "@/lib/db/repositories/trainee";
@@ -22,6 +25,9 @@ export default async function TraineeDetailPage({
     notFound();
   }
 
+  const path = data.plan ? await prisma.learningPath.findUnique({ where: { planId: data.plan.id } }) : null;
+  const instance = path?.type === "INSTANCE" && path.traineeId === data.trainee.id ? path : null;
+
   return (
     <div className="space-y-6">
       {/* Top Breadcrumbs */}
@@ -44,6 +50,17 @@ export default async function TraineeDetailPage({
       {/* Trainee Passport Cover */}
       <PassportCover trainee={data.trainee} plan={data.plan} stats={data.stats} />
 
+      {instance && <section aria-label="Active path instance" className="rounded-xl border border-beat-border bg-white p-5">
+        <p className="text-xs font-bold uppercase text-beat-gold">Active individual path</p>
+        <h2 className="mt-2 font-semibold text-beat-maroon">{instance.title}</h2>
+        <p className="my-3 text-sm text-beat-muted">Version {data.plan?.versionNumber}. Customizations belong to this trainee; promoting copies the active published nodes into a reusable draft.</p>
+        <div className="flex flex-wrap gap-3"><Link className="beat-control" href={`/trainer/plans/${instance.planId}/builder`}>Customize Individual Path</Link><VariantEditor instanceId={instance.id} defaultDepartment={data.trainee.department || ""} defaultPosition={data.trainee.position || ""} /></div>
+      </section>}
+      {data.plan && !instance && <section className="rounded-xl border border-beat-border bg-white p-5" aria-label="Existing shared path">
+        <h2 className="font-semibold text-beat-maroon">{data.plan.title}</h2>
+        <p className="my-3 text-sm text-beat-muted">This trainee has an existing shared assignment. Create a private snapshot to customize or promote it. Their progress and awarded stamps will be retained.</p>
+        <CreateIndividualPathButton traineeId={data.trainee.id} />
+      </section>}
       {/* 5 Paths with Trainer Approval Controls */}
       <div className="space-y-3">
         <div className="flex items-center justify-between px-1">

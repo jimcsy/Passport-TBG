@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { FOUNDATION_PLAN_ID, hasFoundationBaseline } from "@/lib/constants/foundation";
+import { createInstanceForVersion } from "../services/learning-paths";
 import { prisma } from "../prisma";
 import { validateRegistration, type RegistrationInput, type RegistrationErrors } from "@/lib/trainee-registration";
 
@@ -21,11 +22,9 @@ export async function createRegisteredTrainee(
         orderBy: { versionNumber: "desc" }, include: { nodes: true },
       });
       if (!version || !hasFoundationBaseline(version.nodes)) throw new Error("FOUNDATION_NOT_CONFIGURED");
-      const nodes = version.nodes;
-      const planVersionId = version.id;
       const adminId = assignedById || version.publishedById;
 
-      return tx.trainee.create({
+      const trainee = await tx.trainee.create({
         data: {
           traineeCode: values.traineeCode,
           fullName: values.fullName,
@@ -37,19 +36,14 @@ export async function createRegisteredTrainee(
           branchLocation: values.branchLocation,
           cohortBatch: values.cohortBatch,
           hireDate: new Date(`${values.hireDate}T00:00:00.000Z`),
-          planAssignments: {
-            create: { planVersionId, assignedById: adminId, status: "ACTIVE" },
-          },
-          progressRecords: {
-            create: nodes.map((n) => ({
-              planNodeId: n.id,
-              status: "IN_PROGRESS",
-            })),
-          },
         },
         select: { id: true, traineeCode: true, fullName: true, email: true },
       });
-    }, { timeout: 30_000 });
+      const instance = await createInstanceForVersion(tx, trainee.id, version.id, adminId);
+      await tx.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: instance.id, assignedById: adminId } });
+      await tx.traineeProgress.createMany({ data: instance.nodes.map(node => ({ traineeId: trainee.id, planNodeId: node.id, status: "IN_PROGRESS" })) });
+      return trainee;
+    }, { timeout: 60_000 });
     return { success: true as const, trainee };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {

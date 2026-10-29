@@ -69,6 +69,7 @@ import { MilestoneLibraryDrawer, type LibraryMilestone } from "./MilestoneLibrar
 import { CreateMilestoneModal, type CreateCustomMilestoneForm } from "./CreateMilestoneModal";
 import { EditMilestoneModal, type EditableMilestoneTarget } from "./EditMilestoneModal";
 import { PlanTreeView } from "./PlanTreeView";
+import { IndividualPublishModal } from "./IndividualPublishModal";
 import { PublishPlanModal } from "./PublishPlanModal";
 import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
 import { CanvasNotification, type CanvasNotice } from "./CanvasNotification";
@@ -196,6 +197,7 @@ export interface PlanCanvasBuilderProps {
     roleIdentifier: string;
     restaurantBrand: string | null;
     status: string;
+    isIndividualInstance?: boolean;
   };
   initialVersion: {
     pathTitles?: PathTitles;
@@ -938,6 +940,7 @@ function PlanCanvasBuilderInner({
       setEditingMilestone({
         nodeId: canvasNode?.id,
         id: milestone.id,
+        libraryEdit: true,
         code: milestone.code,
         title: milestone.title,
         description: milestone.description,
@@ -971,7 +974,7 @@ function PlanCanvasBuilderInner({
         })
       );
 
-      if (updated.designOnly) { setHasUnsavedChanges(true); return; }
+      if (updated.designOnly || !updated.libraryEdit) { setHasUnsavedChanges(true); return; }
 
       // 2. Update matching item in availableMilestones list
       setAvailableMilestones((prev) =>
@@ -1185,6 +1188,32 @@ function PlanCanvasBuilderInner({
       setIsSaving(false);
     }
   };
+
+  const individualPublishGraph = useMemo(() => {
+    const persistentNodes = nodes
+      .filter((n) => n.type === "milestone")
+      .map((n, index) => ({
+        id: n.id,
+        libraryMilestoneId: (n.data.libraryMilestoneId as string) || null,
+        path: n.data.path as DevelopmentPath,
+        code: n.data.code as string,
+        title: n.data.title as string,
+        description: n.data.description as string,
+        orderIndex: (n.data.orderIndex as number) || index + 1,
+        stampDesign: resolveStampDesign(n.data.stampDesign as string, n.data.path as string),
+        posX: Math.round(n.position.x),
+        posY: Math.round(n.position.y),
+        isCustom: (n.data.isCustom as boolean) ?? true,
+      }));
+
+    const persistentEdges = edges.filter(edge => !edge.id.startsWith("overview-")).map((e) => ({
+      sourceNodeId: e.source,
+      targetNodeId: e.target,
+      edgeType: "PARENT_CHILD" as const,
+    }));
+
+    return { nodes: persistentNodes, edges: persistentEdges, pathTitles: currentPathTitles };
+  }, [nodes, edges, currentPathTitles]);
 
   // Publish current canvas state as immutable version with safe trainee reconcile
   const handleConfirmPublish = async ({
@@ -1585,7 +1614,19 @@ function PlanCanvasBuilderInner({
       />
 
       {/* Publish Plan Modal */}
-      <PublishPlanModal
+      {plan.isIndividualInstance ? <IndividualPublishModal
+        key={isPublishModalOpen ? "open" : "closed"}
+        isOpen={isPublishModalOpen}
+        planId={plan.id}
+        graph={individualPublishGraph}
+        onClose={() => setIsPublishModalOpen(false)}
+        onPublished={count => {
+          setIsPublishModalOpen(false); setHasUnsavedChanges(false);
+          setCurrentVersion(version => ({ ...version, status: "PUBLISHED" }));
+          setSaveMessage(`Published changes for ${count} ${count === 1 ? "trainee" : "trainees"}. Progress and stamps preserved.`);
+          router.refresh();
+        }}
+      /> : <PublishPlanModal
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
         planTitle={plan.title}
@@ -1599,7 +1640,7 @@ function PlanCanvasBuilderInner({
         activeTraineeCount={activeTraineeCount}
         isPublishing={isPublishing}
         onConfirmPublish={handleConfirmPublish}
-      />
+      />}
 
       {/* Plan Version History Modal */}
       <PlanVersionHistoryModal

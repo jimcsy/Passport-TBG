@@ -10,7 +10,7 @@ export default async function TraineesDirectoryPage({ searchParams }: { searchPa
   const [trainees, publishedPlans] = await Promise.all([
     getTraineeDirectory(),
     prisma.trainingPlan.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", learningPath: { type: { in: ["MASTER", "VARIANT"] } } },
       include: {
         versions: {
           where: { status: "PUBLISHED" },
