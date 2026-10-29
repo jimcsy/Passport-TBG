@@ -43,6 +43,7 @@ model Trainee {
   learningPaths   LearningPath[]
   planAssignments TraineePlanAssignment[]
   progressRecords TraineeProgress[]
+  stampNotificationReads StampNotificationRead[]
 
   @@index([traineeCode, email])
   @@index([restaurantBrand, branchLocation, cohortBatch])
@@ -229,4 +230,14 @@ model LearningPath {
 
   @@index([parentId, type])
   @@index([traineeId])
+}
+
+// Award hashes survive plan revisions; reading a notification must survive them too.
+model StampNotificationRead {
+  traineeId        String
+  verificationHash String
+  readAt           DateTime @default(now())
+  trainee          Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+
+  @@id([traineeId, verificationHash])
 }

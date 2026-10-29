@@ -3,23 +3,19 @@
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Award, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
-import type { EnrichedMilestone, TraineePassportViewData } from "@/lib/db/repositories/trainee";
+import type { TraineePassportViewData } from "@/lib/db/repositories/trainee";
 import { buildDynamicPassportPages, type PassportBookPage } from "@/lib/passport/book";
 import { PassportStamp } from "./PassportStamp";
-import { StampDetailCallout } from "./StampDetailCallout";
+import { PathMascot } from "./PathMascot";
 import { ExemptStampPage } from "./ExemptStampPage";
 import { NotesEndorsementsPage } from "./NotesEndorsementsPage";
 
 function BookPage({
   page,
   data,
-  onInspect,
-  detailPanelId,
 }: {
   page: PassportBookPage;
   data: TraineePassportViewData;
-  onInspect?: (milestone: EnrichedMilestone) => void;
-  detailPanelId?: string;
 }) {
   if (!page) {
     return <article className="passport-page flex min-h-[440px] flex-col p-4 sm:p-7 bg-white" />;
@@ -84,7 +80,7 @@ function BookPage({
           <div className="my-4 h-px bg-beat-gold/40" />
           {page.kind === "path" ? (
             <>
-              <BookOpen className="my-8 h-12 w-12 text-beat-gold" />
+              <PathMascot path={page.path?.path} />
               <p className="text-sm leading-relaxed">{page.path?.description}</p>
               <p className="mt-8 text-sm font-bold">
                 {page.path?.verified} / {page.path?.total} milestones verified
@@ -99,8 +95,6 @@ function BookPage({
                 <PassportStamp
                   key={m.id}
                   milestone={m}
-                  onInspect={onInspect}
-                  detailPanelId={detailPanelId}
                 />
               ))}
             </div>
@@ -121,20 +115,7 @@ function BookPage({
 
 export function PassportBook({ data }: { data: TraineePassportViewData }) {
   const desktop = useMediaQuery("(min-width: 768px)");
-  const [queuedNotes, setQueuedNotes] = useState<Record<string, string>>({});
-
-  const paths = useMemo(
-    () =>
-      data.paths.map((path) => ({
-        ...path,
-        milestones: path.milestones.map((milestone) =>
-          milestone.status === "IN_PROGRESS" && Object.hasOwn(queuedNotes, milestone.id)
-            ? { ...milestone, status: "READY_FOR_REVIEW" as const, traineeNote: queuedNotes[milestone.id] }
-            : milestone
-        ),
-      })),
-    [data.paths, queuedNotes]
-  );
+  const paths = data.paths;
 
   const pages = useMemo(
     () =>
@@ -162,11 +143,6 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
   }, [data.paths, pages]);
 
   const detailPanelId = useId();
-  const [selectedStampId, setSelectedStampId] = useState<string | null>(null);
-  const selectedStamp =
-    paths.flatMap((path) => path.milestones).find((m) => m.id === selectedStampId) || null;
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const reviewLock = useRef(false);
   const [spread, setSpread] = useState(0);
   const [turn, setTurn] = useState<{ from: number; to: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -176,9 +152,8 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
 
   function goTo(next: number) {
     if (!desktop) { document.getElementById(`${detailPanelId}-page-${next * 2}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
-    if (turnLock.current || reviewLock.current || next === spread || next < 0 || next >= totalSpreads)
+    if (turnLock.current || next === spread || next < 0 || next >= totalSpreads)
       return;
-    setSelectedStampId(null);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || Math.abs(next - spread) > 1) {
       setSpread(next);
       return;
@@ -193,10 +168,6 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
   }
 
   const forward = turn ? turn.to > turn.from : true;
-
-  function inspectStamp(milestone: EnrichedMilestone) {
-    if (!turnLock.current && !reviewLock.current) setSelectedStampId(milestone.id);
-  }
 
   // Determine which path is active on current spread
   const leftPage = pages[spread * 2];
@@ -227,7 +198,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             {pages.length}-page growth passport
           </span>
           <span className="text-xs text-beat-maroon/60">
-            {desktop ? "Use arrow keys or navigation controls to flip through pages" : "Scroll through your passport. Tap a stamp to inspect it."}
+            {desktop ? "Use arrow keys or navigation controls to flip through pages" : "Scroll through your passport. Tap a stamp to open its module."}
           </span>
         </div>
 
@@ -235,7 +206,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         <nav aria-label="Jump to development path" className="mb-6 flex flex-wrap gap-2">
           <button
             type="button"
-            disabled={!!turn || submittingReview}
+            disabled={!!turn}
             onClick={() => goTo(0)}
             className={`rounded-full border px-3 py-2 text-xs font-semibold cursor-pointer disabled:opacity-40 transition-colors ${
               spread === 0
@@ -255,7 +226,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
               <button
                 type="button"
                 key={path.path}
-                disabled={!!turn || submittingReview}
+                disabled={!!turn}
                 onClick={() => goTo(targetSpread)}
                 className={`rounded-full border px-3 py-2 text-xs font-semibold cursor-pointer disabled:opacity-40 transition-colors flex items-center gap-1.5 ${
                   isSelected
@@ -280,7 +251,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
           {data.archivedMilestones?.length > 0 && (
             <button
               type="button"
-              disabled={!!turn || submittingReview}
+              disabled={!!turn}
               onClick={() => goTo(totalSpreads - 1)}
               className={`rounded-full border px-3 py-2 text-xs font-semibold cursor-pointer disabled:opacity-40 transition-colors ${
                 spread === totalSpreads - 1
@@ -294,7 +265,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         </nav>
 
         {!desktop && <div aria-label="Passport page cards" className="mobile-passport space-y-4">
-          {pages.map((page, index) => <div key={page.number} id={`${detailPanelId}-page-${index}`} className={`min-w-0 scroll-mt-4 rounded-xl border border-beat-gold/30 shadow-sm ${page.kind === "path" || page.kind === "exempt_stamp" ? "mobile-path-divider" : ""} ${page.kind === "cover" ? "mobile-passport-cover" : ""}`}><BookPage page={page} data={data} onInspect={inspectStamp} detailPanelId={detailPanelId} /></div>)}
+          {pages.map((page, index) => <div key={page.number} id={`${detailPanelId}-page-${index}`} className={`min-w-0 scroll-mt-4 rounded-xl border border-beat-gold/30 shadow-sm ${page.kind === "path" || page.kind === "exempt_stamp" ? "mobile-path-divider" : ""} ${page.kind === "cover" ? "mobile-passport-cover" : ""}`}><BookPage page={page} data={data} /></div>)}
         </div>}
         {desktop && <>
         {/* 3D Flip-Book Spreads Container */}
@@ -303,14 +274,10 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             <BookPage
               page={pages[spread * 2]}
               data={data}
-              onInspect={inspectStamp}
-              detailPanelId={detailPanelId}
             />
             <BookPage
               page={pages[spread * 2 + 1]}
               data={data}
-              onInspect={inspectStamp}
-              detailPanelId={detailPanelId}
             />
             {turn && (
               <>
@@ -348,7 +315,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         <nav aria-label="Passport pages" className="flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
-            disabled={spread === 0 || !!turn || submittingReview}
+            disabled={spread === 0 || !!turn}
             onClick={() => goTo(spread - 1)}
             className="inline-flex items-center gap-1 rounded-lg border border-beat-gold/40 px-3 py-2 text-xs font-bold disabled:opacity-40 cursor-pointer hover:bg-beat-canvas transition-colors"
           >
@@ -360,7 +327,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             <span className="sr-only">Jump to spread</span>
             <select
               value={spread}
-              disabled={!!turn || submittingReview}
+              disabled={!!turn}
               onChange={(e) => goTo(Number(e.target.value))}
               className="rounded-lg border border-beat-gold/40 bg-white p-2 text-xs font-semibold text-beat-maroon cursor-pointer"
             >
@@ -374,7 +341,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
 
           <button
             type="button"
-            disabled={spread >= totalSpreads - 1 || !!turn || submittingReview}
+            disabled={spread >= totalSpreads - 1 || !!turn}
             onClick={() => goTo(spread + 1)}
             className="inline-flex items-center gap-1 rounded-lg bg-beat-maroon px-3 py-2 text-xs font-bold text-white disabled:opacity-40 cursor-pointer hover:bg-beat-maroon-dark transition-colors"
           >
@@ -389,30 +356,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
         </>}
       </section>
 
-      {/* Stamp Inspection Callout Panel */}
-      <StampDetailCallout
-        milestone={selectedStamp}
-        id={detailPanelId}
-        onSubmittingChange={(pending) => {
-          reviewLock.current = pending;
-          setSubmittingReview(pending);
-        }}
-        onQueued={(milestoneId, note) =>
-          setQueuedNotes((previous) => ({ ...previous, [milestoneId]: note }))
-        }
-      />
 
-      <p className="sr-only" role="status">
-        {selectedStamp
-          ? `${selectedStamp.title}: ${
-              selectedStamp.status === "VERIFIED"
-                ? "Verified and stamped"
-                : selectedStamp.status === "READY_FOR_REVIEW"
-                ? "In review"
-                : "Incomplete"
-            }. Details updated below the booklet.`
-          : "Hover, focus, or tap a stamp to view its details."}
-      </p>
     </div>
   );
 }

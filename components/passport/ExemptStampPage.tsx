@@ -1,5 +1,6 @@
 "use client";
 
+import { PathMascot } from "./PathMascot";
 import { Award, ShieldCheck } from "lucide-react";
 import type { PathProgressSummary } from "@/lib/db/repositories/trainee";
 
@@ -18,6 +19,8 @@ export function ExemptStampPage({ path, roleName }: ExemptStampPageProps) {
       <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
         <Award className="h-64 w-64 text-beat-maroon" />
       </div>
+
+      <PathMascot path={path?.path} />
 
       {/* Official Circular Seal */}
       <div className="relative flex flex-col items-center justify-center w-56 h-56 rounded-full border-2 border-dashed border-beat-gold/60 p-6 bg-beat-canvas/30 shadow-inner">

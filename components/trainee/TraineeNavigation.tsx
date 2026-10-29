@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, LayoutDashboard } from "lucide-react";
+import { StampNotifications } from "./StampNotifications";
 import { SignOutButton } from "@/components/navigation/SignOutButton";
 
 interface TraineeNavigationProps {
@@ -45,6 +46,7 @@ export function TraineeNavigation({ fullName, traineeCode, signOut }: TraineeNav
           </nav>
 
           <div className="flex items-center gap-3 py-2 sm:gap-4">
+            <StampNotifications />
             <div className="hidden items-center gap-2.5 sm:flex">
               <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-beat-canvas text-xs font-bold text-beat-maroon">{initials}</span>
               <div className="hidden max-w-40 lg:block"><p className="truncate text-xs font-semibold text-beat-maroon" title={fullName}>{fullName}</p><p className="mt-0.5 text-[10px] text-beat-maroon/60">{traineeCode}</p></div>

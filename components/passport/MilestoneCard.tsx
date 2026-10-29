@@ -1,14 +1,13 @@
 import { PassportStamp } from "./PassportStamp";
-import { CheckCircle2, Clock, Lock, Send, UserCheck } from "lucide-react";
+import { CheckCircle2, Clock, Lock } from "lucide-react";
 import { MilestoneStatus } from "@/lib/types/models";
 import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
 
 interface MilestoneCardProps {
   milestone: EnrichedMilestone;
-  onRequestReview?: (milestone: EnrichedMilestone) => void;
 }
 
-export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps) {
+export function MilestoneCard({ milestone }: MilestoneCardProps) {
   const isVerified = milestone.status === MilestoneStatus.VERIFIED;
   const isReadyForReview = milestone.status === MilestoneStatus.READY_FOR_REVIEW;
   const isLocked = milestone.status === MilestoneStatus.LOCKED;
@@ -77,17 +76,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
             {milestone.description}
           </p>
 
-          {/* Trainee Reflection Note Banner */}
-          {milestone.traineeNote && (
-            <div className="mt-3 rounded-xl bg-beat-canvas p-3 border border-beat-border text-xs">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-beat-maroon/70">
-                Trainee Reflection Note
-              </p>
-              <p className="mt-0.5 text-beat-maroon italic">
-                &ldquo;{milestone.traineeNote}&rdquo;
-              </p>
-            </div>
-          )}
+
         </div>
 
         {/* Right: Gold Stamp OR Action Button */}
@@ -101,16 +90,7 @@ export function MilestoneCard({ milestone, onRequestReview }: MilestoneCardProps
             </div>
           )}
 
-          {isInProgress && onRequestReview && (
-            <button
-              type="button"
-              onClick={() => onRequestReview(milestone)}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-beat-canvas px-3.5 py-2 text-xs font-bold text-beat-maroon border border-beat-border hover:border-beat-gold hover:bg-beat-gold/10 hover:text-beat-maroon transition-all cursor-pointer shadow-sm"
-            >
-              <Send className="h-3.5 w-3.5 text-beat-gold" />
-              <span>Mark for Review</span>
-            </button>
-          )}
+
         </div>
       </div>
     </div>

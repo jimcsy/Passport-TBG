@@ -5,9 +5,13 @@ import type { EnrichedMilestone } from "@/lib/db/repositories/trainee";
 export function StampMetadata({ milestone }: { milestone: EnrichedMilestone }) {
   return <dl className="space-y-2 text-xs text-beat-maroon">
     <div><dt className="font-semibold">Milestone</dt><dd>{milestone.code}: {milestone.title}</dd></div>
+    <div><dt className="font-semibold">Status</dt><dd>{milestone.status === "VERIFIED" ? "Verified & Stamped" : milestone.status === "READY_FOR_REVIEW" ? "In Review" : milestone.status === "LOCKED" ? "Locked" : "In Progress"}</dd></div>
+    <div><dt className="font-semibold">Description</dt><dd>{milestone.description}</dd></div>
+    {milestone.status === "VERIFIED" && <>
     <div><dt className="font-semibold">Trainer</dt><dd>{milestone.trainerName || "Not recorded"}</dd></div>
     <div><dt className="font-semibold">Verified at</dt><dd>{milestone.verifiedAt ? new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" }).format(new Date(milestone.verifiedAt)) : "Not recorded"}</dd></div>
     <div><dt className="font-semibold">Verification hash</dt><dd className="font-mono">{milestone.verificationHash?.slice(0, 8) || "Not recorded"}</dd></div>
+    </>}
     {milestone.traineeNote && <div><dt className="font-semibold">Trainee reflection</dt><dd className="line-clamp-2 italic">{milestone.traineeNote}</dd></div>}
     {milestone.trainerNote && <div><dt className="font-semibold">Trainer feedback</dt><dd className="line-clamp-2">{milestone.trainerNote}</dd></div>}
   </dl>;

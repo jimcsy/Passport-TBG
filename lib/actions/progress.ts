@@ -104,19 +104,21 @@ export async function bulkVerifyMilestones(
 }
 
 /** Poll only the authenticated trainee's active, non-archived stamps. */
-export async function checkForNewStampsAction(since: string): Promise<{ hasNew: boolean; checkedAt: string }> {
+export async function checkForNewStampsAction(since: string): Promise<{ hasNew: boolean; checkedAt: string; awards: { id: string; path: string; title: string }[] }> {
   const session = await getTraineeSession();
   if (!session) throw new Error("Unauthorized trainee session");
   const after = new Date(since);
   if (!Number.isFinite(after.getTime())) throw new Error("Invalid stamp cursor");
   // Capture the upper bound before reading so approvals during the query cannot be skipped.
   const checkedAt = new Date();
-  const count = await prisma.traineeProgress.count({
+  const awards = await prisma.traineeProgress.findMany({
     where: {
       traineeId: session.id, isArchived: false, status: "VERIFIED",
       verifiedAt: { gt: after, lte: checkedAt },
       planNode: { planVersion: { assignments: { some: { traineeId: session.id, status: "ACTIVE" } } } },
     },
+    select: { id: true, planNode: { select: { path: true, title: true } } },
+    orderBy: [{ verifiedAt: "asc" }, { id: "asc" }],
   });
-  return { hasNew: count > 0, checkedAt: checkedAt.toISOString() };
+  return { hasNew: awards.length > 0, checkedAt: checkedAt.toISOString(), awards: awards.map(award => ({ id: award.id, path: award.planNode.path, title: award.planNode.title })) };
 }

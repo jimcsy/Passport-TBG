@@ -3,7 +3,12 @@
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, BookOpen, CheckCircle2, Clock, GraduationCap, GitBranch, AlertCircle, Archive } from "lucide-react";
+import Image from "next/image";
+import { STROBI_MASCOT_MAP } from "@/lib/constants/mascots";
+import { developmentPathHref } from "@/lib/paths/navigation";
+import { PathModules } from "./PathModules";
+import { StrobiBanner } from "./StrobiBanner";
+import { ArrowUpRight, BookOpen, GraduationCap, GitBranch, AlertCircle, Archive } from "lucide-react";
 import type { TraineePassportViewData } from "@/lib/db/repositories/trainee";
 import { PassportCover } from "@/components/passport/PassportCover";
 
@@ -24,8 +29,7 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
   const desktop = useMediaQuery("(min-width: 768px)");
   const [showAllModules, setShowAllModules] = useState(false);
   const [activePath, setActivePath] = useState(data.paths[0]?.path);
-  const selectedPath = data.paths.find(path => path.path === activePath);
-  const milestones = selectedPath?.milestones || [];
+  const milestones = data.paths.flatMap(path => path.milestones);
   const learning = [...milestones].sort((a, b) => {
     const priority = { IN_PROGRESS: 0, READY_FOR_REVIEW: 1, LOCKED: 2, VERIFIED: 3 };
     return priority[a.status] - priority[b.status] || a.orderIndex - b.orderIndex;
@@ -90,44 +94,21 @@ export function TraineeDashboard({ data, courses = upcomingCourses }: { data: Tr
       )}
 
       <section aria-labelledby="paths-title" className="space-y-4">
-        <div className="flex items-center justify-between gap-3"><h2 id="paths-title" className="text-xl font-semibold text-beat-maroon">Development paths</h2><span className="text-xs text-beat-maroon/60">5 tracks</span></div>
-        <div role="tablist" aria-label="Development paths" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {data.paths.map((path, index) => <button key={path.path} id={`path-tab-${path.path}`} role="tab" type="button" tabIndex={activePath === path.path ? 0 : -1} aria-selected={activePath === path.path} aria-controls="active-path-panel" onClick={() => setActivePath(path.path)}
-            onKeyDown={event => {
-              let next = index;
-              if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % data.paths.length;
-              else if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + data.paths.length) % data.paths.length;
-              else if (event.key === "Home") next = 0;
-              else if (event.key === "End") next = data.paths.length - 1;
-              else return;
-              event.preventDefault();
-              setActivePath(data.paths[next].path);
-              document.getElementById(`path-tab-${data.paths[next].path}`)?.focus();
-            }}
+        <div className="flex items-center justify-between gap-3"><h2 id="paths-title" className="text-xl font-semibold text-beat-maroon">Development paths</h2><span className="text-xs text-beat-maroon/60">{data.paths.length} tracks</span></div>
+        <StrobiBanner path={activePath} />
+        <nav aria-label="Development paths" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {data.paths.map((path, index) => <Link key={path.path} href={developmentPathHref(path.path)} aria-label={`Open ${path.title}`} onMouseEnter={() => setActivePath(path.path)} onFocus={() => setActivePath(path.path)}
             className={`flex flex-col rounded-lg border p-4 text-left transition-colors ${activePath === path.path ? "border-beat-gold bg-beat-maroon text-white shadow-sm" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}>
             <span className="text-[10px] font-bold uppercase tracking-widest text-beat-gold">Path {String(index + 1).padStart(2, "0")}</span>
-            <span className="mt-3 min-h-10 text-sm font-bold">{path.title}</span>
+            <span className="mt-3 flex min-h-10 items-center gap-2 text-sm font-bold">{STROBI_MASCOT_MAP[path.path] && <Image src={STROBI_MASCOT_MAP[path.path].imagePath} alt="" width={24} height={24} className="h-6 w-6 shrink-0 object-contain" />}{path.title}</span>
             <span className={`mt-4 h-1.5 w-full overflow-hidden rounded-full ${activePath === path.path ? "bg-white/15" : "bg-beat-gold/15"}`}><span className="block h-full rounded-full bg-beat-gold" style={{ width: `${path.percent}%` }} /></span>
             <span className="mt-2 flex w-full justify-between text-[11px]"><span>{path.verified}/{path.total} verified</span><span className={activePath === path.path ? "text-beat-gold" : "text-beat-maroon"}>{path.percent}%</span></span>
-          </button>)}
-        </div>
+          </Link>)}
+        </nav>
       </section>
-      <section id="active-path-panel" role="tabpanel" aria-labelledby={`path-tab-${activePath}`} className="space-y-4">
-        <div><h2 id="learning-title" className="text-xl font-bold text-beat-maroon">Continue learning</h2><p className="mt-1 text-xs text-beat-maroon/60">Your modules in {selectedPath?.title}</p></div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {learning.map(m => {
-            const completed = m.status === "VERIFIED";
-            const review = m.status === "READY_FOR_REVIEW";
-            const locked = m.status === "LOCKED";
-            const status = completed ? "Completed" : review ? "In Review" : locked ? "Not Started" : "In Progress";
-            return <article key={m.id} className="flex flex-col rounded-lg border border-beat-gold/20 bg-white p-5">
-              <div className="flex items-center justify-between gap-2"><span className="text-[10px] font-bold tracking-wide text-beat-maroon/60">{m.code}</span><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${completed ? "bg-beat-maroon text-beat-gold" : "bg-beat-gold/15 text-beat-maroon"}`}>{completed ? <CheckCircle2 className="h-3 w-3" /> : review ? <Clock className="h-3 w-3" /> : null}{status}</span></div>
-              <h3 className="mt-4 font-bold text-beat-maroon">{m.title}</h3><p className="mt-2 flex-1 text-xs leading-relaxed text-beat-maroon/70">{m.description}</p>
-              <Link href={`/trainee/dashboard/modules/${m.id}`} className="mt-5 inline-flex items-center gap-1 self-start text-xs font-bold text-beat-maroon underline decoration-beat-gold decoration-2 underline-offset-4">{completed ? "View approval" : review ? "View review status" : locked ? "View requirements" : "Continue module"}<ArrowUpRight className="h-3 w-3 text-beat-gold" /></Link>
-            </article>;
-          })}
-          {!learning.length && <p className="rounded-xl border border-dashed border-beat-gold/40 p-5 text-sm text-beat-maroon">Modules will appear here when this path is configured.</p>}
-        </div>
+      <section aria-labelledby="learning-title" className="space-y-4">
+        <div><h2 id="learning-title" className="text-xl font-bold text-beat-maroon">Continue learning</h2><p className="mt-1 text-xs text-beat-maroon/60">Your next modules across all development paths</p></div>
+        <PathModules milestones={learning} />
         {milestones.length > 3 && <button type="button" onClick={() => setShowAllModules(!showAllModules)} aria-expanded={showAllModules} className="text-xs font-bold text-beat-maroon underline decoration-beat-gold underline-offset-4">{showAllModules ? "Show fewer modules" : `View all ${milestones.length} modules`}</button>}
         <div className="grid gap-3 sm:grid-cols-2">{courses.map(course => <article key={course.id} className="flex items-start gap-3 rounded-xl border border-beat-gold/20 bg-white p-4"><GraduationCap className="h-6 w-6 shrink-0 text-beat-gold" /><div><p className="text-[10px] font-bold uppercase tracking-wider text-beat-maroon/60">LinkedIn Learning · {course.href ? "Available" : "Coming soon"}</p><h3 className="mt-1 text-sm font-bold text-beat-maroon">{course.title}</h3><p className="mt-1 text-xs text-beat-maroon/70">{course.description}</p><span className="mt-2 inline-block rounded-full bg-beat-gold/15 px-2 py-1 text-[10px] font-bold text-beat-maroon">Not Started</span>{course.href && <a href={course.href} target="_blank" rel="noopener noreferrer" className="ml-3 text-xs font-bold text-beat-maroon underline decoration-beat-gold underline-offset-4">Open course ↗</a>}</div></article>)}</div>
       </section>
