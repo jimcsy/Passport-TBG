@@ -29,14 +29,18 @@ export function VerificationHub({
   const router = useRouter();
   const searchParams = useSearchParams();
   const currentTabParam = searchParams.get("tab");
-  const [activeTab, setActiveTab] = useState<"queue" | "batch">(
+  const [selectedTab, setActiveTab] = useState<"queue" | "batch">(
     currentTabParam === "batch" ? "batch" : initialTab
   );
+
+  const focusedReview = searchParams.get("review");
+  const activeTab = focusedReview ? "queue" : selectedTab;
 
   const handleTabChange = (tab: "queue" | "batch") => {
     setActiveTab(tab);
     const params = new URLSearchParams(window.location.search);
     params.set("tab", tab);
+    params.delete("review");
     window.history.replaceState(null, "", `?${params.toString()}`);
   };
 
@@ -157,7 +161,7 @@ export function VerificationHub({
           ) : (
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {queueItems.map((item) => (
-                <QueueItemCard key={item.id} item={item} />
+                <QueueItemCard key={item.id} item={item} focused={focusedReview === item.id} />
               ))}
             </div>
           )}

@@ -281,3 +281,7 @@ The review token fingerprints submitted graph data and the relevant assignments,
 ### Stamp notification read state
 
 `StampNotificationRead` records the trainee ID, original verification hash, and first-open time. Its compound primary key prevents multiple sessions from celebrating the same award twice. The trainee relation cascades on deletion. Notification history comes from verified progress records; hashes deduplicate preserved awards across plan versions. Opening an unread award claims its read marker before showing Strobi; subsequent openings navigate to the current module. Notifications also include awards verified while the trainee was offline.
+
+### Trainer review notifications
+
+`ReviewNotificationRead` stores a request key and first-open time independently for each trainer. Notifications mirror the shared Review Queue: non-archived milestones awaiting review. Each item includes the trainee, milestone, and request time and opens the corresponding expanded queue card. Request keys incorporate trainee identity, original submission time, and milestone identity, preserving read state across ordinary plan revisions. Verified or archived requests leave the pending notification list. Opening a request does not verify it or clear another trainer's unread state.

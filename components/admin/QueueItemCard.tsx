@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -17,11 +17,19 @@ import type { ReviewQueueItem } from "@/lib/db/repositories/admin";
 
 interface QueueItemCardProps {
   item: ReviewQueueItem;
+  focused?: boolean;
 }
 
-export function QueueItemCard({ item }: QueueItemCardProps) {
+export function QueueItemCard({ item, focused = false }: QueueItemCardProps) {
   const router = useRouter();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(focused);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!focused) return;
+    setExpanded(true);
+    panel.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+    panel.current?.focus({ preventScroll: true });
+  }, [focused]);
   const [error, setError] = useState<string | null>(null);
   const [trainerNote, setTrainerNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
@@ -79,7 +87,7 @@ export function QueueItemCard({ item }: QueueItemCardProps) {
   }
 
   return (
-    <div className="rounded-xl bg-beat-card p-3 md:p-5 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all">
+    <div ref={panel} id={`review-${item.id}`} tabIndex={-1} className={`scroll-mt-6 outline-none focus-visible:ring-2 focus-visible:ring-beat-gold ${focused ? "ring-2 ring-beat-gold" : ""} rounded-xl bg-beat-card p-3 md:p-5 shadow-sm border border-beat-border space-y-4 hover:border-beat-gold/50 transition-all`}>
       {/* Top Header: Trainee Identity & Submission Time */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-beat-border">
         <div className="flex flex-wrap items-center gap-2.5">
