@@ -28,7 +28,7 @@ export function MilestoneCard({ milestone }: MilestoneCardProps) {
     >
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         {/* Left: Code, Title, Description */}
-        <div className="space-y-1.5 flex-1">
+        <div className="min-w-0 flex-1 space-y-1.5 break-words">
           <div className="flex items-center gap-2">
             <span
               className={`font-mono text-xs font-semibold px-2 py-0.5 rounded-md ${

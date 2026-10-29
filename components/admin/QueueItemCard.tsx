@@ -114,7 +114,7 @@ export function QueueItemCard({ item, focused = false }: QueueItemCardProps) {
         </div>
       </div>
 
-      <button type="button" aria-expanded={expanded} aria-controls={`queue-detail-${item.id}`} onClick={() => setExpanded(value => !value)} className="flex min-h-11 w-full items-center justify-between text-left text-sm font-semibold text-beat-maroon"><span>{item.milestone.code}: {item.milestone.title}</span><span>{expanded ? "− Hide details" : "+ Review details"}</span></button>
+      <button type="button" aria-expanded={expanded} aria-controls={`queue-detail-${item.id}`} onClick={() => setExpanded(value => !value)} className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-sm font-semibold text-beat-maroon"><span className="min-w-0 break-words">{item.milestone.code}: {item.milestone.title}</span><span className="shrink-0">{expanded ? "− Hide details" : "+ Review details"}</span></button>
       {expanded && <div id={`queue-detail-${item.id}`} className="space-y-4">
       <div className="flex flex-wrap justify-between gap-3 text-xs text-beat-muted"><span>{item.trainee.email} · {item.trainee.cohortBatch}</span><Link href={`/trainer/trainees/${item.traineeId}`} className="font-semibold text-beat-maroon underline">View passport</Link></div>
       {/* Middle: Milestone Details */}
