@@ -212,3 +212,9 @@ body {
 
 .portal-modal-panel { overflow-y: auto; }
 @media (min-width: 768px) { .portal-modal-panel { max-height: 90dvh; } }
+
+/* Mobile passport pages share a fixed frame; long page content scrolls inside it. */
+.mobile-passport-slider .passport-page { height: 100%; min-height: 0; padding: 16px; }
+.mobile-passport-slider .passport-page > div { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; }
+.mobile-passport-slider .passport-page > footer { flex-shrink: 0; margin-top: 12px; }
+.mobile-passport-slider .passport-page.bg-beat-maroon > div { justify-content: flex-start; padding: 24px 16px; }

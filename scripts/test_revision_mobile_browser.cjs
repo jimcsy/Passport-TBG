@@ -70,26 +70,34 @@ let browser, trainer, trainee, plan, libraries = [], stage = 'fixtures';
   for (const [page, name, region] of [[trainerPage, /^Review notifications/, 'Review notifications'], [traineePage, /^Notifications/, 'Stamp notifications']]) {
     for (const width of widths) {
       await page.setViewportSize({ width, height: 667 });
-      await page.getByRole('button', { name }).click();
-      const panel = page.getByRole('region', { name: region, exact: true });
+      const mobilePage = region === 'Stamp notifications' && width < 768;
+      await page.getByRole(mobilePage ? 'link' : 'button', { name }).click();
+      const panel = page.getByLabel(region, { exact: true });
       await panel.locator('li').first().waitFor();
       assert(await panel.evaluate(element => element.scrollWidth <= element.clientWidth + 1), `${region} content overflows at ${width}px`);
       const bounds = await panel.boundingBox();
       assert(bounds.x >= 0 && bounds.x + bounds.width <= width + 1, `${region} outside ${width}px viewport`);
-      assert(bounds.width <= 320, `${region} should stay compact`);
-      assert(bounds.y + bounds.height <= 668, `${region} extends below viewport`);
-      await page.keyboard.press('Escape');
+      if (mobilePage) {
+        assert.equal(await page.getByRole('button', { name: 'Close notifications', exact: true }).count(), 0);
+        assert(await page.getByRole('navigation', { name: 'Trainee navigation', exact: true }).isVisible());
+        await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+        await page.waitForURL('**/trainee/dashboard');
+      } else {
+        assert(bounds.width <= 320, `${region} should stay compact`);
+        assert(bounds.y + bounds.height <= 668, `${region} extends below viewport`);
+        await page.keyboard.press('Escape');
+      }
     }
   }
   for (const [page, name, region] of [[trainerPage, /^Review notifications/, 'Review notifications'], [traineePage, /^Notifications/, 'Stamp notifications']]) {
     await page.setViewportSize({ width: 844, height: 390 }); await settle(page);
     await page.getByRole('button', { name }).click();
-    const panel = page.getByRole('region', { name: region, exact: true });
+    const panel = page.getByLabel(region, { exact: true });
     const bounds = await panel.boundingBox();
     assert(bounds.y >= 0 && bounds.y + bounds.height <= 391, `${region} does not fit landscape: ${JSON.stringify(bounds)}`);
     await page.keyboard.press('Escape');
   }
-  console.log('PASS: compact trainee/trainer notification panels fit all mobile/tablet/desktop widths');
+  console.log('PASS: trainee mobile notification page and compact desktop/trainer panels fit all widths');
   stage = 'floating actions';
   await trainerPage.goto(origin + '/trainer', { waitUntil: 'networkidle' });
   for (const width of widths) {
@@ -122,6 +130,8 @@ let browser, trainer, trainee, plan, libraries = [], stage = 'fixtures';
   stage = 'mobile passport navigation';
   await traineePage.setViewportSize({ width: 320, height: 667 });
   await traineePage.goto(origin + '/trainee/dashboard/booklet', { waitUntil: 'networkidle' });
+  await traineePage.getByLabel('Jump to page', { exact: true }).selectOption('3');
+  await traineePage.getByRole('group', { name: /^Page 4 of/ }).waitFor();
   await traineePage.getByRole('link', { name: `${libraries[1].title}: incomplete, open module`, exact: true }).click();
   await traineePage.getByRole('heading', { name: 'Module details', exact: true }).waitFor();
   const materials = traineePage.getByRole('region', { name: 'Course materials', exact: true });
@@ -130,7 +140,7 @@ let browser, trainer, trainee, plan, libraries = [], stage = 'fixtures';
   await review.getByLabel('Add a reflection for your trainer (optional)', { exact: true }).fill('Mobile layout reflection');
   assert(await review.getByRole('button', { name: 'Submit for review', exact: true }).isEnabled());
   stage = 'short-screen stamp celebration';
-  await traineePage.getByRole('button', { name: /^Notifications/ }).click();
+  await traineePage.getByRole('link', { name: /^Notifications/ }).click();
   await traineePage.getByRole('button', { name: `Unread: ${libraries[2].title}`, exact: true }).click();
   const celebration = traineePage.getByRole('dialog', { name: 'New stamp earned!', exact: true });
   for (const size of [{width: 320, height: 568}, {width: 844, height: 390}]) {

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { clearTraineeSession, getTraineeSession } from "@/lib/auth/session";
+import { StampNotificationProvider } from "@/components/trainee/StampNotificationProvider";
 import { TraineeNavigation } from "@/components/trainee/TraineeNavigation";
 
 export default async function TraineeLayout({ children }: { children: React.ReactNode }) {
@@ -14,10 +15,12 @@ export default async function TraineeLayout({ children }: { children: React.Reac
 
   return (
     <div className="min-h-screen bg-beat-canvas">
+      <StampNotificationProvider>
       <TraineeNavigation fullName={session.fullName} traineeCode={session.traineeCode} signOut={signOut} />
-      <main id="trainee-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 outline-none sm:px-8 sm:py-8 xl:px-0">
+      <main id="trainee-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 outline-none sm:px-8 sm:pt-8 md:pb-8 xl:px-0">
         {children}
       </main>
+      </StampNotificationProvider>
     </div>
   );
 }

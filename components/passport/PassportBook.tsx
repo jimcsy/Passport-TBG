@@ -1,11 +1,12 @@
 "use client";
 
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Award, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import type { TraineePassportViewData } from "@/lib/db/repositories/trainee";
 import { buildDynamicPassportPages, type PassportBookPage } from "@/lib/passport/book";
 import { PassportStamp } from "./PassportStamp";
+import { MobilePassportSlider } from "./MobilePassportSlider";
 import { PathMascot } from "./PathMascot";
 import { ExemptStampPage } from "./ExemptStampPage";
 import { NotesEndorsementsPage } from "./NotesEndorsementsPage";
@@ -142,7 +143,6 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
     return map;
   }, [data.paths, pages]);
 
-  const detailPanelId = useId();
   const [spread, setSpread] = useState(0);
   const [turn, setTurn] = useState<{ from: number; to: number } | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>();
@@ -151,7 +151,7 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
   useEffect(() => () => { clearTimeout(timer.current); }, []);
 
   function goTo(next: number) {
-    if (!desktop) { document.getElementById(`${detailPanelId}-page-${next * 2}`)?.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+
     if (turnLock.current || next === spread || next < 0 || next >= totalSpreads)
       return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || Math.abs(next - spread) > 1) {
@@ -198,12 +198,12 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
             {pages.length}-page growth passport
           </span>
           <span className="text-xs text-beat-maroon/60">
-            {desktop ? "Use arrow keys or navigation controls to flip through pages" : "Scroll through your passport. Tap a stamp to open its module."}
+            {desktop ? "Use arrow keys or navigation controls to flip through pages" : "Swipe left or right to turn pages. Tap a stamp to open its module."}
           </span>
         </div>
 
         {/* Dynamic Path Navigation */}
-        <nav aria-label="Jump to development path" className="mb-6 flex flex-wrap gap-2">
+        {desktop && <nav aria-label="Jump to development path" className="mb-6 flex flex-wrap gap-2">
           <button
             type="button"
             disabled={!!turn}
@@ -262,11 +262,9 @@ export function PassportBook({ data }: { data: TraineePassportViewData }) {
               Endorsements
             </button>
           )}
-        </nav>
+        </nav>}
 
-        {!desktop && <div aria-label="Passport page cards" className="mobile-passport space-y-4">
-          {pages.map((page, index) => <div key={page.number} id={`${detailPanelId}-page-${index}`} className={`min-w-0 scroll-mt-4 rounded-xl border border-beat-gold/30 shadow-sm ${page.kind === "path" || page.kind === "exempt_stamp" ? "mobile-path-divider" : ""} ${page.kind === "cover" ? "mobile-passport-cover" : ""}`}><BookPage page={page} data={data} /></div>)}
-        </div>}
+        {!desktop && <MobilePassportSlider pages={pages} renderPage={page => <BookPage page={page} data={data} />} />}
         {desktop && <>
         {/* 3D Flip-Book Spreads Container */}
         <div className="pb-5">
