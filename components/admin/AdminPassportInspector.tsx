@@ -10,6 +10,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { verifyMilestone } from "@/lib/actions/progress";
+import { RevokeStampButton } from "./RevokeStampButton";
 import { MilestoneStatus } from "@/lib/types/models";
 import type { PathProgressSummary, EnrichedMilestone } from "@/lib/db/repositories/trainee";
 
@@ -26,6 +27,7 @@ export function AdminPassportInspector({
   const [activePathKey, setActivePathKey] = useState<string>(paths[0]?.path || "");
   const [pendingMilestoneId, setPendingMilestoneId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [notice, setNotice] = useState("");
 
   const activePath = paths.find((p) => p.path === activePathKey) || paths[0];
 
@@ -42,6 +44,7 @@ export function AdminPassportInspector({
 
   return (
     <div className="space-y-6">
+      {notice && <p role="status" className="rounded-lg border border-beat-gold/30 bg-white p-3 text-sm text-beat-maroon">{notice}</p>}
       {/* Path Selector Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
         {paths.map((p) => {
@@ -204,6 +207,7 @@ export function AdminPassportInspector({
                     {/* Trainer Stamp or 1-Click Verification Toggle */}
                     <div className="shrink-0 flex sm:flex-col items-center sm:items-end justify-between gap-2">
                       {isVerified ? (
+                        <>
                         <div className="passport-stamp px-3 py-1 text-[10px] bg-beat-gold/5 shadow-inner">
                           <div className="flex flex-col items-center text-center">
                             <span className="text-[9px] uppercase tracking-widest text-beat-gold-dark font-semibold">
@@ -217,6 +221,8 @@ export function AdminPassportInspector({
                             </span>
                           </div>
                         </div>
+                        {m.progressId && <RevokeStampButton traineeId={traineeId} progressId={m.progressId} verificationHash={m.verificationHash || null} title={m.title} onRevoked={() => setNotice(`Stamp revoked for “${m.title}”. The milestone is now In progress.`)} />}
+                        </>
                       ) : (
                         <button
                           type="button"

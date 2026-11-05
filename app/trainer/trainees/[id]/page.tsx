@@ -27,6 +27,7 @@ export default async function TraineeDetailPage({
 
   const path = data.plan ? await prisma.learningPath.findUnique({ where: { planId: data.plan.id } }) : null;
   const instance = path?.type === "INSTANCE" && path.traineeId === data.trainee.id ? path : null;
+  const revocations = await prisma.stampRevocation.findMany({ where: { traineeId: data.trainee.id }, orderBy: [{ revokedAt: "desc" }, { id: "desc" }], take: 20, include: { revokedBy: { select: { fullName: true } } } });
 
   return (
     <div className="space-y-6">
@@ -77,6 +78,16 @@ export default async function TraineeDetailPage({
           paths={data.paths}
         />
       </div>
+      {revocations.length > 0 && <details className="border-t border-beat-border pt-4">
+        <summary className="min-h-11 cursor-pointer text-sm font-semibold text-beat-maroon">Stamp revocation history</summary>
+        <p className="mt-2 text-xs text-beat-muted">Most recent 20 revocations. Original award records are retained for audit.</p>
+        <ul aria-label="Stamp revocation history" className="mt-3 divide-y divide-beat-border">{revocations.map(record => <li key={record.id} className="space-y-1 py-3 text-sm text-beat-maroon">
+          <p className="font-semibold">{record.milestoneCode} · {record.milestoneTitle}</p>
+          <p className="text-xs text-beat-maroon/75">Revoked by {record.revokedBy.fullName} · {new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Manila" }).format(record.revokedAt)}</p>
+          {record.verifiedAt && <p className="text-xs text-beat-maroon/75">Originally awarded {new Intl.DateTimeFormat("en-PH", { dateStyle: "medium", timeZone: "Asia/Manila" }).format(record.verifiedAt)}</p>}
+          <p className="break-words">{record.reason}</p>
+        </li>)}</ul>
+      </details>}
     </div>
   );
 }

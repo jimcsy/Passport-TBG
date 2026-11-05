@@ -5,10 +5,26 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "../db/prisma";
 import { getTraineeSession, getAdminSession } from "../auth/session";
 import { queueMilestoneForReview } from "../db/repositories/progress";
+import { revokeAward } from "../db/repositories/stamp-revocation";
+import type { StampRevocationInput } from "../validations/stamp-revocation";
 
 export interface ActionResult {
   success: boolean;
   error?: string;
+}
+
+export async function revokeStamp(input: StampRevocationInput): Promise<ActionResult> {
+  const session = await getAdminSession();
+  if (!session) return { success: false, error: "Unauthorized trainer session." };
+  try {
+    const result = await revokeAward(input, session.id);
+    if (!result.success) return result;
+    revalidatePath("/trainee/dashboard", "layout");
+    revalidatePath("/trainer", "layout");
+    return { success: true };
+  } catch {
+    return { success: false, error: "Unable to revoke this stamp. Refresh and try again." };
+  }
 }
 
 /**

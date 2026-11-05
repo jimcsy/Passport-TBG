@@ -24,6 +24,7 @@ model AdminUser {
   authoredPlans     TrainingPlan[]
   publishedVersions PlanVersion[]
   assignedTrainees  TraineePlanAssignment[]
+  stampRevocations StampRevocation[]
 }
 
 model Trainee {
@@ -45,6 +46,7 @@ model Trainee {
   planAssignments TraineePlanAssignment[]
   progressRecords TraineeProgress[]
   stampNotificationReads StampNotificationRead[]
+  stampRevocations StampRevocation[]
 
   @@index([traineeCode, email])
   @@index([restaurantBrand, branchLocation, cohortBatch])
@@ -184,6 +186,30 @@ model TraineeProgress {
 
   @@unique([traineeId, planNodeId])
   @@index([status])
+}
+
+// Preserve the original award when its active stamp is revoked.
+model StampRevocation {
+  id               String @id @default(cuid())
+  traineeId        String
+  awardKey         String
+  verificationHash String?
+  planNodeId       String
+  milestoneCode    String
+  milestoneTitle   String
+  verifiedBy       String?
+  verifiedAt       DateTime?
+  originalTrainerNote String?
+  originalRequestedAt DateTime?
+  revokedById      String
+  revokedAt        DateTime @default(now())
+  reason           String
+
+  trainee   Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  revokedBy AdminUser @relation(fields: [revokedById], references: [id], onDelete: Restrict)
+
+  @@unique([traineeId, awardKey])
+  @@index([traineeId, revokedAt])
 }
 
 model CourseMaterial {

@@ -36,6 +36,9 @@ export function StampNotifications({ view = "popover" }: { view?: "popover" | "p
 
   useEffect(() => { setOpen(false); }, [pathname, desktop]);
   useEffect(() => { if (view === "page") void refresh(); }, [view, refresh]);
+  useEffect(() => {
+    if (!loading && !error && award && !notifications.some(item => item.id === award.id)) setAward(null);
+  }, [notifications, loading, error, award]);
 
   async function openNotification(item: StampNotification) {
     if (opening.current) return;
