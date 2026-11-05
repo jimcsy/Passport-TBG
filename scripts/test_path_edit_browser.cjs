@@ -37,7 +37,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   stage = 'create working draft';
   await page.goto(`${origin}/trainer/plans/${plan.id}/builder`, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'New draft', exact: true }).click();
-  await page.getByRole('button', { name: 'Draft v2', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Save draft', exact: true }).waitFor();
   const nav = page.getByRole('navigation', { name: 'Focus development path' });
   await nav.getByRole('button', { name: /^Technical Skills/ }).click();
   await page.waitForTimeout(600);
@@ -116,6 +116,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   assert.equal(await page.locator(`.react-flow__edge[data-id=\"edge-root-${added.id}\"]`).count(), 1);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByLabel('Learning path outline').waitFor();
+  await page.getByRole('combobox', { name: 'Development path', exact: true }).selectOption('TECHNICAL');
   assert.ok((await page.getByLabel('Learning path outline').textContent()).includes('Operations'));
   assert.equal(await page.getByRole('button', { name: /^Rename / }).count(), 0);
   console.log('PASS: actual publish/sync, order persistence, auto-connected new milestone after reload, mobile path name, immutable published controls, and original progress rows/statuses/hashes retained');

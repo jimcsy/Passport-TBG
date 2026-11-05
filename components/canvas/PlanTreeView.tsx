@@ -12,15 +12,17 @@ interface PlanTreeViewProps {
   onDeleteNode: (id: string) => void;
   onAddMilestone: (path: DevelopmentPath) => void;
   onEditNode?: (id: string) => void;
+  onInspectNode?: (id: string) => void;
+  focusedPath?: DevelopmentPath | null;
   onUpdateNode?: (id: string, data: { title: string; description: string }) => void;
   onReorderMilestones: (path: DevelopmentPath, sourceIndex: number, targetIndex: number) => void;
 }
 
-export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMilestone, onEditNode, onUpdateNode, onRenamePath, onReorderMilestones }: PlanTreeViewProps) {
+export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMilestone, onEditNode, onInspectNode, focusedPath, onUpdateNode, onRenamePath, onReorderMilestones }: PlanTreeViewProps) {
   const dragging = useRef<{ path: DevelopmentPath; index: number } | null>(null);
   return <div aria-label="Learning path outline" className="min-w-0 space-y-4 p-3 md:p-5">
     <header><h3 className="text-sm font-semibold text-beat-maroon">Structured Path Outline</h3><p className="mt-1 text-xs text-beat-muted">Expand a milestone to inspect or edit it. Drag its handle or use the move buttons to reorder.</p></header>
-    {Object.values(DevelopmentPath).map(path => {
+    {Object.values(DevelopmentPath).filter(path => !focusedPath || path === focusedPath).map(path => {
       const items = nodes.filter(node => node.type === "milestone" && node.data.path === path).sort((a, b) => Number(a.data.orderIndex) - Number(b.data.orderIndex));
       return <details key={path} open className="rounded-lg border border-beat-border bg-white">
         <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg bg-beat-canvas p-3 text-sm font-semibold text-beat-maroon"><span>{String(nodes.find(node => node.type === "pathRoot" && node.data.path === path)?.data.title || DEVELOPMENT_PATHS[path].title)}</span><span className="text-xs">{items.length} milestones · Expand / collapse</span></summary>
@@ -44,6 +46,7 @@ export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMiles
                   {!readOnly && onEditNode && <button type="button" onClick={() => onEditNode(node.id)} className="beat-control">Stamp design / materials</button>}
                 </div>
               </details>
+              {onInspectNode && <button type="button" aria-label={`Inspect ${node.data.code}`} onClick={() => onInspectNode(node.id)} className="beat-control shrink-0">Inspect</button>}
             </div>
             {!readOnly && <div className="mt-2 flex flex-wrap justify-end gap-2"><button type="button" aria-label={`Move ${node.data.code} up`} disabled={index === 0} onClick={() => onReorderMilestones(path, index, index - 1)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border disabled:opacity-30"><ArrowUp className="h-4 w-4" /></button><button type="button" aria-label={`Move ${node.data.code} down`} disabled={index === items.length - 1} onClick={() => onReorderMilestones(path, index, index + 1)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border disabled:opacity-30"><ArrowDown className="h-4 w-4" /></button><button type="button" aria-label={`Delete ${node.data.code}`} onClick={() => onDeleteNode(node.id)} className="flex h-11 w-11 items-center justify-center rounded border border-beat-border"><Trash2 className="h-4 w-4" /></button></div>}
           </article>)}

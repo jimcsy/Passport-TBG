@@ -1,7 +1,7 @@
 "use client";
 
 import { MaterialListPanel } from "@/components/admin/MaterialListPanel";
-import { resolveStampDesign, type StampDesignKey } from "@/lib/stamps/catalog";
+import { resolveStampDesign, STAMP_DESIGNS, type StampDesignKey } from "@/lib/stamps/catalog";
 import { StampDesignPicker } from "./StampDesignPicker";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -46,6 +46,8 @@ interface EditMilestoneModalProps {
   existingCodes: Set<string>;
   onSave: (updated: EditableMilestoneTarget) => void;
   onMaterialCountChange?: (count: number) => void;
+  presentation?: "modal" | "inspector";
+  readOnly?: boolean;
 }
 
 const PATH_OPTIONS = [
@@ -63,32 +65,45 @@ export function EditMilestoneModal({
   existingCodes,
   onSave,
   onMaterialCountChange,
+  presentation = "modal",
+  readOnly = false,
 }: EditMilestoneModalProps) {
-  const [stampDesign, setStampDesign] = useState<StampDesignKey>("ONBOARDING_SEAL");
-  const [code, setCode] = useState("");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [path, setPath] = useState<DevelopmentPath>(DevelopmentPath.TECHNICAL);
+  type MilestoneFields = EditCustomMilestoneForm & { stampDesign: StampDesignKey };
+  const [stagedEdits, setStagedEdits] = useState<Record<string, MilestoneFields>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const contextKey = milestone ? `${milestone.libraryEdit ? "library" : "node"}:${milestone.nodeId || milestone.id || milestone.code}` : "";
+  const fields = stagedEdits[contextKey] || {
+    stampDesign: resolveStampDesign(milestone?.stampDesign, milestone?.path || DevelopmentPath.TECHNICAL),
+    code: milestone?.code || "",
+    title: milestone?.title || "",
+    description: milestone?.description || "",
+    path: milestone?.path || DevelopmentPath.TECHNICAL,
+  };
+  const { stampDesign, code, title, description, path } = fields;
 
-  useEffect(() => {
-    if (milestone && isOpen) {
-      setStampDesign(resolveStampDesign(milestone.stampDesign, milestone.path));
-      setCode(milestone.code);
-      setTitle(milestone.title);
-      setDescription(milestone.description);
-      setPath(milestone.path);
-      setErrors({});
-    }
-  }, [milestone, isOpen]);
+  function stage(changes: Partial<MilestoneFields>) {
+    setStagedEdits(previous => ({ ...previous, [contextKey]: { ...fields, ...changes } }));
+  }
+
+  function discardStagedEdits() {
+    setStagedEdits(previous => { const next = { ...previous }; delete next[contextKey]; return next; });
+  }
+
+  function discardAndClose() {
+    discardStagedEdits();
+    onClose();
+  }
+
+  useEffect(() => { setErrors({}); }, [contextKey, isOpen]);
 
   if (!isOpen || !milestone) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (readOnly) return;
     setErrors({});
 
-    if (milestone.designOnly) { onSave({ ...milestone, stampDesign }); onClose(); return; }
+    if (milestone.designOnly) { discardStagedEdits(); onSave({ ...milestone, stampDesign }); onClose(); return; }
 
     const result = EditCustomMilestoneSchema.safeParse({
       code: code.trim().toUpperCase(),
@@ -113,6 +128,7 @@ export function EditMilestoneModal({
       return;
     }
 
+    discardStagedEdits();
     onSave({
       id: milestone.id,
       nodeId: milestone.nodeId,
@@ -130,34 +146,35 @@ export function EditMilestoneModal({
 
   return (
     <div
-      className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
-      onClick={onClose}
+      className={presentation === "inspector" ? "flex min-h-0 flex-1 flex-col" : "portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"}
+      onClick={presentation === "modal" ? discardAndClose : undefined}
     >
       <div
-        role="dialog"
-        aria-modal="true"
+        role={presentation === "modal" ? "dialog" : "region"}
+        aria-modal={presentation === "modal" ? true : undefined}
         aria-labelledby="edit-milestone-heading"
-        className="portal-modal-panel max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-beat-border bg-white p-6 text-beat-maroon shadow-lg"
+        className={presentation === "inspector" ? "min-h-0 flex-1 overflow-y-auto bg-white p-4 text-beat-maroon" : "portal-modal-panel max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-xl border border-beat-border bg-white p-6 text-beat-maroon shadow-lg"}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-beat-border">
+        <div className={`flex items-start justify-between gap-3 border-b border-beat-border bg-white pb-4 ${presentation === "inspector" ? "sticky top-0 z-10" : ""}`}>
           <div className="flex items-center gap-2.5">
             <div>
               <h3 id="edit-milestone-heading" className="text-base font-semibold text-beat-maroon">
-                {milestone.libraryEdit ? "Edit shared library milestone" : "Edit milestone in this draft"}
+                {readOnly ? "Milestone details" : milestone.libraryEdit ? "Edit shared library milestone" : "Edit milestone in this draft"}
               </h3>
               <p className="text-xs text-beat-muted">
                 {milestone.code}
               </p>
+              {presentation === "inspector" && <p className="mt-2 break-words text-sm font-semibold leading-relaxed">{milestone.title}</p>}
             </div>
           </div>
 
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Close edit modal"
-            className="rounded-full p-2 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
+            onClick={discardAndClose}
+            aria-label={presentation === "inspector" ? "Close inspector" : "Close edit modal"}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-beat-maroon/75 hover:bg-beat-canvas"
           >
             <X className="h-5 w-5" />
           </button>
@@ -165,8 +182,10 @@ export function EditMilestoneModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <StampDesignPicker value={stampDesign} onChange={setStampDesign} />
-          <fieldset disabled={milestone.designOnly} className="space-y-4 disabled:opacity-60">
+          {readOnly && <p className="text-xs text-beat-maroon/75">Published version · Read only</p>}
+          {presentation === "inspector" && !readOnly && <p className="text-xs leading-relaxed text-beat-maroon/75">Save changes here to apply this milestone to your draft. Edits stay available while you inspect other milestones.</p>}
+          {presentation === "inspector" ? <details className="border-b border-beat-border pb-2"><summary className="min-h-11 cursor-pointer text-xs font-semibold">Stamp design · {STAMP_DESIGNS[stampDesign].label}</summary><fieldset disabled={readOnly}><StampDesignPicker compact value={stampDesign} onChange={value => { stage({ stampDesign: value }); }} /></fieldset></details> : <fieldset disabled={readOnly}><StampDesignPicker value={stampDesign} onChange={value => stage({ stampDesign: value })} /></fieldset>}
+          <fieldset disabled={readOnly || milestone.designOnly} className="space-y-4 disabled:opacity-60">
           {/* Target Track */}
           <div>
             <label htmlFor="editMilestonePath" className="block text-xs font-bold text-beat-maroon mb-1">
@@ -175,7 +194,7 @@ export function EditMilestoneModal({
             <select
               id="editMilestonePath"
               value={path}
-              onChange={(e) => { setPath(e.target.value as DevelopmentPath); setStampDesign(resolveStampDesign(undefined, e.target.value)); }}
+              onChange={(e) => { const nextPath = e.target.value as DevelopmentPath; const nextDesign = resolveStampDesign(undefined, nextPath); stage({ path: nextPath, stampDesign: nextDesign }); }}
               className="w-full rounded-md border border-beat-border bg-white px-3.5 py-2.5 text-xs font-medium text-beat-maroon focus:border-beat-gold focus:outline-hidden cursor-pointer"
             >
               {PATH_OPTIONS.map((opt) => (
@@ -198,7 +217,7 @@ export function EditMilestoneModal({
               id="editMilestoneCode"
               type="text"
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => { const value = e.target.value.toUpperCase(); stage({ code: value }); }}
               placeholder="e.g. TECH-CUSTOM-01"
               className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 font-mono text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
                 errors.code ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
@@ -221,7 +240,7 @@ export function EditMilestoneModal({
               id="editMilestoneTitle"
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { stage({ title: e.target.value }); }}
               placeholder="e.g. Cloud Systems & Automated Deployments"
               className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
                 errors.title ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
@@ -244,7 +263,7 @@ export function EditMilestoneModal({
               id="editMilestoneDesc"
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => { stage({ description: e.target.value }); }}
               placeholder="Describe the skills and verification criteria for this milestone..."
               className={`w-full rounded-xl border bg-beat-canvas p-3 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
                 errors.description ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
@@ -259,23 +278,23 @@ export function EditMilestoneModal({
           </div>
 
           </fieldset>
-          {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Save the draft and reload it before attaching materials to a new custom milestone.</p>}
+          {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable={!readOnly} onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Save the draft and reload it before attaching materials to a new custom milestone.</p>}
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
               type="button"
-              onClick={onClose}
+              onClick={discardAndClose}
               className="rounded-xl border border-beat-border px-4 py-2.5 text-xs font-bold text-beat-muted hover:bg-beat-canvas transition-colors cursor-pointer"
             >
-              Cancel
+              {readOnly ? "Close" : "Cancel"}
             </button>
-            <button
+            {!readOnly && <button
               type="submit"
               className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon/90 transition-all cursor-pointer"
             >
               <Check className="h-3.5 w-3.5 text-beat-gold" />
               <span>Save changes</span>
-            </button>
+            </button>}
           </div>
         </form>
       </div>

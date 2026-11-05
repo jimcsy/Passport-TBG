@@ -30,24 +30,17 @@ import {
   ArrowLeft,
   LayoutGrid,
   Save,
-  RotateCcw,
   Maximize2,
-  GitBranch,
-  ShieldCheck,
-  PanelRightOpen,
-  Award,
-  AlertTriangle,
   Network,
   ListTree,
   Send,
   History,
-  CheckCircle2,
   Loader2,
-  Info,
-  Eye,
-  Lock,
-  Edit2,
   Plus,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronDown,
+  BookOpen,
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { getMilestonePlacement } from "@/lib/canvas/placement";
@@ -73,6 +66,7 @@ import { IndividualPublishModal } from "./IndividualPublishModal";
 import { PublishPlanModal } from "./PublishPlanModal";
 import { PlanVersionHistoryModal, type PlanVersionSummary } from "./PlanVersionHistoryModal";
 import { CanvasNotification, type CanvasNotice } from "./CanvasNotification";
+import { BuilderInspector } from "./BuilderInspector";
 
 // Initial 5 Development Path Hubs definition
 const PLAN_OVERVIEW_ID = "plan-overview";
@@ -267,7 +261,8 @@ function PlanCanvasBuilderInner({
   const [notice, setNotice] = useState<CanvasNotice | null>(null);
   const dismissNotice = useCallback(() => setNotice(null), []);
   const setSaveMessage = useCallback((message: string | null) => setNotice(message ? { message, tone: "success" } : null), []);
-  const [isLibraryOpen, setIsLibraryOpen] = useState(true);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [isPathNavigationOpen, setIsPathNavigationOpen] = useState(true);
   const libraryReopenButton = useRef<HTMLButtonElement>(null);
   const libraryFocusRequested = useRef(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -283,6 +278,10 @@ function PlanCanvasBuilderInner({
   const effectiveViewMode = desktop ? viewMode : "tree";
 
   useEffect(() => {
+    setIsPathNavigationOpen(window.matchMedia("(min-width: 1280px)").matches);
+  }, [desktop]);
+
+  useEffect(() => {
     if (!libraryFocusRequested.current) return;
     libraryFocusRequested.current = false;
     if (isLibraryOpen) document.getElementById("plan-milestone-search")?.focus();
@@ -291,11 +290,12 @@ function PlanCanvasBuilderInner({
 
   function setLibraryVisible(visible: boolean) {
     libraryFocusRequested.current = true;
+    if (visible) setEditingMilestone(null);
+    if (visible && !window.matchMedia("(min-width: 1280px)").matches) setIsPathNavigationOpen(false);
     setIsLibraryOpen(visible);
   }
 
   function openCanvas() {
-    if (effectiveViewMode !== "canvas") setIsLibraryOpen(true);
     setViewMode("canvas");
   }
 
@@ -331,6 +331,25 @@ function PlanCanvasBuilderInner({
   );
   const [nodes, setNodes, onNodesChange] = useNodesState(initialTree.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialTree.edges);
+  const canvasElement = useRef<HTMLDivElement>(null);
+  const viewportNodes = useRef(nodes);
+  viewportNodes.current = nodes;
+
+  // Panels change the available viewport, not the graph or curriculum order.
+  useEffect(() => {
+    const element = canvasElement.current;
+    if (!element || effectiveViewMode !== "canvas") return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const target = editingMilestone?.nodeId;
+        setFocusRequest({ ids: target ? [target] : viewportNodes.current.filter(node => !focusedPath || node.data.path === focusedPath).map(node => node.id), detail: !!target });
+      });
+    });
+    observer.observe(element);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [effectiveViewMode, focusedPath, editingMilestone?.nodeId, isLibraryOpen, isPathNavigationOpen]);
 
   // Version management: switching, peeking, and read-only published view
   const [allVersions, setAllVersions] = useState<PlanVersionSummary[]>(versions);
@@ -342,6 +361,11 @@ function PlanCanvasBuilderInner({
   const [selectedVersionNumber, setSelectedVersionNumber] = useState(initialVersion.versionNumber);
   const [peekingVersionNumber, setPeekingVersionNumber] = useState<number | null>(null);
   const effectiveVersionNumber = peekingVersionNumber ?? selectedVersionNumber;
+
+  useEffect(() => {
+    setEditingMilestone(null);
+    setIsLibraryOpen(false);
+  }, [selectedVersionNumber]);
 
   const publishedVersion = useMemo(
     () => allVersions.find((v) => v.status === "PUBLISHED"),
@@ -914,6 +938,8 @@ function PlanCanvasBuilderInner({
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
 
+      setIsLibraryOpen(false);
+      if (!window.matchMedia("(min-width: 1280px)").matches) setIsPathNavigationOpen(false);
       setEditingMilestone({
         nodeId: node.id,
         id: (node.data.libraryMilestoneId as string) || undefined,
@@ -937,6 +963,7 @@ function PlanCanvasBuilderInner({
   const handleEditLibraryMilestone = useCallback(
     (milestone: LibraryMilestone) => {
       const canvasNode = nodes.find((n) => n.data.code === milestone.code);
+      setIsLibraryOpen(false);
       setEditingMilestone({
         nodeId: canvasNode?.id,
         id: milestone.id,
@@ -1288,230 +1315,86 @@ function PlanCanvasBuilderInner({
     }
   };
 
+  function focusPath(path: DevelopmentPath | null) {
+    setFocusedPath(path);
+    setFocusRequest({ ids: nodes.filter(node => !path || node.data.path === path).map(node => node.id), detail: false });
+    if (!window.matchMedia("(min-width: 1280px)").matches) setIsPathNavigationOpen(false);
+  }
+
+  function closeInspector() {
+    setIsLibraryOpen(false);
+    setEditingMilestone(null);
+  }
+
+  const versionStatus = peekingVersionNumber !== null
+    ? `Previewing published v${peekingVersionNumber}. Move away to return to your draft.`
+    : isViewingReadOnly
+    ? `Published v${effectiveVersionNumber} · Read only · ${activeTraineeCount} enrolled ${activeTraineeCount === 1 ? "trainee" : "trainees"}`
+    : publishedVersion
+    ? `Draft v${currentVersion.versionNumber} · ${retainedMilestonesCount} retained · ${newMilestonesCount} new. Trainees remain on published v${publishedVersion.versionNumber}.`
+    : `Draft v${currentVersion.versionNumber} · Publish to make this plan available for assignment.`;
+
   return (
-    <div className="relative flex min-w-0 min-h-[640px] md:h-[max(640px,calc(100dvh-12rem))] flex-col overflow-hidden rounded-lg border border-beat-gold/30 bg-white shadow-sm xl:h-[max(640px,calc(100dvh-9rem))]">
+    <div className="relative flex h-[calc(100dvh-16rem)] min-h-[24rem] min-w-0 flex-col overflow-hidden rounded-xl border border-beat-border bg-white md:h-[calc(100dvh-9rem)] md:min-h-[32rem]">
       <CanvasNotification notice={notice} onDismiss={dismissNotice} />
-      {/* Canvas Top Bar */}
-      <header className="z-10 grid shrink-0 grid-cols-1 items-center gap-4 border-b border-beat-border bg-white px-4 py-4 sm:px-6 xl:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            href="/trainer/plans"
-            aria-label="Back to training plans"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-beat-border text-beat-maroon transition-colors hover:bg-beat-canvas"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <h2 title={plan.title} className="min-w-0 truncate text-base font-semibold leading-tight text-beat-maroon">
-                {plan.title}
-              </h2>
-            </div>
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="max-w-40 truncate text-xs capitalize text-beat-maroon/60">
-                {plan.roleIdentifier.replace(/_/g, " ").toLowerCase()}
-              </span>
-
-              {/* Published and working-draft versions */}
-              <div role="group" className="inline-flex shrink-0 items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan version">
-                {publishedVersion && (
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchVersion(publishedVersion.versionNumber)}
-                    onMouseEnter={() => handleStartPeek(publishedVersion.versionNumber)}
-                    onMouseLeave={handleEndPeek}
-                    className="beat-segment"
-                    aria-pressed={effectiveVersionNumber === publishedVersion.versionNumber}
-                    title={`Published v${publishedVersion.versionNumber}: hover to preview, click to open`}
-                  >
-                    <span>Published v{publishedVersion.versionNumber}</span>
-                    {activeTraineeCount > 0 && (
-                      <span className="text-[10px] opacity-80">({activeTraineeCount})</span>
-                    )}
-                  </button>
-                )}
-
-                {draftVersion ? (
-                  <button
-                    type="button"
-                    onClick={() => handleSwitchVersion(draftVersion.versionNumber)}
-                    className="beat-segment"
-                    aria-pressed={effectiveVersionNumber === draftVersion.versionNumber}
-                    title={`Edit draft v${draftVersion.versionNumber}`}
-                  >
-                    <Edit2 className="h-3 w-3" />
-                    <span>Draft v{draftVersion.versionNumber}</span>
-
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleCreateNewDraft}
-                    disabled={isCreatingDraft}
-                    className="beat-segment"
-                    title={`Create working Draft v${nextDraftVersionNumber}`}
-                  >
-                    {isCreatingDraft ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-beat-maroon/60" />
-                    ) : (
-                      <Plus className="h-3 w-3 text-beat-maroon/60" />
-                    )}
-                    <span>New draft</span>
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setIsHistoryModalOpen(true)}
-                  className="rounded-md px-1.5 py-1 text-beat-maroon/60 hover:text-beat-maroon hover:bg-white transition-colors cursor-pointer"
-                  title="Version history"
-                  aria-label="Version history"
-                >
-                  <History className="h-3.5 w-3.5" />
-                </button>
-              </div>
-
-              <span role="status" aria-atomic="true" className="inline-flex h-5 w-24 shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-beat-maroon/60">
-                {hasUnsavedChanges && <><span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-beat-gold" />Unsaved edits</>}
-              </span>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-beat-maroon/60">
-              {isViewingReadOnly
-                ? `Published v${effectiveVersionNumber}. Create or open a draft to make changes.`
-                : "Add milestones and save your draft. Publish when it is ready for trainees."}
-            </p>
+      <header className="z-30 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-beat-border px-3 py-3 md:px-4">
+        <div className="flex min-w-0 flex-1 basis-full items-center gap-3 md:basis-0">
+          <Link href="/trainer/plans" aria-label="Back to training plans" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-beat-maroon hover:bg-beat-canvas"><ArrowLeft aria-hidden="true" className="h-4 w-4" /></Link>
+          <div className="min-w-0">
+            <h2 title={plan.title} className="truncate text-sm font-semibold text-beat-maroon md:text-base">{plan.title}</h2>
+            <p className="mt-1 text-xs text-beat-maroon/75">{isViewingReadOnly ? `Published v${effectiveVersionNumber}` : `Draft v${currentVersion.versionNumber}`}<span role="status" aria-atomic="true">{hasUnsavedChanges ? " · Unsaved edits" : ""}</span></p>
           </div>
         </div>
-
-        {/* Toolbar Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-
-          {/* View Mode Toggle (Canvas vs Outline) */}
-          <div role="group" className="hidden md:inline-flex items-center rounded-lg bg-beat-canvas p-0.5" aria-label="Plan view">
-            <button
-              type="button"
-              onClick={openCanvas}
-              className="beat-segment"
-              aria-pressed={effectiveViewMode === "canvas"}
-              aria-label="Canvas view"
-              title="Interactive Canvas View"
-            >
-              <Network className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Canvas</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("tree")}
-              className="beat-segment"
-              aria-pressed={effectiveViewMode === "tree"}
-              aria-label="Outline view"
-              title="Structured Outline View"
-            >
-              <ListTree className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Outline</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onLayout}
-            disabled={effectiveViewMode !== "canvas" || isSaving || isPublishing || isViewingReadOnly}
-            title={
-              isViewingReadOnly
-                ? "Layout cannot be changed on published version"
-                : viewMode === "tree"
-                ? "Arrange is available in Canvas view"
-                : "Arrange the canvas"
-            }
-            className="beat-control"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            <span>Arrange</span>
-          </button>
-
-          {isViewingReadOnly ? (
-            draftVersion ? (
-              <button
-                type="button"
-                onClick={() => handleSwitchVersion(draftVersion.versionNumber)}
-                className="beat-primary"
-              >
-                <Edit2 className="h-3.5 w-3.5" />
-                <span>Edit draft v{draftVersion.versionNumber}</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleCreateNewDraft}
-                disabled={isCreatingDraft}
-                className="beat-primary"
-              >
-                {isCreatingDraft ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-beat-gold" />
-                ) : (
-                  <Plus className="h-3.5 w-3.5 text-beat-gold" />
-                )}
-                <span>{isCreatingDraft ? "Creating…" : `Create draft v${nextDraftVersionNumber}`}</span>
-              </button>
-            )
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={onSaveDraft}
-                disabled={isSaving || isPublishing}
-                aria-busy={isSaving}
-                className="beat-control min-w-[118px]"
-              >
-                {isSaving ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-beat-gold" /> : <Save aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />}
-                <span>{isSaving ? "Saving…" : "Save draft"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setIsPublishModalOpen(true)}
-                disabled={isSaving || isPublishing}
-                className="beat-primary"
-              >
-                <Send className="h-3.5 w-3.5 text-beat-gold" />
-                <span>Publish</span>
-              </button>
-            </>
-          )}
+        <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">
+          <details className="relative" onKeyDown={event => { if (event.key === "Escape") { handleEndPeek(); event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs font-medium text-beat-maroon hover:bg-beat-canvas [&::-webkit-details-marker]:hidden"><History aria-hidden="true" className="h-4 w-4 sm:hidden" /><span className="sr-only sm:not-sr-only">Versions</span><ChevronDown aria-hidden="true" className="h-3.5 w-3.5" /></summary>
+            <div className="absolute left-0 z-40 mt-1 w-64 rounded-lg border border-beat-border bg-white p-2 text-xs text-beat-maroon md:left-auto md:right-0">
+              <p className="break-words px-2 py-2 text-beat-maroon/75">{plan.roleIdentifier.replace(/_/g, " ")}</p>
+              {publishedVersion && <button type="button" className="flex min-h-11 w-full items-center rounded-md px-3 text-left hover:bg-beat-canvas" aria-pressed={effectiveVersionNumber === publishedVersion.versionNumber} onMouseEnter={editingMilestone ? undefined : () => handleStartPeek(publishedVersion.versionNumber)} onMouseLeave={event => { if (event.currentTarget.closest("details")?.open) handleEndPeek(); }} onClick={event => { handleSwitchVersion(publishedVersion.versionNumber); event.currentTarget.closest("details")?.removeAttribute("open"); }}>Published v{publishedVersion.versionNumber} · {activeTraineeCount} enrolled</button>}
+              {draftVersion && <button type="button" className="flex min-h-11 w-full items-center rounded-md px-3 text-left hover:bg-beat-canvas" aria-pressed={effectiveVersionNumber === draftVersion.versionNumber} onClick={event => { handleSwitchVersion(draftVersion.versionNumber); event.currentTarget.closest("details")?.removeAttribute("open"); }}>Draft v{draftVersion.versionNumber}</button>}
+              <button type="button" className="flex min-h-11 w-full items-center gap-2 border-t border-beat-border px-3 text-left hover:bg-beat-canvas" onClick={event => { event.currentTarget.closest("details")?.removeAttribute("open"); setIsHistoryModalOpen(true); }}><History aria-hidden="true" className="h-4 w-4" />Version history</button>
+            </div>
+          </details>
+          {isViewingReadOnly ? draftVersion ? <button type="button" onClick={() => handleSwitchVersion(draftVersion.versionNumber)} className="beat-primary">Edit draft v{draftVersion.versionNumber}</button> : <button type="button" onClick={handleCreateNewDraft} disabled={isCreatingDraft} className="beat-primary">{isCreatingDraft ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Plus aria-hidden="true" className="h-4 w-4" />}{isCreatingDraft ? "Creating…" : "New draft"}</button> : <>
+            <button type="button" onClick={onSaveDraft} disabled={isSaving || isPublishing} aria-busy={isSaving} className="beat-control">{isSaving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-beat-gold" /> : <Save aria-hidden="true" className="h-4 w-4 text-beat-gold" />}{isSaving ? "Saving…" : "Save draft"}</button>
+            <button type="button" onClick={() => setIsPublishModalOpen(true)} disabled={isSaving || isPublishing} className="beat-primary"><Send aria-hidden="true" className="h-4 w-4 text-beat-gold" />Publish</button>
+          </>}
         </div>
       </header>
 
-      <aside aria-label="Version status" className="flex min-h-11 shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-beat-border bg-beat-canvas/60 px-4 py-2 text-xs text-beat-maroon/70 sm:px-6">
-        <div className="flex min-w-0 items-center gap-2">
-          {peekingVersionNumber !== null ? <Eye aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : isViewingReadOnly ? <Lock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" /> : <Edit2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />}
-          <p className="leading-relaxed">
-            {peekingVersionNumber !== null
-              ? `Previewing published v${peekingVersionNumber}. Move away to return to your draft.`
-              : isViewingReadOnly
-              ? `Published v${effectiveVersionNumber} · Read only · ${activeTraineeCount} enrolled ${activeTraineeCount === 1 ? "trainee" : "trainees"}`
-              : publishedVersion
-              ? `Draft v${currentVersion.versionNumber} · ${retainedMilestonesCount} retained · ${newMilestonesCount} new milestones. Trainees remain on published v${publishedVersion.versionNumber}.`
-              : `Draft v${currentVersion.versionNumber} · Publish to make this plan available for assignment.`}
-          </p>
+      <div className="z-20 flex shrink-0 flex-wrap items-center gap-2 border-b border-beat-border bg-beat-canvas px-3 py-2 text-beat-maroon md:px-4">
+        <button type="button" className="beat-control hidden md:inline-flex" aria-expanded={isPathNavigationOpen} aria-controls="builder-path-navigation" onClick={() => setIsPathNavigationOpen(previous => !previous)}>{isPathNavigationOpen ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}Paths</button>
+        <label className="min-w-0 flex-1 md:hidden"><span className="sr-only">Development path</span><select aria-label="Development path" value={focusedPath || ""} onChange={event => focusPath((event.target.value || null) as DevelopmentPath | null)} className="min-h-11 w-full rounded-md border border-beat-border bg-white px-2 text-xs"><option value="">Whole plan</option>{INITIAL_PATH_ROOTS.map(root => <option key={root.id} value={root.path}>{currentPathTitles[root.path] || root.title}</option>)}</select></label>
+        <div role="group" aria-label="Plan view" className="hidden items-center gap-1 md:flex">
+          <button type="button" className="beat-segment" aria-label="Canvas view" aria-pressed={effectiveViewMode === "canvas"} onClick={openCanvas}><Network aria-hidden="true" className="h-4 w-4" />Canvas</button>
+          <button type="button" className="beat-segment" aria-label="Outline view" aria-pressed={effectiveViewMode === "tree"} onClick={() => setViewMode("tree")}><ListTree aria-hidden="true" className="h-4 w-4" />Outline</button>
         </div>
-        {peekingVersionNumber !== null ? (
-          <button type="button" onClick={() => handleSwitchVersion(peekingVersionNumber)} className="shrink-0 font-medium text-beat-maroon underline decoration-beat-gold/60 underline-offset-4">Open published version</button>
-        ) : (
-          <button type="button" onClick={() => setIsHistoryModalOpen(true)} className="shrink-0 font-medium text-beat-maroon underline decoration-beat-gold/60 underline-offset-4">Version history</button>
-        )}
-      </aside>
+        <button id="builder-library-toggle" ref={libraryReopenButton} type="button" aria-label={isLibraryOpen ? "Close milestone library" : "Open milestone library"} aria-expanded={isLibraryOpen} aria-controls="builder-inspector" className="beat-control" onClick={() => setLibraryVisible(!isLibraryOpen)}><BookOpen aria-hidden="true" className="h-4 w-4" /><span>Milestones</span></button>
+        {effectiveViewMode === "canvas" && <details className="relative" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+          <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 rounded-md px-2 text-xs hover:bg-white [&::-webkit-details-marker]:hidden">Canvas options<ChevronDown aria-hidden="true" className="h-3 w-3" /></summary>
+          <div className="absolute left-0 z-40 mt-1 w-48 rounded-lg border border-beat-border bg-white p-1 text-xs">
+            <button type="button" className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 hover:bg-beat-canvas disabled:opacity-40" disabled={isSaving || isPublishing || isViewingReadOnly} onClick={event => { onLayout(); event.currentTarget.closest("details")?.removeAttribute("open"); }}><LayoutGrid aria-hidden="true" className="h-4 w-4" />Arrange</button>
+            <button type="button" className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 hover:bg-beat-canvas" onClick={event => { focusPath(null); event.currentTarget.closest("details")?.removeAttribute("open"); }}><Maximize2 aria-hidden="true" className="h-4 w-4" />Fit whole plan</button>
+          </div>
+        </details>}
+        <aside aria-label="Version status" title={versionStatus} className="min-w-0 basis-full text-xs leading-relaxed text-beat-maroon/75 xl:ml-auto xl:basis-auto xl:truncate">{versionStatus}</aside>
+      </div>
 
-      <nav aria-label="Focus development path" className="hidden md:flex shrink-0 items-center gap-2 overflow-x-auto border-b border-beat-gold/20 bg-beat-canvas px-4 py-3">
-        <button type="button" aria-pressed={focusedPath === null} onClick={() => { openCanvas(); setFocusedPath(null); setFocusRequest({ ids: nodes.map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === null ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon"}`}><Maximize2 className="h-3.5 w-3.5" />Whole plan</button>
-        {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => { openCanvas(); setFocusedPath(root.path); setFocusRequest({ ids: nodes.filter(node => node.data.path === root.path).map(node => node.id), detail: false }); }} className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold ${focusedPath === root.path ? "border-beat-maroon bg-beat-maroon text-white" : "border-beat-gold/20 bg-white text-beat-maroon hover:border-beat-gold"}`}><span>{currentPathTitles[root.path] || root.title}</span><span className="text-[10px] text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
-      </nav>
-
-      {/* Main Viewport: Canvas vs Tree View */}
-      <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {isPathNavigationOpen && <aside id="builder-path-navigation" aria-label="Development paths" className="absolute inset-y-0 left-0 z-10 hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-beat-border bg-white p-3 md:flex xl:static xl:z-auto">
+          <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-semibold text-beat-maroon">Development paths</h3><button type="button" aria-label="Collapse path navigation" className="flex h-9 w-9 items-center justify-center rounded-md text-beat-maroon hover:bg-beat-canvas" onClick={() => setIsPathNavigationOpen(false)}><PanelLeftClose aria-hidden="true" className="h-4 w-4" /></button></div>
+          <nav aria-label="Focus development path" className="space-y-1">
+            <button type="button" aria-pressed={focusedPath === null} onClick={() => focusPath(null)} className={`flex min-h-11 w-full items-center gap-2 rounded-md px-3 text-left text-xs font-semibold ${focusedPath === null ? "bg-beat-maroon text-white" : "text-beat-maroon hover:bg-beat-canvas"}`}><Maximize2 aria-hidden="true" className="h-4 w-4" />Whole plan</button>
+            {INITIAL_PATH_ROOTS.map(root => <button key={root.id} type="button" aria-pressed={focusedPath === root.path} onClick={() => focusPath(root.path)} className={`flex min-h-11 w-full items-center justify-between gap-3 rounded-md px-3 py-3 text-left text-xs font-semibold ${focusedPath === root.path ? "bg-beat-maroon text-white" : "text-beat-maroon hover:bg-beat-canvas"}`}><span className="min-w-0 break-words">{currentPathTitles[root.path] || root.title}</span><span className="tabular-nums text-beat-gold">{nodeCountMap[root.path] || 0}</span></button>)}
+          </nav>
+          <p className="mt-auto pt-6 text-xs leading-relaxed text-beat-maroon/75">{nodes.filter(node => node.type === "milestone").length} milestones · {activeTraineeCount} enrolled trainees</p>
+        </aside>}
       {effectiveViewMode === "tree" ? (
-        <div className="relative min-h-0 min-w-0 flex-1 bg-beat-canvas/30 md:overflow-y-auto">
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-y-auto bg-beat-canvas/30">
           <PlanTreeView
             nodes={nodes}
+            focusedPath={focusedPath}
+            onInspectNode={handleEditNode}
             onRenamePath={handleRenamePath}
             readOnly={isViewingReadOnly}
             onEditNode={handleEditNode}
@@ -1523,6 +1406,7 @@ function PlanCanvasBuilderInner({
         </div>
       ) : (
         <div
+          ref={canvasElement}
           className="beat-canvas relative min-h-0 min-w-0 flex-1"
           onDragOver={onDragOver}
           onDrop={onDrop}
@@ -1534,6 +1418,7 @@ function PlanCanvasBuilderInner({
             deleteKeyCode={null}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}
+            onNodeClick={(_, node) => { if (node.type === "milestone") handleEditNode(node.id); }}
             onNodesChange={onNodesChange}
             onNodeDragStop={(_, moved) => {
               if (isViewingReadOnly || moved.type !== "milestone") return;
@@ -1566,30 +1451,34 @@ function PlanCanvasBuilderInner({
               maskColor="rgba(250, 248, 244, 0.7)"
             />
             <Panel position="top-left" className="rounded-lg border border-beat-gold/20 bg-white px-3 py-2 text-[11px] text-beat-maroon/70">
-              Drop a milestone to add it to its path and focus it.
+              Select a milestone to inspect it. Drag to reorder within its path.
             </Panel>
           </ReactFlow>
         </div>
       )}
 
-      {/* Docked milestone library */}
-      <MilestoneLibraryDrawer
-        isOpen={isLibraryOpen}
-        onClose={() => setLibraryVisible(false)}
-        milestones={availableMilestones}
-        placedCodes={placedCodes}
-        onAddMilestone={addLibraryMilestone}
-        onEditMilestone={handleEditLibraryMilestone}
-        onDeleteMilestone={handleDeleteLibraryMilestone}
-        className="flex min-h-0 max-h-[45%] w-full shrink-0 flex-col border-t border-beat-gold/25 bg-white text-beat-maroon md:max-h-none md:w-72 md:border-l md:border-t-0 lg:w-80"
-      />
-      {!isLibraryOpen && (
-        <aside aria-label="Milestone library controls" className="flex shrink-0 justify-end border-t border-beat-border bg-white p-2 md:w-12 md:flex-col md:justify-start md:border-l md:border-t-0 md:px-1 md:py-3">
-          <button ref={libraryReopenButton} type="button" onClick={() => setLibraryVisible(true)} aria-label="Open milestone library" aria-controls="plan-milestone-library" aria-expanded={false} title="Open milestone library" className="flex h-10 w-10 items-center justify-center rounded-md text-beat-maroon/70 hover:bg-beat-canvas hover:text-beat-maroon">
-            <PanelRightOpen aria-hidden="true" className="h-5 w-5" />
-          </button>
-        </aside>
-      )}
+      <BuilderInspector open={isLibraryOpen || editingMilestone !== null} desktop={desktop} label={isLibraryOpen ? "Milestone library" : "Milestone inspector"} onClose={closeInspector}>
+        <MilestoneLibraryDrawer
+          isOpen={isLibraryOpen}
+          onClose={closeInspector}
+          milestones={availableMilestones}
+          placedCodes={placedCodes}
+          onAddMilestone={addLibraryMilestone}
+          onEditMilestone={handleEditLibraryMilestone}
+          onDeleteMilestone={handleDeleteLibraryMilestone}
+          className="flex min-h-0 flex-1 flex-col bg-white text-beat-maroon"
+        />
+        <EditMilestoneModal
+          isOpen={editingMilestone !== null}
+          presentation="inspector"
+          readOnly={isViewingReadOnly && !editingMilestone?.libraryEdit}
+          onClose={closeInspector}
+          milestone={editingMilestone}
+          existingCodes={placedCodes}
+          onSave={handleSaveEditedMilestone}
+          onMaterialCountChange={handleMaterialCountChange}
+        />
+      </BuilderInspector>
       </div>
 
       {/* Custom Milestone Creation Modal */}
@@ -1601,16 +1490,6 @@ function PlanCanvasBuilderInner({
         roleIdentifier={plan.roleIdentifier}
         existingCodes={placedCodes}
         onSubmit={handleCreateCustomMilestone}
-      />
-
-      {/* Edit Custom Milestone Modal */}
-      <EditMilestoneModal
-        isOpen={editingMilestone !== null}
-        onClose={() => setEditingMilestone(null)}
-        milestone={editingMilestone}
-        existingCodes={placedCodes}
-        onSave={handleSaveEditedMilestone}
-        onMaterialCountChange={handleMaterialCountChange}
       />
 
       {/* Publish Plan Modal */}

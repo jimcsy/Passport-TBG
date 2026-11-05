@@ -33,7 +33,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
   const publishedVersion = plan.versions.find((v) => v.status === "PUBLISHED");
 
   return (
-    <div className="h-full">
+    <div className="relative w-full md:left-[calc(50%-50vw+1rem)] md:w-[calc(100vw-2rem)]">
       <PlanCanvasBuilder
         plan={{
           id: plan.id,

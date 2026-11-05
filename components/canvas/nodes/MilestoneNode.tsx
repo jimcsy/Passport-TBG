@@ -23,12 +23,12 @@ export interface MilestoneNodeData {
   onDelete?: (nodeId: string) => void;
 }
 
-function MilestoneNodeComponent({ id, data }: { id: string; data: MilestoneNodeData }) {
+function MilestoneNodeComponent({ id, data, selected }: { id: string; data: MilestoneNodeData; selected?: boolean }) {
   return (
     <div
       title={data.versionTooltip || undefined}
       className={`group relative w-60 rounded-lg border bg-white p-4 text-beat-maroon shadow-sm transition-all select-none ${
-        data.versionTag === "new"
+        selected ? "border-beat-gold ring-1 ring-beat-gold" : data.versionTag === "new"
           ? "border-beat-gold/60 hover:border-beat-gold"
           : "border-beat-border hover:border-beat-gold"
       }`}

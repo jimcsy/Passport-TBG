@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createVariant, promoteInstanceToVariant, saveVariant, updateVariantMetadata } from "@/lib/actions/learning-paths";
@@ -12,11 +12,14 @@ export interface EditableVariant {
   id: string; planId: string; title: string; targetDepartment: string | null; targetPosition: string | null;
   nodes: PlanNodeInput[]; edges: PlanEdgeInput[]; pathTitles: PathTitles;
 }
-export function VariantEditor({ variant, instanceId, defaultDepartment = "", defaultPosition = "", initiallyOpen = false }: {
+export function VariantEditor({ variant, instanceId, defaultDepartment = "", defaultPosition = "", initiallyOpen = false, inline = false, onClose, onSaved }: {
   variant?: EditableVariant; instanceId?: string; defaultDepartment?: string; defaultPosition?: string; initiallyOpen?: boolean;
+  inline?: boolean; onClose?: () => void; onSaved?: () => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(initiallyOpen);
+  const [open, setOpen] = useState(inline || initiallyOpen);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const close = useCallback(() => { setOpen(false); onClose?.(); }, [onClose]);
   const [title, setTitle] = useState(variant?.title || "");
   const [department, setDepartment] = useState(variant?.targetDepartment || defaultDepartment);
   const [position, setPosition] = useState(variant?.targetPosition || defaultPosition);
@@ -32,10 +35,11 @@ export function VariantEditor({ variant, instanceId, defaultDepartment = "", def
   }, [initiallyOpen]);
   useEffect(() => {
     if (!open) return;
-    const dismiss = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending) setOpen(false); };
+    const dismiss = (event: KeyboardEvent) => { if (event.key === "Escape" && !pending && (!inline || titleInput.current?.form?.contains(event.target as Node))) close(); };
     document.addEventListener("keydown", dismiss);
     return () => document.removeEventListener("keydown", dismiss);
-  }, [open, pending]);
+  }, [open, pending, inline, close]);
+  useEffect(() => { if (inline && open) titleInput.current?.focus({ preventScroll: true }); }, [inline, open]);
   function begin() {
     setTitle(variant?.title || ""); setDepartment(variant?.targetDepartment || defaultDepartment); setPosition(variant?.targetPosition || defaultPosition);
     setNodes(variant?.nodes || []); setGraphDirty(false); setError(""); setOpen(true);
@@ -58,25 +62,25 @@ export function VariantEditor({ variant, instanceId, defaultDepartment = "", def
         } }) : await updateVariantMetadata({ ...metadata, variantId: variant.id })
         : await createVariant(metadata);
       if (!res.success) setError(res.error || "Unable to save variant.");
-      else { setOpen(false); router.refresh(); }
+      else { onSaved?.(); close(); router.refresh(); }
     } catch { setError("Unable to save variant. Please try again."); }
     finally { setPending(false); }
   }
   return <>
-    <button type="button" className="beat-control" onClick={begin}>{label}</button>
-    {open && <div className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label={label}>
-      <form onSubmit={submit} className="portal-modal-panel max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-beat-border bg-white p-5 text-beat-maroon">
-        <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">{label}</h2><button type="button" disabled={pending} className="beat-control" onClick={() => setOpen(false)}>Close</button></div>
+    {!inline && <button type="button" className="beat-control" onClick={begin}>{label}</button>}
+    {open && <div className={inline ? "text-beat-maroon" : "portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"} role={inline ? undefined : "dialog"} aria-modal={inline ? undefined : true} aria-label={inline ? undefined : label}>
+      <form aria-label={inline ? variant ? `Edit details for ${variant.title}` : "Create role variant" : undefined} onSubmit={submit} className={inline ? "w-full text-beat-maroon" : "portal-modal-panel max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-beat-border bg-white p-5 text-beat-maroon"}>
+        <div className="flex items-center justify-between gap-3"><h2 className={inline ? "text-sm font-semibold" : "text-lg font-bold"}>{inline ? variant ? "Variant details" : "Create role variant" : label}</h2><button type="button" disabled={pending} className="beat-control" onClick={close}>{inline ? "Cancel" : "Close"}</button></div>
         <p className="my-3 text-sm text-beat-muted">{instanceId ? "Copy the trainee’s active published path into a reusable draft. Their progress and stamps stay on their instance." : variant ? "Metadata changes appear in the catalog immediately. Node changes are saved as a draft; publish them in the Path Builder." : "Start a new role track with the five-pillar foundation, then customize its nodes."}</p>
         {error && <p role="alert" className="my-3 text-sm text-beat-maroon">{error}</p>}
-        <fieldset disabled={pending} className="space-y-4">
-          <label className="block text-sm font-semibold">Variant Title<input aria-label="Variant Title" required minLength={3} maxLength={100} value={title} onChange={e => setTitle(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3" /></label>
-          <label className="block text-sm font-semibold">Target Department<select aria-label="Target Department" required value={department} onChange={e => { setDepartment(e.target.value); setPosition(""); }} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3"><option value="">Select department</option>{TBG_DEPARTMENTS.map(value => <option key={value}>{value}</option>)}</select></label>
-          <label className="block text-sm font-semibold">Target Position<select aria-label="Target Position" required disabled={!positionsForDepartment(department).length} value={position} onChange={e => setPosition(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3 disabled:opacity-50"><option value="">Select position</option>{positionsForDepartment(department).map(value => <option key={value}>{value}</option>)}</select></label>
-          {variant && <details className="rounded-lg border border-beat-border p-3"><summary className="min-h-11 cursor-pointer font-semibold">Edit milestone nodes ({nodes.length})</summary>
+        <fieldset disabled={pending} className={inline ? "grid min-w-0 gap-4 md:grid-cols-3" : "space-y-4"}>
+          <label className="block min-w-0 text-sm font-semibold">Variant Title<input ref={titleInput} aria-label="Variant Title" required minLength={3} maxLength={100} value={title} onChange={e => setTitle(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3" /></label>
+          <label className="block min-w-0 text-sm font-semibold">Target Department<select aria-label="Target Department" required value={department} onChange={e => { setDepartment(e.target.value); setPosition(""); }} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3"><option value="">Select department</option>{TBG_DEPARTMENTS.map(value => <option key={value}>{value}</option>)}</select></label>
+          <label className="block min-w-0 text-sm font-semibold">Target Position<select aria-label="Target Position" required disabled={!positionsForDepartment(department).length} value={position} onChange={e => setPosition(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-beat-border p-3 disabled:opacity-50"><option value="">Select position</option>{positionsForDepartment(department).map(value => <option key={value}>{value}</option>)}</select></label>
+          {variant && <details className={inline ? "border-t border-beat-border pt-3 md:col-span-3" : "rounded-lg border border-beat-border p-3"}><summary className="min-h-11 cursor-pointer text-sm font-semibold">{inline ? "Quick milestone edits" : "Edit milestone nodes"} ({nodes.length})</summary>
             {FOUNDATION_PILLARS.map(pillar => <section key={pillar.path} className="mt-4 space-y-2" aria-label={pillar.title}>
               <h3 className="font-semibold">{variant.pathTitles[pillar.path] || pillar.title}</h3>
-              {nodes.map((node, index) => ({ node, index })).filter(({ node }) => node.path === pillar.path).sort((a, b) => a.node.orderIndex - b.node.orderIndex).map(({ node, index }, order) => <div key={node.id || index} className="rounded-lg border border-beat-border p-2">
+              {nodes.map((node, index) => ({ node, index })).filter(({ node }) => node.path === pillar.path).sort((a, b) => a.node.orderIndex - b.node.orderIndex).map(({ node, index }, order) => <div key={node.id || index} className={inline ? "border-b border-beat-border py-3" : "rounded-lg border border-beat-border p-2"}>
                 <p className="text-xs">{order + 1}. {node.code}</p>
                 <label className="block text-xs">Milestone title<input required minLength={2} maxLength={150} value={node.title} onChange={e => { setNodes(nodes.map((item, i) => i === index ? { ...item, title: e.target.value } : item)); setGraphDirty(true); }} className="my-1 min-h-11 w-full rounded border border-beat-border p-2" /></label>
                 <div className="flex flex-wrap gap-2"><button type="button" className="beat-control" aria-label={`Move ${node.code} up`} onClick={() => move(index, -1)}>Move up</button><button type="button" className="beat-control" aria-label={`Move ${node.code} down`} onClick={() => move(index, 1)}>Move down</button><button type="button" className="beat-control" aria-label={`Remove ${node.code}`} onClick={() => { setNodes(nodes.filter((_, i) => i !== index)); setGraphDirty(true); }}>Remove</button></div>
@@ -84,7 +88,7 @@ export function VariantEditor({ variant, instanceId, defaultDepartment = "", def
               <button type="button" className="beat-control" onClick={() => { setNodes([...nodes, { code: `ROLE-${Date.now().toString(36).toUpperCase()}`, title: "New role milestone", description: "Position-specific training milestone.", path: pillar.path, orderIndex: Math.max(0, ...nodes.filter(n => n.path === pillar.path).map(n => n.orderIndex)) + 1, posX: 0, posY: 0, isCustom: true }]); setGraphDirty(true); }}>Add milestone to {pillar.title}</button>
             </section>)}
           </details>}
-          <div className="flex flex-wrap justify-end gap-3 border-t border-beat-border pt-4">{variant && <Link className="beat-control" href={`/trainer/plans/${variant.planId}/builder`}>Open full Path Builder</Link>}<button type="submit" disabled={pending} className="beat-primary">{pending ? "Saving…" : instanceId ? "Create Reusable Variant" : variant ? "Save Variant" : "Create Variant"}</button></div>
+          <div className={`flex flex-wrap justify-end gap-3 border-t border-beat-border pt-4 ${inline ? "md:col-span-3" : ""}`}>{variant && <Link className="beat-control" href={`/trainer/plans/${variant.planId}/builder`}>Open full Path Builder</Link>}<button type="submit" disabled={pending} className="beat-primary">{pending ? "Saving…" : instanceId ? "Create Reusable Variant" : variant ? "Save Variant" : "Create Variant"}</button></div>
         </fieldset>
       </form>
     </div>}

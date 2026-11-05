@@ -43,11 +43,12 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
       const personalCode = `SC-${suffix.slice(-8)}-PERSONAL`;
       const definition = await prisma.milestoneDefinition.findUniqueOrThrow({ where: { code: personalCode } });
       personalDefinition = definition;
+      await page.getByRole('combobox', { name: 'Development path', exact: true }).selectOption('TECHNICAL');
       const outline = page.getByLabel('Learning path outline');
       const card = outline.locator('article[data-path="TECHNICAL"]').filter({ hasText: personalCode });
       await card.locator('summary').click();
       await card.getByRole('button', { name: 'Stamp design / materials', exact: true }).click();
-      const editor = page.getByRole('dialog', { name: 'Edit milestone in this draft', exact: true });
+      const editor = page.getByRole('dialog', { name: 'Milestone inspector', exact: true });
       await editor.locator('#editMilestoneTitle').fill('Personal title stays private');
       await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
       assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: definition.id } })).title, definition.title);
