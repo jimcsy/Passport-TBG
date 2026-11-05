@@ -102,6 +102,10 @@ npm run build
 
 ## 🐘 Supabase Migration Runbook
 
+For the current PostgreSQL deployment, apply checked-in migrations with
+`npx prisma migrate deploy`. See [database security](docs/database-security.md)
+for the RLS lockdown, deployment prerequisites, and verification steps.
+
 All database queries are strictly isolated in `lib/db/repositories/` and `lib/actions/`. When ready to graduate from local SQLite to Supabase (PostgreSQL):
 
 1. **Update `.env`**:
