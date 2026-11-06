@@ -279,6 +279,7 @@ function PlanCanvasBuilderInner({
   const milestoneSaving = useRef(false);
   const [editingMilestone, setEditingMilestone] = useState<EditableMilestoneTarget | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("tree");
+  const [stagedInspectorCount, setStagedInspectorCount] = useState(0);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [focusRequest, setFocusRequest] = useState<{ ids: string[]; detail: boolean } | null>(null);
   const [focusedPath, setFocusedPath] = useState<DevelopmentPath | null>(null);
@@ -1034,8 +1035,8 @@ function PlanCanvasBuilderInner({
         })
       );
 
-      setHasUnsavedChanges(true);
-
+      // The shared action already persisted matching draft metadata. Preserve any
+      // pre-existing unsaved plan edits without inventing a new draft-save requirement.
       setSaveMessage(`Shared milestone "${updated.code}" updated. Matching draft nodes were synchronized; published metadata is unchanged.`);
       return { success: true };
 
@@ -1328,13 +1329,14 @@ function PlanCanvasBuilderInner({
     setEditingMilestone(null);
   }
 
+  const versionState = isViewingReadOnly
+    ? `Published v${effectiveVersionNumber} · Read only`
+    : `Draft v${effectiveVersionNumber} · ${isSaving ? "Saving draft…" : hasUnsavedChanges ? "Unsaved plan changes" : "Saved draft"}${stagedInspectorCount ? ` · ${stagedInspectorCount} inspector ${stagedInspectorCount === 1 ? "form" : "forms"} not applied` : ""}`;
   const versionStatus = peekingVersionNumber !== null
-    ? `Previewing published v${peekingVersionNumber}. Move away to return to your draft.`
+    ? "Preview only. Return to the working draft to make changes."
     : isViewingReadOnly
-    ? `Published v${effectiveVersionNumber} · Read only · ${activeTraineeCount} enrolled ${activeTraineeCount === 1 ? "trainee" : "trainees"}`
-    : publishedVersion
-    ? `Draft v${currentVersion.versionNumber} · ${retainedMilestonesCount} retained · ${newMilestonesCount} new. Trainees remain on published v${publishedVersion.versionNumber}.`
-    : `Draft v${currentVersion.versionNumber} · Publish to make this plan available for assignment.`;
+    ? `${activeTraineeCount} enrolled ${activeTraineeCount === 1 ? "trainee" : "trainees"}. Open the working draft to edit.`
+    : `${publishedVersion ? `${retainedMilestonesCount} retained · ${newMilestonesCount} new. Save draft does not update trainees; review recipient options in Publish.` : "Save draft stores applied plan changes. Publish makes the plan available for assignment."}${stagedInspectorCount ? " Unapplied inspector fields are excluded." : ""}`;
 
   const intendedMilestone = dismissedAddIntent ? undefined : availableMilestones.find(item => item.id === addMilestoneId);
   const isPlaced = (milestone: LibraryMilestone) => placedCodes.has(milestone.code) || nodes.some(node => node.data.libraryMilestoneId === milestone.id);
@@ -1360,7 +1362,7 @@ function PlanCanvasBuilderInner({
           <Link href="/trainer/plans" aria-label="Back to training plans" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-beat-maroon hover:bg-beat-canvas"><ArrowLeft aria-hidden="true" className="h-4 w-4" /></Link>
           <div className="min-w-0">
             <h2 title={plan.title} className="truncate text-sm font-semibold text-beat-maroon md:text-base">{plan.title}</h2>
-            <p className="mt-1 text-xs text-beat-maroon/75">{isViewingReadOnly ? `Published v${effectiveVersionNumber}` : `Draft v${currentVersion.versionNumber}`}<span role="status" aria-atomic="true">{hasUnsavedChanges ? " · Unsaved edits" : ""}</span></p>
+            <p role="status" aria-live="polite" aria-atomic="true" className="mt-1 text-xs text-beat-maroon/75">{versionState}</p>
           </div>
         </div>
         <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">
@@ -1374,8 +1376,8 @@ function PlanCanvasBuilderInner({
             </div>
           </details>
           {isViewingReadOnly ? draftVersion ? <button type="button" onClick={() => handleSwitchVersion(draftVersion.versionNumber)} className="beat-primary">Edit draft v{draftVersion.versionNumber}</button> : <button type="button" onClick={handleCreateNewDraft} disabled={isCreatingDraft} className="beat-primary">{isCreatingDraft ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : <Plus aria-hidden="true" className="h-4 w-4" />}{isCreatingDraft ? "Creating…" : "New draft"}</button> : <>
-            <button type="button" onClick={onSaveDraft} disabled={isSaving || isPublishing} aria-busy={isSaving} className="beat-control">{isSaving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-beat-gold" /> : <Save aria-hidden="true" className="h-4 w-4 text-beat-gold" />}{isSaving ? "Saving…" : "Save draft"}</button>
-            <button type="button" onClick={() => setIsPublishModalOpen(true)} disabled={isSaving || isPublishing} className="beat-primary"><Send aria-hidden="true" className="h-4 w-4 text-beat-gold" />Publish</button>
+            <button type="button" onClick={onSaveDraft} aria-describedby="plan-save-scope" disabled={isSaving || isPublishing} aria-busy={isSaving} className="beat-control">{isSaving ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin text-beat-gold" /> : <Save aria-hidden="true" className="h-4 w-4 text-beat-gold" />}{isSaving ? "Saving…" : "Save draft"}</button>
+            <button type="button" onClick={() => setIsPublishModalOpen(true)} aria-describedby="plan-save-scope" disabled={isSaving || isPublishing} className="beat-primary"><Send aria-hidden="true" className="h-4 w-4 text-beat-gold" />Publish</button>
           </>}
         </div>
       </header>
@@ -1395,7 +1397,7 @@ function PlanCanvasBuilderInner({
             <button type="button" className="flex min-h-11 w-full items-center gap-2 rounded-md px-3 hover:bg-beat-canvas" onClick={event => { focusPath(null); event.currentTarget.closest("details")?.removeAttribute("open"); }}><Maximize2 aria-hidden="true" className="h-4 w-4" />Fit whole plan</button>
           </div>
         </details>}
-        <aside aria-label="Version status" title={versionStatus} className="min-w-0 basis-full text-xs leading-relaxed text-beat-maroon/75 xl:ml-auto xl:basis-auto xl:truncate">{versionStatus}</aside>
+        <aside id="plan-save-scope" aria-label="Plan save scope" title={versionStatus} className="min-w-0 basis-full text-xs leading-relaxed text-beat-maroon/75 xl:ml-auto xl:basis-auto xl:truncate">{versionStatus}</aside>
       </div>
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -1501,6 +1503,7 @@ function PlanCanvasBuilderInner({
           existingCodes={placedCodes}
           onSave={handleSaveEditedMilestone}
           onPendingChange={pending => { milestoneSaving.current = pending; }}
+          onStagedChange={setStagedInspectorCount}
           onMaterialCountChange={handleMaterialCountChange}
         />
       </BuilderInspector>

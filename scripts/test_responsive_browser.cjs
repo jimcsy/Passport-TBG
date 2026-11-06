@@ -99,7 +99,7 @@ const phase = process.env.RESPONSIVE_PHASE || 'all';
     const first = page.getByLabel('Learning path outline').locator('article').first();
     await first.locator('summary').click();
     await first.getByRole('textbox', { name: `Title for ${libraries[0].code}` }).fill('Edited on mobile');
-    await first.getByRole('button', { name: 'Save milestone', exact: true }).click();
+    await first.getByRole('button', { name: 'Apply to draft', exact: true }).click();
     await first.getByText('Edited on mobile', { exact: true }).waitFor();
     await page.getByRole('button', { name: `Move ${libraries[0].code} down`, exact: true }).click();
     assert.ok((await page.getByLabel('Learning path outline').locator('article').first().textContent()).includes(libraries[1].code));

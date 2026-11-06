@@ -45,6 +45,7 @@ export function IndividualPublishModal({ isOpen, planId, graph, onClose, onPubli
   return <div className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
     <div role="dialog" aria-modal="true" aria-label="Choose who receives path changes" className="portal-modal-panel max-h-[90dvh] w-full max-w-2xl overflow-y-auto rounded-xl border border-beat-border bg-white p-5 text-beat-maroon">
       <div className="flex items-center justify-between gap-3"><h2 className="text-lg font-bold">Who should receive these changes?</h2><button type="button" className="beat-control" disabled={pending} onClick={onClose}>Cancel</button></div>
+      <p className="mt-3 text-xs text-beat-maroon/75">Publish applied plan changes to the recipients you select. Unapplied inspector fields are excluded; shared materials are saved separately.</p>
       {context && <p className="my-3 text-sm">Editing {context.traineeName}. {context.sharedAvailable ? `“${context.variantTitle}” has ${context.enrolledCount} enrolled ${context.enrolledCount === 1 ? "trainee" : "trainees"}.` : "This path has no available shared role variant."}</p>}
       {error && <p role="alert" className="my-3 rounded border border-beat-border p-3 text-sm">{error}</p>}
       {!context && !error && <p role="status" className="my-4 text-sm">Loading path and enrolled trainees…</p>}

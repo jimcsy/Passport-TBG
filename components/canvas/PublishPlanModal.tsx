@@ -89,7 +89,7 @@ export function PublishPlanModal({
                 Publish Training Plan Version {versionNumber}
               </h3>
               <p className="text-xs text-beat-muted">
-                Create an immutable production version of this curriculum.
+                Publish the applied plan changes. Choose whether enrolled trainees receive them below.
               </p>
             </div>
           </div>

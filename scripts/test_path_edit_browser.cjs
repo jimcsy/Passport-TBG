@@ -70,7 +70,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   const create = page.getByRole('dialog', { name: 'Create milestone', exact: true });
   await create.getByText('Operations', { exact: true }).waitFor();
   await create.locator('#milestoneCode').fill(addedCode); await create.locator('#milestoneTitle').fill('New operations milestone'); await create.locator('#milestoneDesc').fill('Demonstrate the newly introduced operational workflow');
-  await create.getByRole('checkbox').uncheck(); await create.getByRole('button', { name: 'Add to Canvas', exact: true }).click();
+  await create.getByRole('checkbox').uncheck(); await create.getByRole('button', { name: 'Add to draft', exact: true }).click();
   stage = 'progress warning on removal';
   const removedDraftNode = draft.nodes.find(node => node.code === definitions[2].code);
   const removedCard = page.locator(`.react-flow__node[data-id="${removedDraftNode.id}"]`);

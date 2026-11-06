@@ -115,7 +115,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   const privateCode = `${prefix}-PVT`;
   await customForm.locator('#milestoneCode').fill(privateCode); await customForm.locator('#milestoneTitle').fill('Private draft competency');
   await customForm.locator('#milestoneDesc').fill('This custom competency must stay private when the draft is saved.');
-  await customForm.getByRole('checkbox').uncheck(); await customForm.getByRole('button', { name: 'Add to Canvas', exact: true }).click();
+  await customForm.getByRole('checkbox').uncheck(); await customForm.getByRole('button', { name: 'Add to draft', exact: true }).click();
   await customForm.waitFor({ state: 'detached' });
   await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByText('Draft saved.', { exact: true }).waitFor();
   assert.equal(await prisma.milestoneDefinition.count({ where: { code: privateCode } }), 0);

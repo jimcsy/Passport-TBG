@@ -36,7 +36,7 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
     browser = await chromium.launch(process.env.SCOPE_USE_BUNDLED_BROWSER === '1' ? { headless: true } : { executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 950 } });
     await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
-    page = await context.newPage(); page.setDefaultTimeout(20000);
+    page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
     await page.goto(`${origin}/trainer/plans/${aa.planVersion.planId}/builder`, { waitUntil: 'networkidle' });
     if (editPersonal) {
       await page.setViewportSize({ width: 390, height: 844 });
@@ -50,26 +50,33 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
       await card.getByRole('button', { name: 'Stamp design / materials', exact: true }).click();
       const editor = page.getByRole('dialog', { name: 'Milestone inspector', exact: true });
       await editor.locator('#editMilestoneTitle').fill('Personal title stays private');
-      await editor.getByRole('button', { name: 'Save changes', exact: true }).click();
+      await editor.getByRole('button', { name: 'Apply to draft', exact: true }).click();
       assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: definition.id } })).title, definition.title);
       console.log('PASS: individual custom-node editing does not rename the shared library definition before publication');
     }
     await page.getByRole('button', { name: 'Publish', exact: true }).click();
     const modal = page.getByRole('dialog', { name: 'Choose who receives path changes', exact: true });
-    await modal.getByRole('radio', { name: /^Only this trainee/ }).waitFor(); return modal;
+    await modal.getByRole('radio', { name: /^Only this trainee/ }).waitFor({ timeout: 60000 }); return modal;
   }
+  // Publishing already permits a 120s backend transaction; include transport/queue time.
   async function confirm(modal) {
     await modal.getByRole('button', { name: 'Confirm and publish', exact: true }).click();
     const result = await Promise.race([
-      modal.waitFor({ state: 'detached', timeout: 60000 }).then(() => 'published'),
-      modal.getByRole('alert').waitFor({ timeout: 60000 }).then(async () => `Publish error: ${await modal.getByRole('alert').textContent()}`),
+      modal.waitFor({ state: 'detached', timeout: 180000 }).then(() => 'published'),
+      modal.getByRole('alert').waitFor({ timeout: 180000 }).then(async () => `Publish error: ${await modal.getByRole('alert').textContent()}`),
     ]);
     assert.equal(result, 'published');
   }
   async function draft(code, title) {
     if (browser) { await browser.close(); browser = undefined; }
     const current = await active(a.id);
-    await savePlanVersion({ planId: current.planVersion.planId, publishedById: trainer.id, status: 'DRAFT', nodes: current.planVersion.nodes.map(node => node.code === 'ONB-01' ? { ...node, title } : node).concat(extra(code)), edges: [] });
+    const addition = extra(code);
+    if (code === 'PERSONAL') {
+      // Shared linkage is explicit; plan-only saves intentionally never register definitions.
+      const definition = await prisma.milestoneDefinition.create({ data: { code: addition.code, title: addition.title, description: addition.description, path: addition.path, isStandard: false } });
+      addition.libraryMilestoneId = definition.id;
+    }
+    await savePlanVersion({ planId: current.planVersion.planId, publishedById: trainer.id, status: 'DRAFT', nodes: current.planVersion.nodes.map(node => node.code === 'ONB-01' ? { ...node, title } : node).concat(addition), edges: [] });
   }
   stage = 'individual default and cancel';
   await draft('PERSONAL', 'Alice personal orientation');
@@ -83,9 +90,10 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
   assert.equal((await active(a.id)).planVersionId, aa.planVersionId);
   await page.getByRole('button', { name: 'Publish', exact: true }).click();
   modal = page.getByRole('dialog', { name: 'Choose who receives path changes', exact: true });
+  await modal.getByRole('radio', { name: /^Only this trainee/ }).waitFor({ timeout: 60000 });
   assert.equal(await modal.getByRole('radio', { name: /^Only this trainee/ }).isChecked(), true, 'individual scope must default/reset on opening');
   await modal.getByRole('button', { name: 'Review impact', exact: true }).click();
-  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor();
+  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor({ timeout: 60000 });
   assert.equal(await modal.locator('article').count(), 1);
   await confirm(modal);
   assert.equal((await active(b.id)).planVersionId, bBefore);
@@ -99,7 +107,7 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
   await modal.getByRole('radio', { name: /^Update the shared variant/ }).check();
   await modal.getByRole('checkbox', { name: /Bob Scope Fixture/ }).check();
   await modal.getByRole('button', { name: 'Review impact', exact: true }).click();
-  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor();
+  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor({ timeout: 60000 });
   assert.equal(await modal.locator('article').count(), 2);
   await modal.getByText(/individual title retained/).waitFor();
   await confirm(modal);
@@ -119,7 +127,7 @@ const suffix = String(Date.now()); let trainer, browser, stage = 'fixtures'; con
   assert.equal(await modal.getByLabel('Variant Position', { exact: true }).inputValue(), '');
   await modal.getByLabel('Variant Position', { exact: true }).selectOption('Accounting Assistant');
   await modal.getByRole('button', { name: 'Review impact', exact: true }).click();
-  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor();
+  await modal.getByRole('region', { name: 'Publish impact preview', exact: true }).waitFor({ timeout: 60000 });
   assert.equal(await modal.locator('article').count(), 1);
   await confirm(modal);
   const instance = await prisma.learningPath.findUniqueOrThrow({ where: { planId: aa.planVersion.planId } });

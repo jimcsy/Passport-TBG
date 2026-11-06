@@ -40,7 +40,7 @@ const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   const title = () => panel.locator('#editMilestoneTitle');
   await select(custom);
   assert.equal(await panel.getByText(/Stamp design/).count(), 0);
-  await panel.getByText(/Saving updates this definition and 1 matching nodes in 1 draft plans/).waitFor();
+  await panel.getByText(/Saving updates this definition and 1 matching node in 1 draft plan/).waitFor();
   await title().fill('Staged shared title'); await select(other); await select(custom);
   assert.equal(await title().inputValue(), 'Staged shared title');
   await page.setViewportSize({ width: 390, height: 844 });
@@ -115,7 +115,7 @@ const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   const builder = page.locator('#builder-inspector');
   await builder.locator('#editMilestoneTitle').fill('Draft-local title only');
   assert.ok(await builder.locator('summary').filter({ hasText: 'Stamp design' }).isVisible());
-  await builder.getByRole('button', { name: 'Save changes', exact: true }).click(); await builder.waitFor({ state: 'hidden' });
+  await builder.getByRole('button', { name: 'Apply to draft', exact: true }).click(); await builder.waitFor({ state: 'hidden' });
   assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: custom.id } })).title, 'Saved shared fixture title');
   await page.getByRole('button', { name: 'Save draft', exact: true }).click();
   await page.getByText('Draft saved.', { exact: true }).waitFor();
@@ -124,7 +124,7 @@ const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   await page.getByRole('button', { name: /^Published v1 ·/ }).click();
   await page.getByRole('button', { name: `Inspect ${custom.code}`, exact: true }).click();
   assert.ok(await builder.locator('#editMilestoneTitle').isDisabled());
-  assert.equal(await builder.getByRole('button', { name: 'Save changes', exact: true }).count(), 0);
+  assert.equal(await builder.getByRole('button', { name: 'Apply to draft', exact: true }).count(), 0);
   assert.equal(await builder.getByLabel(`Attach materials to ${custom.code}`).count(), 0);
   assert.deepEqual(await prisma.traineeProgress.findUniqueOrThrow({ where: { id: progress.id } }), progress);
   assert.deepEqual(await prisma.planNode.findUniqueOrThrow({ where: { id: liveNode.id } }), liveNode);

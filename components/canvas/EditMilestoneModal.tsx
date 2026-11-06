@@ -53,6 +53,7 @@ interface EditMilestoneModalProps {
   notice?: string;
   focusMaterials?: boolean;
   actions?: ReactNode;
+  onStagedChange?: (count: number) => void;
   onPendingChange?: (pending: boolean) => void;
   onMaterialCountChange?: (count: number) => void;
   presentation?: "modal" | "inspector";
@@ -81,6 +82,7 @@ export function EditMilestoneModal({
   notice,
   focusMaterials = false,
   actions,
+  onStagedChange,
 }: EditMilestoneModalProps) {
   const materialsSection = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -90,6 +92,9 @@ export function EditMilestoneModal({
   }, [isOpen, focusMaterials, milestone?.id]);
   type MilestoneFields = EditCustomMilestoneForm & { stampDesign: StampDesignKey };
   const [stagedEdits, setStagedEdits] = useState<Record<string, MilestoneFields>>({});
+  const baselines = useRef<Record<string, MilestoneFields>>({});
+  const stagedCount = Object.keys(stagedEdits).length;
+  useEffect(() => { onStagedChange?.(stagedCount); }, [stagedCount, onStagedChange]);
   const [pending, setPending] = useState(false);
   const submitting = useRef(false);
   const [usageError, setUsageError] = useState(false);
@@ -102,6 +107,9 @@ export function EditMilestoneModal({
   const usage = providedUsage || (milestone?.id ? loadedUsage[milestone.id] : undefined);
   const shared = !!milestone?.libraryEdit;
   const protectedDetails = shared && !!milestone?.isStandard;
+  const sharedSaveImpact = usage
+    ? `${usage.metadataAffectedDraftNodeCount} matching ${usage.metadataAffectedDraftNodeCount === 1 ? "node" : "nodes"} in ${usage.metadataAffectedDraftPlanCount} draft ${usage.metadataAffectedDraftPlanCount === 1 ? "plan" : "plans"}`
+    : "matching draft nodes, including custom code matches";
   useEffect(() => {
     if (!isOpen || !milestone?.id || providedUsage) return;
     let active = true; const id = milestone.id; setUsageError(false);
@@ -118,10 +126,20 @@ export function EditMilestoneModal({
   const { stampDesign, code, title, description, path } = fields;
 
   function stage(changes: Partial<MilestoneFields>) {
-    setStagedEdits(previous => ({ ...previous, [contextKey]: { ...fields, ...changes } }));
+    const baseline = baselines.current[contextKey] || fields;
+    baselines.current[contextKey] = baseline;
+    const next = { ...fields, ...changes };
+    const reverted = (Object.keys(next) as (keyof MilestoneFields)[]).every(key => next[key] === baseline[key]);
+    setStagedEdits(previous => {
+      const updated = { ...previous };
+      if (reverted) { delete updated[contextKey]; delete baselines.current[contextKey]; }
+      else updated[contextKey] = next;
+      return updated;
+    });
   }
 
   function discardStagedEdits() {
+    delete baselines.current[contextKey];
     setSaveError(previous => ({ ...previous, [contextKey]: "" }));
     setErrors({});
     setStagedEdits(previous => { const next = { ...previous }; delete next[contextKey]; return next; });
@@ -172,6 +190,7 @@ export function EditMilestoneModal({
       const outcome = await onSave({ ...milestone, ...(result.success && !milestone.designOnly ? result.data : {}), stampDesign });
       if (outcome && !outcome.success) { setSaveError(previous => ({ ...previous, [key]: outcome.error || "Could not save changes. Please retry." })); return; }
       setStagedEdits(previous => { const next = { ...previous }; delete next[key]; return next; });
+      delete baselines.current[key];
       saved = true;
     } catch { setSaveError(previous => ({ ...previous, [key]: "Could not save changes. Please retry." })); }
     finally { submitting.current = false; setPending(false); onPendingChange?.(false); if (saved && activeContext.current === key) onClose(); }
@@ -219,10 +238,10 @@ export function EditMilestoneModal({
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
           {notice && <p role="status" className="text-sm leading-relaxed text-beat-maroon">{notice}</p>}
           <h4 className="text-sm font-semibold">Details</h4>
-          {shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Shared library definition{readOnly ? " · Read only in this published plan." : protectedDetails ? " · Canonical BEAT details are protected." : ` · Saving updates this definition and ${usage ? `${usage.metadataAffectedDraftNodeCount} matching nodes in ${usage.metadataAffectedDraftPlanCount} draft plans` : "matching draft nodes, including custom code matches"}. Published snapshot metadata and trainee verification remain unchanged.`}</p>}
+          {shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Shared library definition{readOnly ? " · Read only in this published plan." : protectedDetails ? " · Canonical BEAT details are protected." : ` · Saving updates this definition and ${sharedSaveImpact}. Published snapshot metadata and trainee verification remain unchanged.`}</p>}
           {saveError[contextKey] && <p role="alert" className="text-sm text-beat-maroon">{saveError[contextKey]}</p>}
           {readOnly && <p className="text-xs text-beat-maroon/75">Published version · Read only</p>}
-          {presentation === "inspector" && !readOnly && !shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Save changes here to apply this milestone to your draft. Edits stay available while you inspect other milestones.</p>}
+          {presentation === "inspector" && !readOnly && !shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Apply to draft updates this milestone in the working plan. Then use Save draft to persist it and Publish to choose who receives it.</p>}
           {!shared && (presentation === "inspector" ? <details className="border-b border-beat-border pb-2"><summary className="min-h-11 cursor-pointer text-xs font-semibold">Stamp design · {STAMP_DESIGNS[stampDesign].label}</summary><fieldset disabled={readOnly || pending}><StampDesignPicker compact value={stampDesign} onChange={value => { stage({ stampDesign: value }); }} /></fieldset></details> : <fieldset disabled={readOnly || pending}><StampDesignPicker value={stampDesign} onChange={value => stage({ stampDesign: value })} /></fieldset>)}
           <fieldset disabled={readOnly || pending || protectedDetails || milestone.designOnly} className="space-y-4 disabled:opacity-60">
           {/* Target Track */}
@@ -317,6 +336,7 @@ export function EditMilestoneModal({
           </div>
 
           </fieldset>
+          {!readOnly && <p className="text-xs leading-relaxed text-beat-maroon/75">Closing keeps staged fields; Cancel discards this form. Neither undoes shared material changes.</p>}
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
@@ -333,7 +353,7 @@ export function EditMilestoneModal({
               className="flex min-h-11 items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon/90 transition-all cursor-pointer"
             >
               <Check className="h-3.5 w-3.5 text-beat-gold" />
-              <span>{pending ? "Saving…" : shared ? "Save shared details" : "Save changes"}</span>
+              <span>{pending ? shared ? "Saving…" : "Applying…" : shared ? "Save shared details" : "Apply to draft"}</span>
             </button>}
           </div>
         </form>

@@ -98,7 +98,7 @@ let browser, plan, trainee, trainer;
   assert.equal(new Set(signatures).size, 8);
   assert.equal(await previews.first().evaluate(element => getComputedStyle(element).opacity), '1');
   await dialog.getByRole('button', { name: /Kitchen/ }).click();
-  await dialog.getByRole('button', { name: 'Save changes', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Apply to draft', exact: true }).click();
   await adminPage.getByRole('button', { name: 'Save draft', exact: true }).click();
   await adminPage.getByText('Draft saved.', { exact: true }).waitFor();
   const draft = await prisma.planVersion.findFirstOrThrow({ where: { planId: plan.id, status: 'DRAFT' }, include: { nodes: true } });

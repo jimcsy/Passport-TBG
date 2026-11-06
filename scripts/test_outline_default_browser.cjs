@@ -41,7 +41,7 @@ const definitions = [];
   assert.equal(await nav.getByRole('button').count(), 6);
   await page.getByRole('button', { name: `Inspect ${definitions[0].code}`, exact: true }).click();
   await inspector.locator('#editMilestoneTitle').fill('Saved completely from outline');
-  await inspector.getByRole('button', { name: 'Save changes', exact: true }).click(); await inspector.waitFor({ state: 'hidden' });
+  await inspector.getByRole('button', { name: 'Apply to draft', exact: true }).click(); await inspector.waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: `Move ${definitions[0].code} down`, exact: true }).click();
   assert.equal(await outline.locator('article[data-path="ONBOARDING"]').first().getAttribute('data-milestone-index'), '0');
   assert.ok((await outline.locator('article[data-path="ONBOARDING"]').first().textContent()).includes(definitions[1].code));

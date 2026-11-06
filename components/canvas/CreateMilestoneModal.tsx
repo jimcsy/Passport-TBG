@@ -265,12 +265,13 @@ export function CreateMilestoneModal({
                 Save to Shared Milestone Library
               </span>
               <span className="block text-[11px] text-beat-muted mt-0.5">
-                Makes this custom competency reusable across all training tracks in the organization.
+                Also saves this milestone to the shared library now. Use Save draft for a working copy and Publish for assignment updates.
               </span>
             </div>
           </label>
 
           {errors.form && <p role="alert" className="text-sm text-beat-maroon">{errors.form}</p>}
+          <p className="text-xs leading-relaxed text-beat-maroon/75">Adds to this working draft. Save draft persists the plan; Publish controls assignment updates.</p>
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
@@ -285,7 +286,7 @@ export function CreateMilestoneModal({
               className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer"
             >
               {pending ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-beat-gold" /> : <Plus aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />}
-              <span>{pending ? "Adding…" : "Add to Canvas"}</span>
+              <span>{pending ? "Adding…" : "Add to draft"}</span>
             </button>
           </div>
           </fieldset>
