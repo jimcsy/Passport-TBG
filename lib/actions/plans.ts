@@ -19,11 +19,26 @@ import type { SavePlanVersionInput, PublishPlanVersionInput } from "@/lib/valida
 import { DevelopmentPath } from "@/lib/types/models";
 import { createCustomLibraryMilestone, type CreateLibraryMilestoneResult } from "@/lib/db/repositories/milestones";
 import type { CustomMilestoneInput } from "@/lib/validations/milestones";
+import type { MilestoneLibraryFilters } from "@/lib/validations/milestones";
+import { listMilestoneLibrary, type MilestoneLibraryRow } from "@/lib/db/repositories/milestone-library";
 
 export interface PlanActionResult {
   success: boolean;
   error?: string;
   data?: unknown;
+}
+
+/** Trainer-only library metadata; never returns material locations or private identities. */
+export async function listMilestoneLibraryAction(filters: MilestoneLibraryFilters = {}): Promise<
+  { success: true; data: MilestoneLibraryRow[] } | { success: false; error: string; data: [] }
+> {
+  const admin = await getAdminSession();
+  if (!admin) return { success: false, error: "Unauthorized session", data: [] };
+  try {
+    return { success: true, data: await listMilestoneLibrary(filters) };
+  } catch {
+    return { success: false, error: "Could not load the milestone library. Check the filters and try again.", data: [] };
+  }
 }
 
 /**

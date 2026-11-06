@@ -13,6 +13,13 @@ export const customMilestoneSchema = z.object({
 
 export type CustomMilestoneInput = z.infer<typeof customMilestoneSchema>;
 
+export const milestoneLibraryFiltersSchema = z.object({
+  search: z.string().trim().max(100).optional(),
+  path: z.nativeEnum(DevelopmentPath).optional(),
+  origin: z.enum(["ALL", "STANDARD", "CUSTOM"]).default("ALL"),
+});
+export type MilestoneLibraryFilters = z.input<typeof milestoneLibraryFiltersSchema>;
+
 export interface MilestoneCreationOutcome {
   success: boolean;
   error?: string;
