@@ -268,6 +268,7 @@ function PlanCanvasBuilderInner({
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
+  const milestoneSaving = useRef(false);
   const [editingMilestone, setEditingMilestone] = useState<EditableMilestoneTarget | null>(null);
   const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -972,7 +973,11 @@ function PlanCanvasBuilderInner({
   // Handle saving edited custom milestone
   const handleSaveEditedMilestone = useCallback(
     async (updated: EditableMilestoneTarget) => {
-      // 1. Update matching node on canvas
+      if (updated.libraryEdit && !updated.designOnly) {
+        const result = await updateCustomLibraryMilestoneAction({ id: updated.id, code: updated.code }, updated);
+        if (!result.success) return { success: false, error: result.error };
+      }
+
       setNodes((prevNodes) =>
         prevNodes.map((n) => {
           const matches =
@@ -987,13 +992,13 @@ function PlanCanvasBuilderInner({
               title: updated.title,
               description: updated.description,
               path: updated.path,
-              stampDesign: updated.stampDesign,
+              stampDesign: updated.libraryEdit ? n.data.stampDesign : updated.stampDesign,
             },
           };
         })
       );
 
-      if (updated.designOnly || !updated.libraryEdit) { setHasUnsavedChanges(true); return; }
+      if (updated.designOnly || !updated.libraryEdit) { setHasUnsavedChanges(true); return { success: true }; }
 
       // 2. Update matching item in availableMilestones list
       setAvailableMilestones((prev) =>
@@ -1013,24 +1018,9 @@ function PlanCanvasBuilderInner({
 
       setHasUnsavedChanges(true);
 
-      // 3. Persist update to database
-      try {
-        const res = await updateCustomLibraryMilestoneAction(
-          { id: updated.id, code: updated.code },
-          {
-            code: updated.code,
-            title: updated.title,
-            description: updated.description,
-            path: updated.path,
-          }
-        );
-        if (res.success) {
-          setSaveMessage(`Custom milestone "${updated.code}" updated successfully.`);
+      setSaveMessage(`Shared milestone "${updated.code}" updated. Matching draft nodes were synchronized; published metadata is unchanged.`);
+      return { success: true };
 
-        }
-      } catch (err) {
-        console.error("Failed to update milestone:", err);
-      }
     },
     [setNodes]
   );
@@ -1314,6 +1304,7 @@ function PlanCanvasBuilderInner({
   }
 
   function closeInspector() {
+    if (milestoneSaving.current) return;
     setIsLibraryOpen(false);
     setEditingMilestone(null);
   }
@@ -1463,11 +1454,12 @@ function PlanCanvasBuilderInner({
         <EditMilestoneModal
           isOpen={editingMilestone !== null}
           presentation="inspector"
-          readOnly={isViewingReadOnly && !editingMilestone?.libraryEdit}
+          readOnly={isViewingReadOnly}
           onClose={closeInspector}
           milestone={editingMilestone}
           existingCodes={placedCodes}
           onSave={handleSaveEditedMilestone}
+          onPendingChange={pending => { milestoneSaving.current = pending; }}
           onMaterialCountChange={handleMaterialCountChange}
         />
       </BuilderInspector>

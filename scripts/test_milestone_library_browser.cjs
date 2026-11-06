@@ -46,15 +46,16 @@ const plans = [];
   await page.getByRole('heading', { name: target.title, exact: true }).waitFor();
   assert.equal(new URL(page.url()).searchParams.get('milestone'), target.id);
   assert.equal(await targetButton.getAttribute('aria-pressed'), 'true');
-  assert.ok(await page.getByText('2 attached materials', { exact: true }).isVisible());
+  await page.getByRole('heading', { name: 'Course materials (2)', exact: true }).waitFor();
   assert.ok(await page.getByText('1 current reusable plan', { exact: true }).isVisible());
   await page.getByRole('button', { name: 'Close milestone details' }).click();
-  assert.equal(await targetButton.evaluate(el => el === document.activeElement), true);
-  assert.ok(Math.abs(await page.evaluate(() => scrollY) - scroll) < 4);
+  assert.equal(await targetButton.evaluate(el => el === document.activeElement), true, 'Selection close/Back must restore row focus');
+  await page.waitForTimeout(100);
+  assert.ok(Math.abs(await page.evaluate(() => scrollY) - scroll) < 4, 'Selection close must restore list scroll');
   assert.equal(new URL(page.url()).searchParams.get('pillar'), 'TECHNICAL');
   await page.goBack(); await page.getByRole('heading', { name: target.title, exact: true }).waitFor();
   await page.goBack(); await page.getByRole('heading', { name: target.title, exact: true }).waitFor({ state: 'detached' });
-  assert.equal(await targetButton.evaluate(el => el === document.activeElement), true);
+  assert.equal(await targetButton.evaluate(el => el === document.activeElement), true, 'Selection close/Back must restore row focus');
   await page.goForward(); await page.getByRole('heading', { name: target.title, exact: true }).waitFor();
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: target.title, exact: true }).waitFor();
@@ -81,6 +82,7 @@ const plans = [];
   stage = 'responsive selection';
   await search.fill(prefix);
   for (const width of [320, 390, 768, 1024, 1440]) {
+    stage = `responsive selection at ${width}px`;
     await page.setViewportSize({ width, height: 900 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `list overflow at ${width}`);
     const long = button(definitions[0].code);
@@ -88,16 +90,16 @@ const plans = [];
     await page.getByRole('heading', { name: definitions[0].title, exact: true }).waitFor();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `selection overflow at ${width}`);
     if (width < 1024) {
-      const dialog = page.getByRole('dialog', { name: definitions[0].title, exact: true }); await dialog.waitFor();
+      const dialog = page.getByRole('dialog', { name: 'Shared library milestone inspector', exact: true }); await dialog.waitFor();
       const bounds = await dialog.boundingBox(); assert.equal(bounds.x, 0); assert.equal(bounds.width, width); assert.equal(bounds.height, 900);
       await dialog.getByRole('button', { name: 'Close milestone details' }).focus(); await page.keyboard.press('Shift+Tab');
-      assert.equal(await dialog.evaluate(el => el.contains(document.activeElement)), true);
+      await page.waitForFunction(el => el.contains(document.activeElement), await dialog.elementHandle());
     }
     assert.ok((await long.boundingBox()).height >= 44);
     if (width === 390 || width === 1440) await page.screenshot({ path: `/tmp/tc05-library-selected-${width}.png`, fullPage: width === 1440 });
     await page.keyboard.press('Escape');
     await page.getByRole('heading', { name: definitions[0].title, exact: true }).waitFor({ state: 'detached' });
-    assert.equal(await long.evaluate(el => el === document.activeElement), true);
+    await page.waitForFunction(el => el === document.activeElement, await long.elementHandle());
     assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
   }
   await page.screenshot({ path: '/tmp/tc05-library-desktop.png', fullPage: true });

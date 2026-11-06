@@ -1,0 +1,143 @@
+// PLAYWRIGHT_MODULE=<playwright path> node --env-file=.env scripts/test_contextual_inspector_browser.cjs
+const assert = require('node:assert/strict');
+require('tsx/cjs');
+const { prisma } = require('../lib/db/prisma.ts');
+const { verificationData } = require('../lib/stamps/hash.ts');
+const { SignJWT } = require('jose');
+const { createClient } = require('@supabase/supabase-js');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const origin = process.env.INSPECTOR_TEST_ORIGIN || 'http://localhost:3100';
+const prefix = `TC06-${Date.now()}`;
+let trainer, trainee, plan, browser, stage = 'fixtures';
+const service = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+(async () => {
+  trainer = await prisma.adminUser.create({ data: { employeeId: prefix, fullName: 'Inspector fixture trainer', email: `${prefix}@example.invalid`, passwordHash: 'unused' } });
+  trainee = await prisma.trainee.create({ data: { traineeCode: prefix, fullName: 'Inspector fixture trainee', email: `${prefix}-trainee@example.invalid`, restaurantBrand: 'Test', branchLocation: 'Test', cohortBatch: 'Test', hireDate: new Date() } });
+  const definitions = [];
+  for (let i = 0; i < 3; i++) definitions.push(await prisma.milestoneDefinition.create({ data: { code: `${prefix}-${i}`, title: `${prefix} milestone ${i}`, description: 'Demonstrate this isolated fixture competency before verification.', path: 'TECHNICAL', isStandard: i === 2 } }));
+  const [custom, other, standard] = definitions;
+  plan = await prisma.trainingPlan.create({ data: { title: `${prefix} plan`, roleIdentifier: prefix, status: 'PUBLISHED', createdById: trainer.id } });
+  await prisma.learningPath.create({ data: { planId: plan.id, title: plan.title, type: 'VARIANT' } });
+  const live = await prisma.planVersion.create({ data: { planId: plan.id, versionNumber: 1, status: 'PUBLISHED', publishedById: trainer.id } });
+  const draft = await prisma.planVersion.create({ data: { planId: plan.id, versionNumber: 2, status: 'DRAFT', publishedById: trainer.id } });
+  let liveNode;
+  for (const v of [live, draft]) for (const def of definitions) {
+    const node = await prisma.planNode.create({ data: { planVersionId: v.id, libraryMilestoneId: def.id, code: def.code, title: def.title, description: def.description, path: def.path, orderIndex: definitions.indexOf(def) + 1, posX: 0, posY: 0, isCustom: !def.isStandard } });
+    if (v.id === live.id && def.id === custom.id) liveNode = node;
+  }
+  await prisma.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: live.id, assignedById: trainer.id } });
+  const progress = await prisma.traineeProgress.create({ data: { traineeId: trainee.id, planNodeId: liveNode.id, ...verificationData(trainee.id, liveNode.id, trainer.id, new Date(), 'Original fixture stamp') } });
+  const token = await new SignJWT({ id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: 'TRAINER', portal: 'trainer' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
+  const page = await context.newPage(); page.setDefaultTimeout(20000);
+  const errors = []; page.on('pageerror', error => errors.push(error.name));
+  const library = `${origin}/trainer/plans/library?q=${prefix}`;
+  await page.goto(library, { waitUntil: 'networkidle' });
+  const select = async def => { await page.getByRole('list', { name: 'Shared milestones' }).getByRole('button').filter({ hasText: def.code }).click(); await page.locator('#library-inspector[open]').waitFor(); };
+  const panel = page.locator('#library-inspector');
+  const title = () => panel.locator('#editMilestoneTitle');
+  await select(custom);
+  assert.equal(await panel.getByText(/Stamp design/).count(), 0);
+  await panel.getByText(/Saving updates this definition and 1 matching nodes in 1 draft plans/).waitFor();
+  await title().fill('Staged shared title'); await select(other); await select(custom);
+  assert.equal(await title().inputValue(), 'Staged shared title');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('dialog', { name: 'Shared library milestone inspector', exact: true }).waitFor();
+  assert.equal(await panel.evaluate(el => el.matches(':modal')), true);
+  assert.equal(await title().inputValue(), 'Staged shared title');
+  await panel.getByRole('button', { name: 'Close milestone details' }).click(); await select(custom);
+  assert.equal(await title().inputValue(), 'Staged shared title');
+  await panel.getByRole('button', { name: 'Cancel', exact: true }).click(); await select(custom);
+  assert.equal(await title().inputValue(), custom.title);
+  console.log('PASS: shared context, no global stamp picker, exact impact, staged selection/close/resize retention, explicit Cancel and native mobile dialog');
+
+  stage = 'failed and pending shared saves';
+  await title().fill('Saved shared fixture title');
+  let intercept = true, release;
+  await page.route('**/trainer/plans/library*', async route => {
+    if (route.request().method() === 'POST' && (route.request().postData() || '').includes('Saved shared fixture title')) {
+      if (intercept) { intercept = false; return route.abort(); }
+      await new Promise(resolve => { release = resolve; });
+    }
+    await route.continue();
+  });
+  await panel.getByRole('button', { name: 'Save shared details' }).click();
+  await panel.getByRole('alert').waitFor(); assert.equal(await title().inputValue(), 'Saved shared fixture title');
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: custom.id } })).title, custom.title);
+  await panel.getByRole('button', { name: 'Save shared details' }).click();
+  await panel.getByRole('button', { name: 'Saving…', exact: true }).waitFor();
+  assert.ok(await title().isDisabled()); await page.keyboard.press('Escape'); assert.ok(await panel.isVisible());
+  for (let i = 0; i < 40 && !release; i++) await page.waitForTimeout(50); assert.ok(release); release();
+  await panel.waitFor({ state: 'hidden' }); await page.unroute('**/trainer/plans/library*');
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: custom.id } })).title, 'Saved shared fixture title');
+  assert.equal((await prisma.planNode.findFirstOrThrow({ where: { planVersionId: draft.id, libraryMilestoneId: custom.id } })).title, 'Saved shared fixture title');
+  assert.deepEqual(await prisma.planNode.findUniqueOrThrow({ where: { id: liveNode.id } }), liveNode);
+  assert.deepEqual(await prisma.traineeProgress.findUniqueOrThrow({ where: { id: progress.id } }), progress);
+  console.log('PASS: failed save retains fields, pending save cannot dismiss, awaited success synchronizes only draft metadata and preserves published node/stamp');
+
+  stage = 'canonical and material workflow';
+  await select(standard); assert.ok(await title().isDisabled()); assert.equal(await panel.getByRole('button', { name: 'Save shared details' }).count(), 0);
+  assert.ok(await panel.getByLabel(`Attach materials to ${standard.code}`).isVisible());
+  await page.keyboard.press('Escape'); await select(custom);
+  const bytes = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n');
+  await panel.getByLabel(`Attach materials to ${custom.code}`).setInputFiles([{ name: 'first-fixture.pdf', mimeType: 'application/pdf', buffer: bytes }, { name: 'second-fixture.pdf', mimeType: 'application/pdf', buffer: bytes }]);
+  await panel.getByRole('heading', { name: 'Course materials (2)' }).waitFor({ timeout: 60000 });
+  await panel.getByRole('button', { name: 'Move second-fixture.pdf up', exact: true }).click();
+  await panel.getByRole('listitem').first().getByText(/second-fixture.pdf/).waitFor();
+  assert.equal((await prisma.courseMaterial.findFirstOrThrow({ where: { milestoneId: custom.id }, orderBy: { displayOrder: 'asc' } })).fileName, 'second-fixture.pdf');
+  await title().fill('Retained under preview');
+  await panel.getByRole('button', { name: 'Preview / download', exact: true }).first().click();
+  const preview = page.getByRole('dialog', { name: 'second-fixture.pdf', exact: true }); await preview.waitFor();
+  stage = 'nested material preview focus';
+  await preview.getByRole('button', { name: 'Close material preview' }).focus(); await page.keyboard.press('Shift+Tab');
+  assert.equal(await preview.evaluate(el => el.contains(document.activeElement)), true);
+  await page.keyboard.press('Escape'); await preview.waitFor({ state: 'detached' });
+  assert.ok(await panel.isVisible()); assert.equal(await title().inputValue(), 'Retained under preview');
+  let impact = '';
+  page.once('dialog', dialog => { impact = dialog.message(); void dialog.dismiss(); });
+  await panel.getByRole('button', { name: 'Delete', exact: true }).first().click();
+  assert.ok(impact.includes('historical versions and private instances')); assert.ok(impact.includes('active trainees'));
+  assert.equal(await prisma.courseMaterial.count({ where: { milestoneId: custom.id } }), 2);
+  page.once('dialog', dialog => dialog.accept());
+  await panel.getByRole('button', { name: 'Delete', exact: true }).first().click();
+  await panel.getByRole('heading', { name: 'Course materials (1)' }).waitFor();
+  await page.screenshot({ path: '/tmp/tc06-inspector-mobile.png' });
+  await panel.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: custom.id } })).title, 'Saved shared fixture title');
+  console.log('PASS: canonical fields protected; real existing upload/reorder/preview/delete pipeline, impact before deletion, nested Escape/focus and staged fields preserved');
+
+  stage = 'draft-local and published contexts';
+  await page.goto(`${origin}/trainer/plans/${plan.id}/builder`, { waitUntil: 'networkidle' });
+  await page.getByRole('combobox', { name: 'Development path', exact: true }).selectOption('TECHNICAL');
+  await page.getByRole('button', { name: `Inspect ${custom.code}`, exact: true }).click();
+  const builder = page.locator('#builder-inspector');
+  await builder.locator('#editMilestoneTitle').fill('Draft-local title only');
+  assert.ok(await builder.locator('summary').filter({ hasText: 'Stamp design' }).isVisible());
+  await builder.getByRole('button', { name: 'Save changes', exact: true }).click(); await builder.waitFor({ state: 'hidden' });
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: custom.id } })).title, 'Saved shared fixture title');
+  await page.getByRole('button', { name: 'Save draft', exact: true }).click();
+  await page.getByText('Draft saved.', { exact: true }).waitFor();
+  assert.equal((await prisma.planNode.findFirstOrThrow({ where: { planVersionId: draft.id, libraryMilestoneId: custom.id } })).title, 'Draft-local title only');
+  await page.locator('summary').filter({ hasText: 'Versions' }).click();
+  await page.getByRole('button', { name: /^Published v1 ·/ }).click();
+  await page.getByRole('button', { name: `Inspect ${custom.code}`, exact: true }).click();
+  assert.ok(await builder.locator('#editMilestoneTitle').isDisabled());
+  assert.equal(await builder.getByRole('button', { name: 'Save changes', exact: true }).count(), 0);
+  assert.equal(await builder.getByLabel(`Attach materials to ${custom.code}`).count(), 0);
+  assert.deepEqual(await prisma.traineeProgress.findUniqueOrThrow({ where: { id: progress.id } }), progress);
+  assert.deepEqual(await prisma.planNode.findUniqueOrThrow({ where: { id: liveNode.id } }), liveNode);
+  assert.equal(await prisma.planVersion.count({ where: { planId: plan.id } }), 2);
+  assert.deepEqual(errors, []);
+  console.log('PASS: draft-local stamp/metadata controls retain save/publish semantics; published inspector read-only; no publication, verification or original stamp mutation');
+})().catch(error => { console.error(`Contextual inspector check failed at ${stage}: ${String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 1800)}`); process.exitCode = 1; }).finally(async () => {
+  await browser?.close();
+  const materials = await prisma.courseMaterial.findMany({ where: { milestone: { code: { startsWith: prefix } } }, select: { storagePath: true } });
+  if (materials.length) { const result = await service.storage.from('course-materials').remove(materials.map(m => m.storagePath)); if (result.error) { console.error('Temporary material cleanup failed'); process.exitCode = 1; } }
+  if (trainee) await prisma.trainee.delete({ where: { id: trainee.id } });
+  if (plan) await prisma.trainingPlan.delete({ where: { id: plan.id } });
+  await prisma.milestoneDefinition.deleteMany({ where: { code: { startsWith: prefix } } });
+  if (trainer) await prisma.adminUser.delete({ where: { id: trainer.id } });
+  await prisma.$disconnect();
+});
