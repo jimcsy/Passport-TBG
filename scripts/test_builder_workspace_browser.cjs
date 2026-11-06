@@ -34,6 +34,8 @@ let browser, trainer, trainee, plan, definitions = [], stage = 'fixtures';
 
   stage = 'canvas space and navigation';
   await page.goto(`${origin}/trainer/plans/${plan.id}/builder`, { waitUntil: 'networkidle' }); await settle();
+  assert.equal(await page.getByRole('button', { name: 'Outline view', exact: true }).getAttribute('aria-pressed'), 'true');
+  await page.getByRole('button', { name: 'Canvas view', exact: true }).click(); await settle();
   assert.equal(await inspector().isVisible(), false);
   const originalWidth = (await canvas.boundingBox()).width;
   assert.ok(originalWidth > 1000, `expected canvas >1000px, got ${originalWidth}`);
@@ -91,6 +93,7 @@ let browser, trainer, trainee, plan, definitions = [], stage = 'fixtures';
   stage = 'library and toolbar actions';
   await page.getByRole('button', { name: 'Open milestone library', exact: true }).click();
   await page.getByRole('complementary', { name: 'Milestone library', exact: true }).waitFor();
+  await inspector().getByRole('button', { name: 'All Paths', exact: true }).click();
   await inspector().getByRole('textbox', { name: 'Search milestone library' }).fill(definitions[3].code);
   await inspector().getByRole('button', { name: `Add ${definitions[3].title} to its development path`, exact: true }).click();
   await inspector().getByRole('button', { name: 'Close milestone library', exact: true }).click();

@@ -278,10 +278,10 @@ function PlanCanvasBuilderInner({
   const [addingToPath, setAddingToPath] = useState<DevelopmentPath | null>(null);
   const milestoneSaving = useRef(false);
   const [editingMilestone, setEditingMilestone] = useState<EditableMilestoneTarget | null>(null);
-  const [viewMode, setViewMode] = useState<"canvas" | "tree">("canvas");
+  const [viewMode, setViewMode] = useState<"canvas" | "tree">("tree");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [focusRequest, setFocusRequest] = useState<{ ids: string[]; detail: boolean } | null>(null);
-  const [focusedPath, setFocusedPath] = useState<DevelopmentPath | null>(DevelopmentPath.ONBOARDING);
+  const [focusedPath, setFocusedPath] = useState<DevelopmentPath | null>(null);
 
   const desktop = useMediaQuery("(min-width: 768px)");
   const effectiveViewMode = desktop ? viewMode : "tree";
@@ -1384,8 +1384,8 @@ function PlanCanvasBuilderInner({
         <button type="button" className="beat-control hidden md:inline-flex" aria-expanded={isPathNavigationOpen} aria-controls="builder-path-navigation" onClick={() => setIsPathNavigationOpen(previous => !previous)}>{isPathNavigationOpen ? <PanelLeftClose aria-hidden="true" className="h-4 w-4" /> : <PanelLeftOpen aria-hidden="true" className="h-4 w-4" />}Paths</button>
         <label className="min-w-0 flex-1 md:hidden"><span className="sr-only">Development path</span><select aria-label="Development path" value={focusedPath || ""} onChange={event => focusPath((event.target.value || null) as DevelopmentPath | null)} className="min-h-11 w-full rounded-md border border-beat-border bg-white px-2 text-xs"><option value="">Whole plan</option>{INITIAL_PATH_ROOTS.map(root => <option key={root.id} value={root.path}>{currentPathTitles[root.path] || root.title}</option>)}</select></label>
         <div role="group" aria-label="Plan view" className="hidden items-center gap-1 md:flex">
-          <button type="button" className="beat-segment" aria-label="Canvas view" aria-pressed={effectiveViewMode === "canvas"} onClick={openCanvas}><Network aria-hidden="true" className="h-4 w-4" />Canvas</button>
           <button type="button" className="beat-segment" aria-label="Outline view" aria-pressed={effectiveViewMode === "tree"} onClick={() => setViewMode("tree")}><ListTree aria-hidden="true" className="h-4 w-4" />Outline</button>
+          <button type="button" className="beat-segment" aria-label="Canvas view" aria-pressed={effectiveViewMode === "canvas"} onClick={openCanvas}><Network aria-hidden="true" className="h-4 w-4" />Canvas</button>
         </div>
         <button id="builder-library-toggle" ref={libraryReopenButton} type="button" aria-label={isLibraryOpen ? "Close milestone library" : "Open milestone library"} aria-expanded={isLibraryOpen} aria-controls="builder-inspector" className="beat-control" onClick={() => setLibraryVisible(!isLibraryOpen)}><BookOpen aria-hidden="true" className="h-4 w-4" /><span>Milestones</span></button>
         {effectiveViewMode === "canvas" && <details className="relative" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
