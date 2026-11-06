@@ -32,8 +32,18 @@ Contextual-inspector verification: `PLAYWRIGHT_MODULE=<playwright path> node --e
 
 ## Create and attach materials (TC-07 / #42)
 
-Choose **Create milestone** in the library (view-state `create=1`). Enter code, title, description/criteria and pillar, then **Save shared milestone**. The same inspector switches to the saved definition's materials using the server-returned ID; no reload or search is needed, even when current filters exclude the new item. The filters remain unchanged. Saving shared content does not insert a node into a plan draft or publish anything; plan insertion is scoped to TC-08/#43.
+Choose **Create milestone** in the library (view-state `create=1`). Enter code, title, description/criteria and pillar, then **Save shared milestone**. The same inspector switches to the saved definition's materials using the server-returned ID; no reload or search is needed, even when current filters exclude the new item. The filters remain unchanged. Saving shared content does not insert a node into a plan draft or publish anything; plan insertion follows the explicit TC-08/#43 flow below.
 
 Creation errors retain the fields. Closing preserves an unsaved form; **Cancel** discards it. After persistence, upload failures, upload cancellation and closing the inspector leave the saved definition intact. Existing file validation, 50 MB limits, signed upload/confirmation/cancellation and preview are reused. Zero-material milestones are valid.
 
 Verification: `PLAYWRIGHT_MODULE=<playwright path> node --env-file=.env scripts/test_shared_creation_upload_browser.cjs` with the production app on port 3100. It uses temporary records and storage files, simulates upload failure/cancellation, retries a real PDF upload, previews it in the same inspector, checks mobile creation and zero-material persistence, and cleans up afterward.
+
+## Add shared milestones to drafts (TC-08 / #43)
+
+From a library inspector, choose **Add to plan**, select an available master/role variant, then **Open plan to add**. The authenticated picker excludes archived plans and private trainee instances. The builder URL carries `addMilestone=<saved-definition-id>` as an explicit request only: visiting it does not create a draft, insert a node, assign a trainee or publish.
+
+For a published plan, explicitly **Create working draft** or **Open working draft** first. Then choose **Add to this draft**. Insertion reuses the existing pillar hub, append order, layout and connection rules, and rejects an existing definition/code. **Save draft** persists the local insertion; **Publish** remains a separate existing workflow.
+
+Inside a plan, the milestone picker starts at the focused pillar, with **All Paths** available. Its Add controls target the current draft directly. **Create shared milestone** reuses the create/upload inspector and offers an explicit Add action after persistence, without selecting the plan again. Existing plan-only custom creation remains separate: when sharing is unchecked, draft saves now preserve a null library link instead of silently upserting a shared definition, including when its code matches an existing shared item. Such nodes have no shared materials.
+
+Verification: `PLAYWRIGHT_MODULE=<playwright path> node --env-file=.env scripts/test_plan_insertion_browser.cjs`. It uses isolated plans, private/archived paths, a trainee stamp, shared definitions and a temporary uploaded PDF. Checks include authentication, eligible-plan filtering, safe URLs, draft creation/reuse, explicit insertion/save, duplicates, pillar/order/ID linkage, material access, private saves and preservation of active assignments/published curriculum/stamps. Fixtures and files are removed afterward.

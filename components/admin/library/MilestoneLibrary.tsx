@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Search, Loader2, Plus } from "lucide-react";
 import type { MilestoneDefinition } from "@prisma/client";
+import { LibraryPlanPicker } from "./LibraryPlanPicker";
 import { CreateSharedMilestoneForm } from "./CreateSharedMilestoneForm";
 import { BuilderInspector } from "@/components/canvas/BuilderInspector";
 import { EditMilestoneModal, type EditableMilestoneTarget } from "@/components/canvas/EditMilestoneModal";
@@ -127,7 +128,7 @@ export function MilestoneLibrary() {
           <BuilderInspector open={creating || !!selected} desktop={desktop} label="Shared library milestone inspector" id="library-inspector" fallbackFocusId="library-search" onClose={closeSelection}
             className="fixed inset-0 z-50 m-0 h-[100dvh] max-h-[100dvh] w-full max-w-none flex-col overflow-hidden border-0 bg-white p-0 pb-[env(safe-area-inset-bottom)] text-beat-maroon outline-none backdrop:bg-black/50 lg:sticky lg:inset-auto lg:top-4 lg:z-auto lg:h-auto lg:max-h-[calc(100dvh-2rem)] lg:w-full lg:rounded-xl lg:border lg:border-beat-border [&[open]]:flex [&:not([open])]:hidden">
             <CreateSharedMilestoneForm isOpen={creating} initialPath={FOUNDATION_PILLARS.some(p => p.path === path) ? path as DevelopmentPath : DevelopmentPath.ONBOARDING} onClose={closeSelection} onCreated={created} onPendingChange={pending => { savingRef.current = pending; setSaving(pending); }} />
-            <EditMilestoneModal notice={selected && selected.id === createdId ? "Saved to the shared library. Attach materials below or keep this milestone without materials. It has not been added to a plan draft." : undefined} focusMaterials={!!selected && selected.id === createdId} isOpen={!!selected} onClose={closeSelection} presentation="inspector" milestone={selected ? { ...selected, path: selected.path as DevelopmentPath, libraryEdit: true } : null} existingCodes={new Set(rows?.map(row => row.code))} onSave={saveShared} usage={selected?.usage} onPendingChange={pending => { savingRef.current = pending; setSaving(pending); }} onMaterialCountChange={onMaterialCountChange} />
+            <EditMilestoneModal actions={selected ? <LibraryPlanPicker key={selected.id} milestoneId={selected.id} /> : undefined} notice={selected && selected.id === createdId ? "Saved to the shared library. Attach materials below or keep this milestone without materials. It has not been added to a plan draft." : undefined} focusMaterials={!!selected && selected.id === createdId} isOpen={!!selected} onClose={closeSelection} presentation="inspector" milestone={selected ? { ...selected, path: selected.path as DevelopmentPath, libraryEdit: true } : null} existingCodes={new Set(rows?.map(row => row.code))} onSave={saveShared} usage={selected?.usage} onPendingChange={pending => { savingRef.current = pending; setSaving(pending); }} onMaterialCountChange={onMaterialCountChange} />
           </BuilderInspector>
         </div>
         {!creating && selectedId && !selected && <div role="status" className="space-y-2 text-sm text-beat-maroon"><p>This milestone is no longer available in the shared library.</p><button type="button" className="beat-control min-h-11" onClick={closeSelection}>Clear selection</button></div>}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   X,
   Search,
@@ -25,6 +25,7 @@ export interface LibraryMilestone {
   title: string;
   description: string;
   isStandard: boolean;
+  materialCount?: number;
 }
 
 interface MilestoneLibraryDrawerProps {
@@ -33,6 +34,8 @@ interface MilestoneLibraryDrawerProps {
   milestones: LibraryMilestone[];
   placedCodes: Set<string>;
   className?: string;
+  initialPath?: DevelopmentPath;
+  onCreateShared?: () => void;
   onAddMilestone?: (milestone: LibraryMilestone) => void;
   onEditMilestone?: (milestone: LibraryMilestone) => void;
   onDeleteMilestone?: (milestone: LibraryMilestone) => void;
@@ -56,10 +59,15 @@ export function MilestoneLibraryDrawer({
   onAddMilestone,
   onEditMilestone,
   onDeleteMilestone,
+  initialPath,
+  onCreateShared,
 }: MilestoneLibraryDrawerProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPath, setSelectedPath] = useState<DevelopmentPath | undefined>(undefined);
   const [originFilter, setOriginFilter] = useState<"all" | "standard" | "custom">("all");
+
+  const wasOpen = useRef(false);
+  useEffect(() => { if (isOpen && !wasOpen.current) setSelectedPath(initialPath); wasOpen.current = isOpen; }, [isOpen, initialPath]);
 
   const standardCount = useMemo(() => milestones.filter((m) => m.isStandard).length, [milestones]);
   const customCount = useMemo(() => milestones.filter((m) => !m.isStandard).length, [milestones]);
@@ -124,6 +132,7 @@ export function MilestoneLibraryDrawer({
         </button>
       </div>
 
+      {onCreateShared && <button type="button" className="beat-control mx-4 mt-3 min-h-11" onClick={onCreateShared}>Create shared milestone</button>}
       {/* Search & Filter Section */}
       <div className="p-4 space-y-3 border-b border-beat-border bg-white">
         <div className="relative">
@@ -168,8 +177,8 @@ export function MilestoneLibraryDrawer({
             onClick={() => setOriginFilter("custom")}
             className={`flex-1 py-1 rounded-lg font-bold transition-all ${
               originFilter === "custom"
-                ? "bg-white text-purple-700 shadow-xs"
-                : "text-beat-muted hover:text-purple-700"
+                ? "bg-white text-beat-maroon shadow-xs"
+                : "text-beat-muted hover:text-beat-maroon"
             }`}
           >
             Custom ({customCount})
@@ -281,9 +290,9 @@ export function MilestoneLibraryDrawer({
                       type="button"
                       aria-label={`Add ${milestone.title} to its development path`}
                       onClick={() => onAddMilestone(milestone)}
-                      className="min-h-7 rounded-md border border-beat-gold/30 bg-beat-canvas px-2.5 text-xs font-semibold text-beat-maroon hover:border-beat-gold hover:bg-beat-gold/10 transition-colors cursor-pointer"
+                      className="min-h-11 rounded-md border border-beat-gold/30 bg-beat-canvas px-2.5 text-xs font-semibold text-beat-maroon hover:border-beat-gold hover:bg-beat-gold/10 transition-colors cursor-pointer"
                     >
-                      Add to plan
+                      Add to this draft
                     </button>
                   ) : (
                     <span className="text-[10px] text-beat-muted font-medium">

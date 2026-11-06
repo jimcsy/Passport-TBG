@@ -1,5 +1,7 @@
 "use client";
 
+import { CreateSharedMilestoneForm } from "@/components/admin/library/CreateSharedMilestoneForm";
+import type { MilestoneDefinition } from "@prisma/client";
 import { computePlanVersionDiff } from "@/lib/canvas/diff";
 import { pathTitle, readPathTitles, type PathTitles } from "@/lib/plans/paths";
 import { useRouter } from "next/navigation";
@@ -221,6 +223,7 @@ export interface PlanCanvasBuilderProps {
     }>;
   };
   libraryMilestones?: LibraryMilestone[];
+  addMilestoneId?: string;
   progressCounts?: Record<string, number>;
   activeTraineeCount?: number;
   publishedVersionNumber?: number | null;
@@ -239,6 +242,7 @@ function PlanCanvasBuilderInner({
   plan,
   initialVersion,
   libraryMilestones = [],
+  addMilestoneId,
   progressCounts = {},
   activeTraineeCount = 0,
   publishedVersionNumber = null,
@@ -262,6 +266,10 @@ function PlanCanvasBuilderInner({
   const dismissNotice = useCallback(() => setNotice(null), []);
   const setSaveMessage = useCallback((message: string | null) => setNotice(message ? { message, tone: "success" } : null), []);
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const [creatingShared, setCreatingShared] = useState(false);
+  const [createdSharedId, setCreatedSharedId] = useState<string>();
+  const [dismissedAddIntent, setDismissedAddIntent] = useState(false);
+  useEffect(() => setDismissedAddIntent(false), [addMilestoneId]);
   const [isPathNavigationOpen, setIsPathNavigationOpen] = useState(true);
   const libraryReopenButton = useRef<HTMLButtonElement>(null);
   const libraryFocusRequested = useRef(false);
@@ -290,6 +298,8 @@ function PlanCanvasBuilderInner({
   }, [isLibraryOpen]);
 
   function setLibraryVisible(visible: boolean) {
+    if (milestoneSaving.current) return;
+    if (visible) setCreatingShared(false);
     libraryFocusRequested.current = true;
     if (visible) setEditingMilestone(null);
     if (visible && !window.matchMedia("(min-width: 1280px)").matches) setIsPathNavigationOpen(false);
@@ -628,19 +638,19 @@ function PlanCanvasBuilderInner({
 
   const addLibraryMilestone = useCallback(
     (milestone: LibraryMilestone) => {
-      if (isViewingReadOnly) {
-        showWarning("You are viewing a published version (read-only). Switch to Working Draft to add milestones.");
-        return;
+      if (isViewingReadOnly || plan.status === "ARCHIVED") {
+        showWarning("Open an available working draft before adding milestones.");
+        return false;
       }
 
       // Check if duplicate
-      if (placedCodes.has(milestone.code)) {
+      if (placedCodes.has(milestone.code) || nodes.some(node => node.data.libraryMilestoneId === milestone.id || String(node.data.code || "").toUpperCase() === milestone.code.toUpperCase())) {
         showWarning(`${milestone.code} is already in this plan.`);
-        return;
+        return false;
       }
 
       const placement = getMilestonePlacement(nodes, milestone.path as DevelopmentPath);
-      if (!placement) { showWarning("This milestone does not have a matching development path."); return; }
+      if (!placement) { showWarning("This milestone does not have a matching development path."); return false; }
 
       const newNodeId = `node-lib-${milestone.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
       const newNode: Node = {
@@ -656,6 +666,7 @@ function PlanCanvasBuilderInner({
           orderIndex: placement.orderIndex,
           isCustom: false,
           libraryMilestoneId: milestone.id,
+          materialCount: milestone.materialCount || 0,
         },
       };
 
@@ -672,8 +683,10 @@ function PlanCanvasBuilderInner({
       setHasUnsavedChanges(true);
       setFocusedPath(milestone.path as DevelopmentPath);
       setFocusRequest({ ids: [newNodeId], detail: true });
+      setSaveMessage(`${milestone.code} added to this draft. Save draft to persist it; publish separately to update trainees.`);
+      return true;
     },
-    [isViewingReadOnly, placedCodes, nodes, edges, setNodes, setEdges, showWarning]
+    [isViewingReadOnly, plan.status, placedCodes, nodes, edges, setNodes, setEdges, showWarning]
   );
 
   const onDrop = useCallback(
@@ -928,6 +941,8 @@ function PlanCanvasBuilderInner({
   // Handle editing custom milestone from canvas
   const handleEditNode = useCallback(
     (nodeId: string) => {
+      if (milestoneSaving.current) return;
+      setCreatingShared(false);
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return;
 
@@ -948,13 +963,16 @@ function PlanCanvasBuilderInner({
   );
 
   const handleMaterialCountChange = useCallback((count: number) => {
+    if (editingMilestone?.id) setAvailableMilestones(previous => previous.map(item => item.id === editingMilestone.id ? { ...item, materialCount: count } : item));
     if (!editingMilestone?.nodeId) return;
     setNodes(previous => previous.map(node => node.id === editingMilestone.nodeId ? { ...node, data: { ...node.data, materialCount: count } } : node));
-  }, [editingMilestone?.nodeId, setNodes]);
+  }, [editingMilestone?.nodeId, editingMilestone?.id, setNodes]);
 
   // Handle editing custom milestone from library drawer
   const handleEditLibraryMilestone = useCallback(
     (milestone: LibraryMilestone) => {
+      if (milestoneSaving.current) return;
+      setCreatingShared(false);
       const canvasNode = nodes.find((n) => n.data.code === milestone.code);
       setIsLibraryOpen(false);
       setEditingMilestone({
@@ -1306,6 +1324,7 @@ function PlanCanvasBuilderInner({
   function closeInspector() {
     if (milestoneSaving.current) return;
     setIsLibraryOpen(false);
+    setCreatingShared(false);
     setEditingMilestone(null);
   }
 
@@ -1317,8 +1336,24 @@ function PlanCanvasBuilderInner({
     ? `Draft v${currentVersion.versionNumber} · ${retainedMilestonesCount} retained · ${newMilestonesCount} new. Trainees remain on published v${publishedVersion.versionNumber}.`
     : `Draft v${currentVersion.versionNumber} · Publish to make this plan available for assignment.`;
 
+  const intendedMilestone = dismissedAddIntent ? undefined : availableMilestones.find(item => item.id === addMilestoneId);
+  const isPlaced = (milestone: LibraryMilestone) => placedCodes.has(milestone.code) || nodes.some(node => node.data.libraryMilestoneId === milestone.id);
+  function sharedCreated(milestone: MilestoneDefinition) {
+    setAvailableMilestones(previous => [...previous.filter(item => item.id !== milestone.id), milestone]);
+    setCreatedSharedId(milestone.id); setCreatingShared(false);
+    setEditingMilestone({ ...milestone, path: milestone.path as DevelopmentPath, libraryEdit: true });
+  }
+  const inspectedLibraryItem = editingMilestone?.libraryEdit ? availableMilestones.find(item => item.id === editingMilestone.id) : undefined;
+
   return (
     <div className="relative flex h-[calc(100dvh-16rem)] min-h-[24rem] min-w-0 flex-col overflow-hidden rounded-xl border border-beat-border bg-white md:h-[calc(100dvh-9rem)] md:min-h-[32rem]">
+      {addMilestoneId && !dismissedAddIntent && <section aria-label="Milestone add request" className="max-h-56 shrink-0 overflow-y-auto space-y-2 border-b border-beat-border bg-beat-canvas p-3 text-sm text-beat-maroon">
+        {intendedMilestone ? <><p className="break-words font-semibold">Add {intendedMilestone.code}: {intendedMilestone.title}</p><p className="text-xs">{isViewingReadOnly ? "Open or create the working draft first. Nothing has been added." : "Add explicitly, then save the draft. Publish remains a separate action."}</p><div className="flex flex-wrap gap-2">
+          {isViewingReadOnly && (draftVersion ? <button type="button" className="beat-control min-h-11" onClick={() => handleSwitchVersion(draftVersion.versionNumber)}>Open working draft</button> : <button type="button" className="beat-control min-h-11" disabled={isCreatingDraft || plan.status === "ARCHIVED"} onClick={handleCreateNewDraft}>Create working draft</button>)}
+          <button type="button" className="beat-primary min-h-11" disabled={isViewingReadOnly || isPlaced(intendedMilestone) || plan.status === "ARCHIVED"} onClick={() => addLibraryMilestone(intendedMilestone)}>{isPlaced(intendedMilestone) ? "Already in this draft" : "Add to this draft"}</button>
+        </div></> : <p role="alert">This shared milestone is unavailable. Choose an existing milestone from the library.</p>}
+        <button type="button" className="beat-control min-h-11" onClick={() => setDismissedAddIntent(true)}>Dismiss add request</button>
+      </section>}
       <CanvasNotification notice={notice} onDismiss={dismissNotice} />
       <header className="z-30 flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-beat-border px-3 py-3 md:px-4">
         <div className="flex min-w-0 flex-1 basis-full items-center gap-3 md:basis-0">
@@ -1440,18 +1475,24 @@ function PlanCanvasBuilderInner({
         </div>
       )}
 
-      <BuilderInspector open={isLibraryOpen || editingMilestone !== null} desktop={desktop} label={isLibraryOpen ? "Milestone library" : "Milestone inspector"} onClose={closeInspector}>
+      <BuilderInspector open={isLibraryOpen || creatingShared || editingMilestone !== null} desktop={desktop} label={isLibraryOpen ? "Milestone library" : "Milestone inspector"} onClose={closeInspector}>
         <MilestoneLibraryDrawer
           isOpen={isLibraryOpen}
           onClose={closeInspector}
           milestones={availableMilestones}
           placedCodes={placedCodes}
-          onAddMilestone={addLibraryMilestone}
+          initialPath={focusedPath || undefined}
+          onCreateShared={!isViewingReadOnly ? () => { setIsLibraryOpen(false); setEditingMilestone(null); setCreatingShared(true); } : undefined}
+          onAddMilestone={!isViewingReadOnly ? addLibraryMilestone : undefined}
           onEditMilestone={handleEditLibraryMilestone}
-          onDeleteMilestone={handleDeleteLibraryMilestone}
+          onDeleteMilestone={!isViewingReadOnly ? handleDeleteLibraryMilestone : undefined}
           className="flex min-h-0 flex-1 flex-col bg-white text-beat-maroon"
         />
+        <CreateSharedMilestoneForm isOpen={creatingShared} initialPath={focusedPath || DevelopmentPath.ONBOARDING} onClose={closeInspector} onCreated={sharedCreated} onPendingChange={pending => { milestoneSaving.current = pending; }} />
         <EditMilestoneModal
+          notice={editingMilestone?.id === createdSharedId ? "Saved to the shared library. Upload materials here, then explicitly add it to this draft. Saving shared content does not add a plan node." : undefined}
+          focusMaterials={!!createdSharedId && editingMilestone?.id === createdSharedId}
+          actions={inspectedLibraryItem && !isViewingReadOnly ? <section className="space-y-2 border-t border-beat-border pt-4"><p className="text-xs">Adds to this plan’s working draft only. Save draft and Publish remain separate.</p><button type="button" className="beat-primary min-h-11" disabled={isPlaced(inspectedLibraryItem)} onClick={() => addLibraryMilestone(inspectedLibraryItem)}>{isPlaced(inspectedLibraryItem) ? "Already in this draft" : "Add to this draft"}</button></section> : undefined}
           isOpen={editingMilestone !== null}
           presentation="inspector"
           readOnly={isViewingReadOnly}

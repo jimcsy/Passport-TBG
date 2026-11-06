@@ -6,12 +6,13 @@ import { PlanCanvasBuilder } from "@/components/canvas/PlanCanvasBuilder";
 export const dynamic = "force-dynamic";
 
 interface BuilderPageProps {
+  searchParams?: { addMilestone?: string };
   params: {
     id: string;
   };
 }
 
-export default async function PlanBuilderPage({ params }: BuilderPageProps) {
+export default async function PlanBuilderPage({ params, searchParams }: BuilderPageProps) {
   const [plan, libraryMilestones, progressCounts] = await Promise.all([
     getTrainingPlanById(params.id),
     getLibraryMilestones(),
@@ -35,6 +36,7 @@ export default async function PlanBuilderPage({ params }: BuilderPageProps) {
   return (
     <div className="relative w-full md:left-[calc(50%-50vw+1rem)] md:w-[calc(100vw-2rem)]">
       <PlanCanvasBuilder
+        addMilestoneId={searchParams?.addMilestone}
         plan={{
           id: plan.id,
           title: plan.title,

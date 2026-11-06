@@ -28,6 +28,20 @@ export interface PlanActionResult {
   data?: unknown;
 }
 
+/** Picker reads only reusable, available plans; never exposes private instance metadata. */
+export async function getReusablePlanOptionsAction() {
+  if (!await getAdminSession()) return { success: false as const, error: "Please sign in as a trainer.", data: [] };
+  try {
+    const { prisma } = await import("@/lib/db/prisma");
+    const paths = await prisma.learningPath.findMany({
+      where: { type: { in: ["MASTER", "VARIANT"] }, plan: { status: { not: "ARCHIVED" }, versions: { some: { status: { in: ["DRAFT", "PUBLISHED"] } } } } },
+      select: { planId: true, title: true, type: true, plan: { select: { versions: { where: { status: "DRAFT" }, select: { id: true }, take: 1 } } } },
+      orderBy: [{ type: "asc" }, { title: "asc" }, { planId: "asc" }],
+    });
+    return { success: true as const, data: paths.map(path => ({ planId: path.planId, title: path.title, type: path.type, hasDraft: path.plan.versions.length > 0 })) };
+  } catch { return { success: false as const, error: "Could not load available plans. Please retry.", data: [] }; }
+}
+
 /** Trainer-only library metadata; never returns material locations or private identities. */
 export async function listMilestoneLibraryAction(filters: MilestoneLibraryFilters = {}): Promise<
   { success: true; data: MilestoneLibraryRow[] } | { success: false; error: string; data: [] }

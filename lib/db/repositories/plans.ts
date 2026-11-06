@@ -250,26 +250,9 @@ export async function savePlanVersion(input: SavePlanVersionInput, db: PrismaCli
 
     // Create new nodes
     for (const node of validated.nodes) {
-      let libraryMilestoneId = node.libraryMilestoneId || null;
-
-      // If it's a custom milestone, also upsert into MilestoneDefinition
-      // so it is combined into the shared library across all training tracks
-      if (node.isCustom && !libraryMilestoneId) {
-        const customDef = await tx.milestoneDefinition.upsert({
-          where: { code: node.code },
-          // Node snapshots can diverge without renaming the shared library entry.
-          update: {},
-          create: {
-            code: node.code,
-            title: node.title,
-            description: node.description,
-            path: node.path,
-            orderIndex: node.orderIndex,
-            isStandard: false,
-          },
-        });
-        libraryMilestoneId = customDef.id;
-      }
+      // Sharing is explicit at creation. An unlinked custom node stays plan-only,
+      // including when a shared definition happens to have the same code.
+      const libraryMilestoneId = node.libraryMilestoneId || null;
 
       const createdNode = await tx.planNode.create({
         data: {

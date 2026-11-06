@@ -6,7 +6,7 @@ import type { MilestoneLibraryRow } from "@/lib/db/repositories/milestone-librar
 import { MaterialListPanel } from "@/components/admin/MaterialListPanel";
 import { resolveStampDesign, STAMP_DESIGNS, type StampDesignKey } from "@/lib/stamps/catalog";
 import { StampDesignPicker } from "./StampDesignPicker";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import { X, Check, AlertCircle, Edit3 } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
@@ -52,6 +52,7 @@ interface EditMilestoneModalProps {
   usage?: MilestoneLibraryRow["usage"];
   notice?: string;
   focusMaterials?: boolean;
+  actions?: ReactNode;
   onPendingChange?: (pending: boolean) => void;
   onMaterialCountChange?: (count: number) => void;
   presentation?: "modal" | "inspector";
@@ -79,6 +80,7 @@ export function EditMilestoneModal({
   onPendingChange,
   notice,
   focusMaterials = false,
+  actions,
 }: EditMilestoneModalProps) {
   const materialsSection = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -336,9 +338,10 @@ export function EditMilestoneModal({
           </div>
         </form>
         <div ref={materialsSection} tabIndex={-1} className="mt-5 space-y-5">
-          {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable={!readOnly} embedded impact={usage ? `${usage.reusablePlanCount} current reusable plans, ${usage.historicalVersionCount} historical versions, ${usage.privateInstanceCount} private instances and ${usage.materialAffectedActiveTraineeCount} active trainees with shared-material access` : undefined} onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Save the draft and reload it before attaching materials to a new custom milestone.</p>}
+          {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable={!readOnly} embedded impact={usage ? `${usage.reusablePlanCount} current reusable plans, ${usage.historicalVersionCount} historical versions, ${usage.privateInstanceCount} private instances and ${usage.materialAffectedActiveTraineeCount} active trainees with shared-material access` : undefined} onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Plan-only milestones have no shared materials. Create a shared milestone from the library to attach reusable materials.</p>}
 
           {usage ? <MilestoneUsage usage={usage} /> : milestone.id && <section className="space-y-2 border-t border-beat-border pt-4 text-xs"><h4 className="font-semibold">Used in plans</h4><p role={usageError ? "alert" : "status"}>{usageError ? "Usage is unavailable. Material changes still affect every linked plan." : "Loading plan usage…"}</p>{usageError && <button type="button" className="beat-control min-h-11" onClick={() => setUsageRetry(value => value + 1)}>Retry usage</button>}</section>}
+          {actions}
         </div>
       </div>
     </div>
