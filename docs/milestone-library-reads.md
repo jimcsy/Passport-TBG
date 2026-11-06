@@ -19,3 +19,11 @@ Counts use three batched reads in one repeatable-read transaction, independent o
 ## Verification
 
 Run `node --env-file=.env scripts/test_milestone_library_reads.cjs` against the configured development database. The test creates unique temporary fixtures and removes them afterward; it never calls storage or displays environment values. It checks authentication, filters, material counts, multiple versions/nodes/assignments, history-only references, private and legacy scopes, canonical protection, exact legacy fallback behavior, privacy, repeatable results, and bounded query count.
+
+## Library browser (TC-05 / #40)
+
+Open `/trainer/plans/library` to search and inspect existing shared milestones without entering a plan. View-state query parameters are `q` (code/title search), `pillar` (pillar enum), `origin` (`STANDARD` or `CUSTOM`, omitted for all), and `milestone` (saved definition ID). Selection and filter links support browser Back/Forward. Search replaces the current history entry while typing; changing a filter or selection adds an entry. These operations do not write content.
+
+The desktop detail panel and full-screen mobile view are read-only at this stage. Shared editing/material controls are scoped to TC-06/#41. Closing details preserves filters and list position, restoring focus to the selected row or search if that row is no longer visible. Counts retain the definitions above; zero materials is valid.
+
+Browser verification: `PLAYWRIGHT_MODULE=<playwright-module-path> node --env-file=.env scripts/test_milestone_library_browser.cjs`, with the production app running on port 3100 and its build in `.next-mobile-check` (override with `LIBRARY_TEST_ORIGIN` and `PASSPORT_BUILD_DIR`). It uses isolated database metadata fixtures, simulates a failed read and an empty response in the browser, and cleans up its records without touching storage objects.
