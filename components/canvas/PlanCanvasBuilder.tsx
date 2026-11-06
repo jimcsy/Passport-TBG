@@ -863,7 +863,16 @@ function PlanCanvasBuilderInner({
 
   // Handle custom milestone creation from modal
   const handleCreateCustomMilestone = useCallback(
-    (form: CreateCustomMilestoneForm) => {
+    async (form: CreateCustomMilestoneForm) => {
+      if (isViewingReadOnly) return { success: false, error: "Open a working draft before adding a milestone." };
+      if (placedCodes.has(form.code)) return { success: false, fieldErrors: { code: "This milestone code already exists in this plan." } };
+      let savedMilestone: LibraryMilestone | null = null;
+      if (form.addToLibrary !== false) {
+        const result = await createCustomLibraryMilestoneAction({ code: form.code, title: form.title, description: form.description, path: form.path });
+        if (!result.success) return result;
+        savedMilestone = result.data;
+      }
+
       const parentHub = nodes.find((n) => n.id === `root-${form.path}`);
       const newNodeId = `node-custom-${form.code.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}`;
 
@@ -880,7 +889,7 @@ function PlanCanvasBuilderInner({
           path: form.path,
           orderIndex: Math.max(0, ...nodes.filter(node => node.type === "milestone" && node.data.path === form.path).map(node => Number(node.data.orderIndex))) + 1,
           isCustom: true,
-          libraryMilestoneId: null,
+          libraryMilestoneId: savedMilestone?.id || null,
         },
       };
 
@@ -900,36 +909,19 @@ function PlanCanvasBuilderInner({
       setEdges(layouted.edges);
       setHasUnsavedChanges(true);
 
-      // Register in shared milestone library if requested
-      if (form.addToLibrary !== false) {
-        const newLibraryItem: LibraryMilestone = {
-          id: `custom-def-${form.code.toLowerCase()}`,
-          code: form.code,
-          title: form.title,
-          description: form.description,
-          path: form.path,
-          orderIndex: Math.max(0, ...nodes.filter(node => node.type === "milestone" && node.data.path === form.path).map(node => Number(node.data.orderIndex))) + 1,
-          isStandard: false,
-        };
-        setAvailableMilestones((prev) => {
-          if (prev.some((m) => m.code === form.code)) return prev;
-          return [...prev, newLibraryItem];
-        });
-
-        createCustomLibraryMilestoneAction({
-          code: form.code,
-          title: form.title,
-          description: form.description,
-          path: form.path,
-        }).catch((err) => console.error("Could not persist custom milestone to library:", err));
+      if (savedMilestone) {
+        const item = savedMilestone;
+        setAvailableMilestones(previous => previous.some(milestone => milestone.id === item.id) ? previous : [...previous, item]);
       }
-
-      setSaveMessage(`Custom milestone "${form.code}" added to plan and shared library.`);
+      setSaveMessage(savedMilestone
+        ? `Custom milestone "${form.code}" added to this draft and the shared library.`
+        : `Custom milestone "${form.code}" added to this draft.`);
       setFocusedPath(form.path);
       setFocusRequest({ ids: [newNodeId], detail: true });
+      return { success: true };
 
     },
-    [nodes, edges, nodeCountMap, setNodes, setEdges]
+    [nodes, edges, isViewingReadOnly, placedCodes, setNodes, setEdges]
   );
 
   // Handle editing custom milestone from canvas

@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { X, Plus, AlertCircle } from "lucide-react";
+import { X, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
+import { customMilestoneSchema, type MilestoneCreationOutcome } from "@/lib/validations/milestones";
 
 const PATH_PREFIX_MAP: Record<DevelopmentPath, string> = {
   [DevelopmentPath.ONBOARDING]: "ONB",
@@ -21,21 +22,7 @@ const ROLE_PREFIX_MAP: Record<string, string> = {
   IT_INTERN: "IT",
 };
 
-export const CreateCustomMilestoneSchema = z.object({
-  code: z
-    .string()
-    .min(3, "Code must be at least 3 characters")
-    .max(25, "Code cannot exceed 25 characters")
-    .regex(/^[A-Z0-9_-]+$/, "Code must contain only uppercase letters, numbers, hyphens, or underscores"),
-  title: z
-    .string()
-    .min(3, "Title must be at least 3 characters")
-    .max(100, "Title cannot exceed 100 characters"),
-  description: z
-    .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(500, "Description cannot exceed 500 characters"),
-  path: z.nativeEnum(DevelopmentPath),
+export const CreateCustomMilestoneSchema = customMilestoneSchema.extend({
   addToLibrary: z.boolean().default(true),
 });
 
@@ -48,7 +35,7 @@ interface CreateMilestoneModalProps {
   pathDisplayName?: string;
   roleIdentifier: string;
   existingCodes: Set<string>;
-  onSubmit: (data: CreateCustomMilestoneForm) => void;
+  onSubmit: (data: CreateCustomMilestoneForm) => Promise<MilestoneCreationOutcome>;
 }
 
 export function CreateMilestoneModal({
@@ -65,10 +52,16 @@ export function CreateMilestoneModal({
   const [description, setDescription] = useState("");
   const [addToLibrary, setAddToLibrary] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pending, setPending] = useState(false);
+  const submitting = useRef(false);
+  const openContext = useRef<string | null>(null);
 
   // Auto-generate sequential code when path or modal opens
   useEffect(() => {
-    if (!isOpen || !path) return;
+    if (!isOpen || !path) { openContext.current = null; return; }
+    const context = `${path}:${roleIdentifier}`;
+    if (openContext.current === context) return;
+    openContext.current = context;
 
     const pathPrefix = PATH_PREFIX_MAP[path] || "GEN";
     const rolePrefix =
@@ -93,8 +86,11 @@ export function CreateMilestoneModal({
 
   if (!isOpen || !path) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  function close() { if (!submitting.current) onClose(); }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting.current) return;
     setErrors({});
 
     const result = CreateCustomMilestoneSchema.safeParse({
@@ -120,14 +116,23 @@ export function CreateMilestoneModal({
       return;
     }
 
-    onSubmit(result.data);
-    onClose();
+    submitting.current = true;
+    setPending(true);
+    try {
+      const saved = await onSubmit(result.data);
+      if (!saved.success) {
+        setErrors(saved.fieldErrors && Object.keys(saved.fieldErrors).length ? saved.fieldErrors : { form: saved.error || "Could not add the milestone. Please try again." });
+        return;
+      }
+      onClose();
+    } catch { setErrors({ form: "Could not add the milestone. Your details are kept; please try again." }); }
+    finally { submitting.current = false; setPending(false); }
   };
 
   return (
     <div
       className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
-      onClick={onClose}
+      onClick={close}
     >
       <div
         role="dialog" aria-modal="true" aria-label="Create milestone" className="portal-modal-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
@@ -150,7 +155,9 @@ export function CreateMilestoneModal({
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={close}
+            disabled={pending}
+            aria-label="Close milestone creation"
             className="rounded-full p-2 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
@@ -158,7 +165,8 @@ export function CreateMilestoneModal({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} aria-busy={pending} className="mt-5 space-y-4">
+          <fieldset disabled={pending} className="space-y-4">
           {/* Target Track & Role Badge */}
           <div className="flex items-center gap-2 p-3 rounded-lg bg-beat-canvas border border-beat-border">
             <span className="text-[10px] uppercase font-bold text-beat-gold tracking-wider">
@@ -262,11 +270,12 @@ export function CreateMilestoneModal({
             </div>
           </label>
 
+          {errors.form && <p role="alert" className="text-sm text-beat-maroon">{errors.form}</p>}
           {/* Action Footer */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
               type="button"
-              onClick={onClose}
+              onClick={close}
               className="rounded-xl border border-beat-border px-4 py-2.5 text-xs font-bold text-beat-muted hover:bg-beat-canvas transition-colors cursor-pointer"
             >
               Cancel
@@ -275,10 +284,11 @@ export function CreateMilestoneModal({
               type="submit"
               className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5 text-beat-gold" />
-              <span>Add to Canvas</span>
+              {pending ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-beat-gold" /> : <Plus aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />}
+              <span>{pending ? "Adding…" : "Add to Canvas"}</span>
             </button>
           </div>
+          </fieldset>
         </form>
       </div>
     </div>

@@ -17,6 +17,8 @@ import {
 } from "@/lib/db/repositories/assignments";
 import type { SavePlanVersionInput, PublishPlanVersionInput } from "@/lib/validations/plans";
 import { DevelopmentPath } from "@/lib/types/models";
+import { createCustomLibraryMilestone, type CreateLibraryMilestoneResult } from "@/lib/db/repositories/milestones";
+import type { CustomMilestoneInput } from "@/lib/validations/milestones";
 
 export interface PlanActionResult {
   success: boolean;
@@ -134,35 +136,15 @@ export async function getLibraryMilestonesAction(pathFilter?: string): Promise<P
 /**
  * Persists a custom milestone to the organization library for reuse across all plans.
  */
-export async function createCustomLibraryMilestoneAction(data: {
-  code: string;
-  title: string;
-  description: string;
-  path: DevelopmentPath;
-}): Promise<PlanActionResult> {
+export async function createCustomLibraryMilestoneAction(data: CustomMilestoneInput): Promise<CreateLibraryMilestoneResult> {
   const admin = await getAdminSession();
   if (!admin) return { success: false, error: "Unauthorized session" };
 
   try {
-    const { prisma } = await import("@/lib/db/prisma");
-    const milestone = await prisma.milestoneDefinition.upsert({
-      where: { code: data.code },
-      update: {
-        title: data.title,
-        description: data.description,
-        path: data.path,
-      },
-      create: {
-        code: data.code,
-        title: data.title,
-        description: data.description,
-        path: data.path,
-        isStandard: false,
-      },
-    });
-
+    const result = await createCustomLibraryMilestone(data);
+    if (!result.success) return result;
     revalidatePath("/trainer/plans");
-    return { success: true, data: milestone };
+    return result;
   } catch (error) {
     console.error("Error creating custom library milestone:", error);
     return { success: false, error: "Failed to register custom milestone in library." };
