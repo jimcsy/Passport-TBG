@@ -1,8 +1,10 @@
 # Trainer content workspace redesign plan
 
-Date: 2026-11-06  
-Status: Approved; tracked by [GitHub epic #35](https://github.com/jimcsy/Passport-TBG/issues/35).  
-Scope: Trainer content management. This document does not authorize implementing the tasks.
+Date: 2026-11-06
+Status: Implemented and reviewed on `feat/trainer-content-workspace`; tracked by [GitHub epic #35](https://github.com/jimcsy/Passport-TBG/issues/35).
+Scope: Trainer content management. Implementation proceeded through the approved dependency-linked issues.
+
+Handoff: [trainer usage guide](docs/trainer-content-guide.md) · [screenshots, evidence and limitations](docs/trainer-content-handoff.md) · [regression checks](docs/trainer-content-regressions.md).
 
 ## 1. Objective
 
@@ -62,7 +64,7 @@ Preserve:
 
 Exclude new watch tracking, automatic completion, quizzes, ratings, certificates, thumbnails, recommendation engines, and engagement analytics. New read queries and narrowly scoped action fixes are identified below; no schema changes are expected for the agreed design.
 
-## 5. Proposed information architecture
+## 5. Implemented information architecture
 
 Preserve the existing four main trainer destinations. Rename **Training Plans** to **Training Content** and place the two content tabs inside that area.
 
@@ -76,7 +78,7 @@ Trainer navigation
   Trainees
 ```
 
-Proposed routes preserve existing bookmarks and links:
+Implemented routes preserve existing bookmarks and links:
 
 | Screen | Route |
 | --- | --- |
@@ -197,12 +199,12 @@ Each task should be independently reviewable. Complete its acceptance criteria b
 
 Dependencies: None.
 
-- [ ] Validate shared creation on the server using the existing milestone field constraints.
-- [ ] Make creation reject duplicate codes without updating an existing definition, including canonical milestones.
-- [ ] Preserve authentication and existing canonical protections.
-- [ ] Return the actual persisted milestone ID and handle concurrent duplicate creation cleanly.
-- [ ] Await the result in the creation UI; do not use a synthetic ID for upload authorization.
-- [ ] Show success only after persistence succeeds; preserve entered fields on failure.
+- [x] Validate shared creation on the server using the existing milestone field constraints.
+- [x] Make creation reject duplicate codes without updating an existing definition, including canonical milestones.
+- [x] Preserve authentication and existing canonical protections.
+- [x] Return the actual persisted milestone ID and handle concurrent duplicate creation cleanly.
+- [x] Await the result in the creation UI; do not use a synthetic ID for upload authorization.
+- [x] Show success only after persistence succeeds; preserve entered fields on failure.
 
 Acceptance: Two attempts using the same code cannot overwrite existing content. A failed request creates no optimistic success message or upload target. A successful request returns a usable definition ID. No plan is published or trainee progress changed.
 
@@ -210,12 +212,12 @@ Acceptance: Two attempts using the same code cannot overwrite existing content. 
 
 Dependencies: None; required by TC-05 and TC-06.
 
-- [ ] Provide authenticated milestone listing with real material counts and correctly labeled usage information.
-- [ ] Support code/title search, pillar, and standard/custom filtering.
-- [ ] Resolve plan references using existing definitions and plan nodes; distinguish current/draft references from history and private instances.
-- [ ] Identify matching draft nodes affected by shared metadata updates, including existing code-based fallback behavior.
-- [ ] Avoid a separate database request for every row.
-- [ ] Keep storage paths, signed URLs, credentials, and trainee-private details out of list responses unless specifically needed and authorized.
+- [x] Provide authenticated milestone listing with real material counts and correctly labeled usage information.
+- [x] Support code/title search, pillar, and standard/custom filtering.
+- [x] Resolve plan references using existing definitions and plan nodes; distinguish current/draft references from history and private instances.
+- [x] Identify matching draft nodes affected by shared metadata updates, including existing code-based fallback behavior.
+- [x] Avoid a separate database request for every row.
+- [x] Keep storage paths, signed URLs, credentials, and trainee-private details out of list responses unless specifically needed and authorized.
 
 Acceptance: Counts are deduplicated and reproducible from fixtures. Usage does not treat every version as a separate reusable plan. Existing trainer access rules remain enforced. No schema migration is required.
 
@@ -225,11 +227,11 @@ Acceptance: Counts are deduplicated and reproducible from fixtures. Usage does n
 
 Dependencies: None.
 
-- [ ] Rename the trainer content destination while retaining the four main destinations.
-- [ ] Add the two local tabs and the `/trainer/plans/library` route.
-- [ ] Preserve existing plan, builder, and `?create=1` entry links.
-- [ ] Keep selected-tab and keyboard/focus states clear on desktop and mobile.
-- [ ] Rename the misleading New Course shortcut to its actual role-variant action.
+- [x] Rename the trainer content destination while retaining the four main destinations.
+- [x] Add the two local tabs and the `/trainer/plans/library` route.
+- [x] Preserve existing plan, builder, and `?create=1` entry links.
+- [x] Keep selected-tab and keyboard/focus states clear on desktop and mobile.
+- [x] Rename the misleading New Course shortcut to its actual role-variant action.
 
 Acceptance: Both tabs are directly addressable; existing links still work. Mobile navigation remains usable. URL navigation performs no content mutation.
 
@@ -237,9 +239,9 @@ Acceptance: Both tabs are directly addressable; existing links still work. Mobil
 
 Dependencies: TC-03.
 
-- [ ] Place the existing master summary and variant rows under the Training Plans tab.
-- [ ] Preserve enrolled counts, filters, inline metadata, creation, deletion, and builder links.
-- [ ] Keep individual instances accessible through trainee profiles, outside the reusable catalog.
+- [x] Place the existing master summary and variant rows under the Training Plans tab.
+- [x] Preserve enrolled counts, filters, inline metadata, creation, deletion, and builder links.
+- [x] Keep individual instances accessible through trainee profiles, outside the reusable catalog.
 
 Acceptance: Exactly one master remains visible. Existing variant workflows continue to work. No duplicate editor, extra confirmation, or mandatory modal is added to routine catalog editing.
 
@@ -249,11 +251,11 @@ Acceptance: Exactly one master remains visible. Existing variant workflows conti
 
 Dependencies: TC-02, TC-03.
 
-- [ ] Add the agreed row layout, counts, search, and filters.
-- [ ] Provide a keyboard-accessible milestone selection control and a clear selected-row state.
-- [ ] Use URL view state for selected milestone and relevant filters; preserve Back behavior without writes.
-- [ ] Implement loading, empty, no-results, retry, and long-content states.
-- [ ] Adapt the same information to compact mobile rows.
+- [x] Add the agreed row layout, counts, search, and filters.
+- [x] Provide a keyboard-accessible milestone selection control and a clear selected-row state.
+- [x] Use URL view state for selected milestone and relevant filters; preserve Back behavior without writes.
+- [x] Implement loading, empty, no-results, retry, and long-content states.
+- [x] Adapt the same information to compact mobile rows.
 
 Acceptance: A trainer can find and select an existing milestone without entering a plan. Filters and scroll position survive inspector use. No horizontal overflow at supported widths.
 
@@ -261,12 +263,12 @@ Acceptance: A trainer can find and select an existing milestone without entering
 
 Dependencies: TC-02, TC-05.
 
-- [ ] Reuse existing inspector/form/material components with a clear shared-library or plan-draft context.
-- [ ] Add Details, Materials, and Used-in-plans sections.
-- [ ] Preserve canonical protections, draft-local editing, and existing shared-update behavior.
-- [ ] Keep plan-node stamp design controls out of the global library definition editor.
-- [ ] Make shared material impact visible before replacement/deletion.
-- [ ] Retain staged edits, pending/error states, native mobile focus containment, Escape behavior, and focus return.
+- [x] Reuse existing inspector/form/material components with a clear shared-library or plan-draft context.
+- [x] Add Details, Materials, and Used-in-plans sections.
+- [x] Preserve canonical protections, draft-local editing, and existing shared-update behavior.
+- [x] Keep plan-node stamp design controls out of the global library definition editor.
+- [x] Make shared material impact visible before replacement/deletion.
+- [x] Retain staged edits, pending/error states, native mobile focus containment, Escape behavior, and focus return.
 
 Acceptance: Trainers can identify what will change before saving. Library edits do not silently publish plan metadata or verify competencies. Nested material previews close without dismissing the underlying inspector.
 
@@ -276,12 +278,12 @@ Acceptance: Trainers can identify what will change before saving. Library edits 
 
 Dependencies: TC-01, TC-06.
 
-- [ ] Add Create milestone with code, title, description, and pillar.
-- [ ] After successful persistence, transition the same inspector into material management using the real ID.
-- [ ] Preserve entered metadata and list context during that transition.
-- [ ] Reuse existing MP4/PDF/PPTX validation, 50 MB limits, signed upload, confirmation, and cleanup behavior.
-- [ ] Keep a saved milestone available when an upload fails or is canceled; allow retry without duplicating the milestone.
-- [ ] Clearly distinguish saving shared content from adding it to a plan draft.
+- [x] Add Create milestone with code, title, description, and pillar.
+- [x] After successful persistence, transition the same inspector into material management using the real ID.
+- [x] Preserve entered metadata and list context during that transition.
+- [x] Reuse existing MP4/PDF/PPTX validation, 50 MB limits, signed upload, confirmation, and cleanup behavior.
+- [x] Keep a saved milestone available when an upload fails or is canceled; allow retry without duplicating the milestone.
+- [x] Clearly distinguish saving shared content from adding it to a plan draft.
 
 Acceptance: Create → upload → preview requires no page reload or searching for the new item. No file upload starts before a valid saved milestone exists. Zero-material milestones remain valid. Canceling file upload does not silently delete the saved milestone.
 
@@ -289,13 +291,13 @@ Acceptance: Create → upload → preview requires no page reload or searching f
 
 Dependencies: TC-04, TC-06, TC-07.
 
-- [ ] In a plan context, offer Add to this draft without asking the trainer to select the same plan again.
-- [ ] In library-only context, offer an eligible master/variant plan picker and open the existing editor with an explicit add intent.
-- [ ] If a plan is published, use its existing create/open-draft workflow before insertion.
-- [ ] Require an explicit Add to draft action; never mutate a plan merely by visiting a link.
-- [ ] Reuse existing duplicate prevention, pillar matching, placement, ordering, and connection rules.
-- [ ] Keep Save draft and Publish as separate existing operations.
-- [ ] Retain the current plan-only custom creation option without silently sharing its content.
+- [x] In a plan context, offer Add to this draft without asking the trainer to select the same plan again.
+- [x] In library-only context, offer an eligible master/variant plan picker and open the existing editor with an explicit add intent.
+- [x] If a plan is published, use its existing create/open-draft workflow before insertion.
+- [x] Require an explicit Add to draft action; never mutate a plan merely by visiting a link.
+- [x] Reuse existing duplicate prevention, pillar matching, placement, ordering, and connection rules.
+- [x] Keep Save draft and Publish as separate existing operations.
+- [x] Retain the current plan-only custom creation option without silently sharing its content.
 
 Acceptance: The correct saved definition is linked, its materials are available, duplicate insertion is blocked, and active trainees receive no new assignment or changed curriculum before the existing publish flow is completed.
 
@@ -305,11 +307,11 @@ Acceptance: The correct saved definition is linked, its materials are available,
 
 Dependencies: TC-04; TC-08 for the integrated add flow.
 
-- [ ] Default a fresh editor session to the curriculum outline.
-- [ ] Retain the five pillars, collapsible navigation, Whole plan access, and accessible reorder controls.
-- [ ] Keep Canvas and its existing features available through the view switch.
-- [ ] Use the shared content picker and inspector from the outline.
-- [ ] Preserve graph nodes/connections and staged draft edits while switching views or resizing.
+- [x] Default a fresh editor session to the curriculum outline.
+- [x] Retain the five pillars, collapsible navigation, Whole plan access, and accessible reorder controls.
+- [x] Keep Canvas and its existing features available through the view switch.
+- [x] Use the shared content picker and inspector from the outline.
+- [x] Preserve graph nodes/connections and staged draft edits while switching views or resizing.
 
 Acceptance: A plan can be opened, edited, supplied with a reusable milestone, and saved without entering Canvas. Canvas remains fully functional and sees the same draft data.
 
@@ -317,10 +319,10 @@ Acceptance: A plan can be opened, edited, supplied with a reusable milestone, an
 
 Dependencies: TC-06, TC-08, TC-09.
 
-- [ ] Use context-specific save labels and concise scope explanations.
-- [ ] Show current version and saved/unsaved state without repeating banners.
-- [ ] Preserve shared-plan sync controls and individual/shared/new-variant publishing scope, impact previews, and confirmations.
-- [ ] Preserve plan-removal progress checks, original stamp hashes, revocations, and audit history.
+- [x] Use context-specific save labels and concise scope explanations.
+- [x] Show current version and saved/unsaved state without repeating banners.
+- [x] Preserve shared-plan sync controls and individual/shared/new-variant publishing scope, impact previews, and confirmations.
+- [x] Preserve plan-removal progress checks, original stamp hashes, revocations, and audit history.
 
 Acceptance: Saving shared material is not presented as publishing a plan. Saving inspector fields is not presented as saving the entire draft. Existing recipient selection and progress safeguards remain intact.
 
@@ -330,17 +332,17 @@ Acceptance: Saving shared material is not presented as publishing a plan. Saving
 
 Dependencies: TC-01 through TC-10.
 
-- [ ] Test duplicate-code creation, concurrent attempts, canonical protection, failure recovery, and real-ID handoff.
-- [ ] Test library reads, count deduplication, permissions, filters, selection, Back, and context restoration.
-- [ ] Test create → upload → preview → add to draft → save → reload.
-- [ ] Test upload failure/cancellation without losing saved metadata or duplicating records.
-- [ ] Test shared metadata versus published snapshots, shared material effects, and draft-local customizations.
-- [ ] Test outline/Canvas parity, reordering, empty pillars, staged edits, and published read-only inspection.
-- [ ] Test individual/shared/new-variant publishing and archived progress preservation.
-- [ ] Test original stamp hashes, revocation history, and review availability before/after content changes.
-- [ ] Inspect real rendered layouts at 320, 390, 768, 1024, and 1440 px, including long titles, zero materials, errors, and open inspectors.
-- [ ] Check keyboard access, focus return, nested previews, touch targets, and mobile bottom-navigation clearance.
-- [ ] Run TypeScript and production build checks.
+- [x] Test duplicate-code creation, concurrent attempts, canonical protection, failure recovery, and real-ID handoff.
+- [x] Test library reads, count deduplication, permissions, filters, selection, Back, and context restoration.
+- [x] Test create → upload → preview → add to draft → save → reload.
+- [x] Test upload failure/cancellation without losing saved metadata or duplicating records.
+- [x] Test shared metadata versus published snapshots, shared material effects, and draft-local customizations.
+- [x] Test outline/Canvas parity, reordering, empty pillars, staged edits, and published read-only inspection.
+- [x] Test individual/shared/new-variant publishing and archived progress preservation.
+- [x] Test original stamp hashes, revocation history, and review availability before/after content changes.
+- [x] Inspect real rendered layouts at 320, 390, 768, 1024, and 1440 px, including long titles, zero materials, errors, and open inspectors.
+- [x] Check keyboard access, focus return, nested previews, touch targets, and mobile bottom-navigation clearance.
+- [x] Run TypeScript and production build checks.
 
 Acceptance: Tests use isolated fixtures and clean them up. No credentials or signed URLs appear in logs/screenshots. Existing tests are adapted to changed navigation/view defaults without dropping behavioral assertions.
 
@@ -348,10 +350,10 @@ Acceptance: Tests use isolated fixtures and clean them up. No credentials or sig
 
 Dependencies: TC-11.
 
-- [ ] Review the agreed end-to-end trainer journey on desktop and mobile.
-- [ ] Record changed files, checks run, and any remaining limitations.
-- [ ] Update trainer-facing usage documentation and relevant screenshots.
-- [ ] Confirm all existing content and trainee workflows remain accessible.
+- [x] Review the agreed end-to-end trainer journey on desktop and mobile.
+- [x] Record changed files, checks run, and any remaining limitations.
+- [x] Update trainer-facing usage documentation and relevant screenshots.
+- [x] Confirm all existing content and trainee workflows remain accessible.
 
 Acceptance: Each preceding task has evidence against its criteria. Any deferred work is explicitly named; none of the six interview decisions is silently omitted.
 
@@ -424,7 +426,7 @@ A trainer can create a reusable milestone, attach and preview materials, add it 
 
 Parent tracker: [#35 — Epic: Trainer Content Workspace Redesign](https://github.com/jimcsy/Passport-TBG/issues/35). The parent issue contains the approved design brief and completion checklist. Each task issue contains its required work and acceptance criteria.
 
-Start with TC-01; TC-02 and TC-03 have no prerequisites and can be prepared independently. Follow the native blocked-by relationships for subsequent tasks.
+TC-01 through TC-12 are complete. The table preserves their dependency order; per-task acceptance evidence is linked in the [handoff](docs/trainer-content-handoff.md#preceding-task-evidence).
 
 | Task | GitHub issue | Prerequisites |
 | --- | --- | --- |

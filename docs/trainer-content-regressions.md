@@ -59,6 +59,9 @@ status and redacts configured credentials and URLs from output.
 | Keyboard, focus return, nested preview, 44px targets, bottom-nav clearance | `contextual_inspector_browser`, `milestone_library_browser`, `training_content_navigation` |
 
 Screenshots are temporary local artifacts under `/tmp/tc*`; they are not committed.
+The final handoff includes a curated, reproducible set of committed screenshots
+in [the trainer guide](trainer-content-guide.md), with provenance and remaining
+limits in [the handoff](trainer-content-handoff.md).
 Media fixtures check transport and preview elements, rather than codec decoding.
 Browser coverage uses Chromium; physical-device and other-browser testing remain
 separate checks.

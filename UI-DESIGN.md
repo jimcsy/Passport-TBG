@@ -16,6 +16,18 @@ and the next action. Use the same conventions in trainee and trainer screens.
 - Keep version states explicit in text: Published, Draft, Read only, New, and Viewing. Use a single quiet status strip and avoid repeating the same state in banners, badges, and action buttons.
 - Version history uses a simple divided list. The active version has a gold selection edge; load and draft actions retain the same control hierarchy as the builder.
 
+## Training Content workspace
+
+- Keep four trainer destinations: Hub, Verifications, Training Content and Trainees. Training Content contains Training Plans and Milestone Library; preserve existing builder links and the mobile bottom navigation.
+- Use compact divided catalog/library rows with readable text metadata, explicit origin and precisely labeled counts. Count current reusable plans separately from history, private instances and active trainees.
+- Open fresh builders in Outline/Whole plan with five pillars. Preserve desktop Canvas as an optional view over the same draft. Mobile uses the focused outline and path selector.
+- Use a docked inspector on desktop and a full-screen, independently scrolling inspector on mobile. Preserve staged fields across selection/resizing; Escape closes nested previews first and returns focus on inspector close.
+- Keep save scope next to its action: Apply to draft, Save draft, Save shared details and Publish. Saved shared materials affect linked references immediately; unpublished inspector fields are excluded from draft save/publish.
+- Create shared milestones before enabling uploads, transition the same inspector to materials, then require explicit draft insertion. Show validation, pending, retry and zero-material states without introducing a new content lifecycle.
+- Keep routine controls and mobile navigation at usable touch sizes, visible focus states and bottom-navigation clearance. Informational stamp tooltips must not intercept module-link taps.
+
+Implemented workflow: [trainer guide](docs/trainer-content-guide.md). Reviewed screenshots, evidence and limits: [handoff](docs/trainer-content-handoff.md).
+
 References reviewed for this refinement:
 
 - [Linear's March 2026 interface refresh](https://linear.app/now/behind-the-latest-design-refresh): less competing decoration, fewer icons, and predictable control placement.

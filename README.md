@@ -131,27 +131,24 @@ All database queries are strictly isolated in `lib/db/repositories/` and `lib/ac
 See [UI-DESIGN.md](./UI-DESIGN.md) for shared surface, typography, control,
 and copy conventions and the design references behind the interface refinement.
 
-The training plan builder docks the milestone library beside the canvas on
-desktop. Its toolbar keeps Arrange visible but disabled in Outline view. Save,
-publish, and milestone feedback appears in a dismissible top-right notification
-outside the toolbar, so messages do not shift controls. Success messages dismiss
-automatically; errors remain visible until dismissed.
-The library sits beside the canvas on
-desktop and stacks it below the viewport on smaller screens. The library starts
-expanded whenever a plan opens. Closing
-it with × leaves a compact panel icon at the canvas edge to reopen it, rather
-than a large toolbar button. Reopening the panel focuses search; closing it
-returns keyboard focus to the panel icon. Returning from Outline to Canvas
-also opens the library. Dropping a library
-card, or using its Add to plan button, connects the milestone to its matching
-development path and rebalances the vertical tree. The default canvas starts
+The trainer content workflow is documented in the [trainer guide](docs/trainer-content-guide.md),
+with reviewed screenshots, acceptance evidence and limitations in the
+[implementation handoff](docs/trainer-content-handoff.md).
+
+The builder opens in Outline/Whole plan with five pillar sections. Desktop Canvas
+remains optional. The on-demand Milestones picker and contextual inspector dock
+on desktop and use a full-screen inspector on mobile. Inspect, edit, reorder,
+create shared content, upload and add to the draft without a reload/search detour.
+Apply to draft, Save draft, Save shared details and Publish have distinct scopes.
+Versions and publishing-impact review retain their existing behavior.
+
+When selected, Canvas starts
 with a visual training-plan root and a vertical spine of five path hubs.
 Milestones branch to both sides of their hub in staggered rows, with individual
 curved connectors rather than one shared horizontal bus. Path spacing adapts
 to milestone counts and measured sizes. The spine is visual only and is excluded
 from saved/published graph data. Initial loading applies this grouped layout
-rather than displaying raw seed coordinates, and opens at the first path for
-readability; Whole plan fits the entire tree.
+rather than displaying raw seed coordinates; Whole plan fits the entire tree.
 Once React Flow measures the
 new node, the viewport smoothly focuses it at a readable zoom (instant with
 reduced motion). Path shortcuts focus a category; Whole plan restores the overview.
@@ -162,57 +159,36 @@ https://reactflow.dev/api-reference/types/react-flow-instance
 `node --import tsx scripts/test_canvas_layout.ts` checks vertical path ordering,
 staggered branches, and collision-free placement with uneven milestone counts.
 
-The authenticated `/trainer` workspace uses a top navbar in
-`components/admin/AdminNavigation.tsx` in place of the sidebar. Review Queue,
-Training Plans, Trainees, and Batch Sign-Off keep their existing routes, with
-parent sections highlighted on detail and builder screens. The header follows
-the trainee theme and shows trainer identity, employee ID, role, and Sign out.
-Smaller screens use a horizontally scrollable navigation row. Both portals share
-`components/navigation/SignOutButton.tsx` for pending-state feedback; trainer
-sign-out clears the admin session and returns to `/trainer/login`.
+The authenticated `/trainer` workspace keeps four main destinations: Hub,
+Verifications, Training Content and Trainees. Training Content contains Training
+Plans (`/trainer/plans`) and Milestone Library (`/trainer/plans/library`). Desktop
+uses the header navigation; phones use icon-based bottom navigation. Trainer
+identity, notifications and Sign out remain available. Batch sign-off retains
+`/trainer/batch`; existing plan and builder links remain valid.
 
-All authenticated trainee screens share `app/passport/layout.tsx` and
-`components/trainee/TraineeNavigation.tsx`: a white header, Dashboard / My passport
-links with a gold active underline, trainee identity, and a separate Sign out
-action with a pending state. On smaller screens the links sit beneath the brand
-and account actions. Module pages keep Dashboard active as their parent section.
-The brand links home to the dashboard, and a keyboard skip link targets the main
-content. Navigation follows the current GOV.UK service-navigation guidance:
-https://design-system.service.gov.uk/patterns/navigate-a-service/
-The shared header and right-side account utilities also draw on Carbon's UI shell:
-https://www.carbondesignsystem.com/building-blocks/core/components/ui-shell-header/guidelines
+Authenticated trainee screens share `app/trainee/dashboard/layout.tsx` and
+`components/trainee/TraineeNavigation.tsx`. Dashboard, My passport and Notifications
+use bottom navigation on mobile. Modules retain Dashboard as their parent section.
+The header includes Sign out, and keyboard skip links target the main content.
 
-The authenticated `/passport` route renders `components/trainee/TraineeDashboard.tsx`
-with live repository data. Track selection filters the learning cards. The detailed
-milestone list has been removed from the dashboard; cards link to authenticated
-`/passport/modules/[id]` screens for module details and trainer review requests.
-Use "View all modules" to access every module in the selected track.
+`/trainee/dashboard` renders live learning progress and development paths with
+Strobi guidance. Paths and stamps lead to authenticated module pages at
+`/trainee/dashboard/modules/[id]`. Materials appear before Review & feedback;
+trainees submit their reflection there. The trainer queue is `/trainer/queue`.
+Server guards prevent duplicate requests and preserve existing approvals.
 
-The "View passport" action navigates to the authenticated `/passport/booklet`
-screen, which uses the portal's maroon, gold, warm canvas, and white card theme.
-`components/passport/PassportBook.tsx` renders an inline reader with CSS 3D page
-turns, arrow keys, track shortcuts, spread selection, and reduced motion support.
-A "Back to dashboard" link returns to the operational view. On narrow screens,
-the two-page spread scrolls horizontally.
-Below the reader, `StampDetailCallout.tsx` provides an inline detail panel for every
-stamp state. Hover, keyboard focus, and tap update the preview, verification
-status, trainer approval, and trainee reflection. The selection remains visible
-until another stamp is inspected or the spread changes. The panel stays in normal
-page flow so it cannot cover the reader controls. Incomplete, unlocked milestones
-include an optional reflection field and a Submit for review action. Drafts are
-kept per milestone while browsing. Submission uses the existing server action to
-set `READY_FOR_REVIEW` and put the milestone in `/admin/queue`, matching the
-notification workflow in `architecture.md`; it does not send email or push alerts.
-Queued, verified, and locked milestones show their current state and cannot be
-resubmitted. Server-side guards preserve existing trainer approvals and prevent
-duplicate queue entries. Empty reflections use the portal's existing reflection
-prompt. The named reference images were not
-supplied with this change, so their exact placeholder wording is unverified.
-`lib/passport/book.ts` allocates exactly 32 pages: cover, holder profile, then one
-introduction and five milestone pages for each of the five paths. This is a
-provisional allocation based on the supplied wireframe; a full physical booklet
-specification was not supplied. Milestones are sorted and distributed without
-omission, including when a track has more than five milestones.
+My passport opens `/trainee/dashboard/booklet`. Desktop retains the page-turn
+reader and path shortcuts; mobile uses equal-sized swipeable pages and selectors
+for jumping to a development path or page. Informational stamp tooltips show
+status and approval details; clicking/tapping a stamp opens its module. Tooltips
+ignore pointer events so they cannot block that navigation. Review submission is
+not available directly from the passport. Dynamic pagination keeps all milestones
+accessible as paths grow; empty pillars retain their exemption view.
+
+Stamp notifications are available at `/trainee/dashboard/notifications` and the
+notification control. First opening an unread earned stamp triggers its Strobi
+celebration; subsequent openings navigate to the module. Mobile notifications
+behave as a navigation tab rather than a dismissible overlay.
 
 Verified stamps display the recorded trainer name, employee ID, approval date in
 Asia/Manila, and trainer note. The signature area represents digital approval
@@ -251,7 +227,7 @@ Manual check: open registration, confirm Position is initially disabled, select 
 
 ## Master catalog, role variants and trainee instances
 
-`/trainer/plans` shows one **Foundation Level 1: TBG Corporate Onboarding** master card with an expandable Role Variants list. Create a variant inside the card, select its department/position tags, then use **Edit Variant** to rename, retag, reorder or append milestones. Node changes save to a draft. Use **Edit Nodes** / the full Path Builder to publish that draft before assigning it.
+`/trainer/plans` shows one **Foundation Level 1: TBG Corporate Onboarding** master summary and compact role-variant rows. Use **Create role variant**, search/status filters, **Edit details** for inline title/tag and default-node changes, or **Edit plan** to open the Outline builder. Rows show enrolled counts and contextual deletion. Node changes save to a draft; review and publish it through the builder before assigning the published path.
 
 `LearningPath` stores hierarchy metadata and links one-to-one to the existing `TrainingPlan` version graph:
 
