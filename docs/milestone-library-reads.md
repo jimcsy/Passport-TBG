@@ -29,3 +29,11 @@ The desktop panel and full-screen native mobile inspector reuse the builder form
 Browser verification: `PLAYWRIGHT_MODULE=<playwright-module-path> node --env-file=.env scripts/test_milestone_library_browser.cjs`, with the production app running on port 3100 and its build in `.next-mobile-check` (override with `LIBRARY_TEST_ORIGIN` and `PASSPORT_BUILD_DIR`). It uses isolated database metadata fixtures, simulates a failed read and an empty response in the browser, and cleans up its records without touching storage objects.
 
 Contextual-inspector verification: `PLAYWRIGHT_MODULE=<playwright path> node --env-file=.env scripts/test_contextual_inspector_browser.cjs`. This exercises isolated custom/canonical definitions, draft/published nodes, an existing fixture stamp, and real temporary material uploads/reordering/previews/deletion. It cleans up its database fixtures and storage files.
+
+## Create and attach materials (TC-07 / #42)
+
+Choose **Create milestone** in the library (view-state `create=1`). Enter code, title, description/criteria and pillar, then **Save shared milestone**. The same inspector switches to the saved definition's materials using the server-returned ID; no reload or search is needed, even when current filters exclude the new item. The filters remain unchanged. Saving shared content does not insert a node into a plan draft or publish anything; plan insertion is scoped to TC-08/#43.
+
+Creation errors retain the fields. Closing preserves an unsaved form; **Cancel** discards it. After persistence, upload failures, upload cancellation and closing the inspector leave the saved definition intact. Existing file validation, 50 MB limits, signed upload/confirmation/cancellation and preview are reused. Zero-material milestones are valid.
+
+Verification: `PLAYWRIGHT_MODULE=<playwright path> node --env-file=.env scripts/test_shared_creation_upload_browser.cjs` with the production app on port 3100. It uses temporary records and storage files, simulates upload failure/cancellation, retries a real PDF upload, previews it in the same inspector, checks mobile creation and zero-material persistence, and cleans up afterward.

@@ -50,6 +50,8 @@ interface EditMilestoneModalProps {
   existingCodes: Set<string>;
   onSave: (updated: EditableMilestoneTarget) => void | Promise<{ success: boolean; error?: string }>;
   usage?: MilestoneLibraryRow["usage"];
+  notice?: string;
+  focusMaterials?: boolean;
   onPendingChange?: (pending: boolean) => void;
   onMaterialCountChange?: (count: number) => void;
   presentation?: "modal" | "inspector";
@@ -75,7 +77,15 @@ export function EditMilestoneModal({
   readOnly = false,
   usage: providedUsage,
   onPendingChange,
+  notice,
+  focusMaterials = false,
 }: EditMilestoneModalProps) {
+  const materialsSection = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!isOpen || !focusMaterials) return;
+    const frame = requestAnimationFrame(() => { materialsSection.current?.focus({ preventScroll: true }); materialsSection.current?.scrollIntoView({ block: "nearest" }); });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen, focusMaterials, milestone?.id]);
   type MilestoneFields = EditCustomMilestoneForm & { stampDesign: StampDesignKey };
   const [stagedEdits, setStagedEdits] = useState<Record<string, MilestoneFields>>({});
   const [pending, setPending] = useState(false);
@@ -205,6 +215,7 @@ export function EditMilestoneModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {notice && <p role="status" className="text-sm leading-relaxed text-beat-maroon">{notice}</p>}
           <h4 className="text-sm font-semibold">Details</h4>
           {shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Shared library definition{readOnly ? " · Read only in this published plan." : protectedDetails ? " · Canonical BEAT details are protected." : ` · Saving updates this definition and ${usage ? `${usage.metadataAffectedDraftNodeCount} matching nodes in ${usage.metadataAffectedDraftPlanCount} draft plans` : "matching draft nodes, including custom code matches"}. Published snapshot metadata and trainee verification remain unchanged.`}</p>}
           {saveError[contextKey] && <p role="alert" className="text-sm text-beat-maroon">{saveError[contextKey]}</p>}
@@ -324,7 +335,7 @@ export function EditMilestoneModal({
             </button>}
           </div>
         </form>
-        <div className="mt-5 space-y-5">
+        <div ref={materialsSection} tabIndex={-1} className="mt-5 space-y-5">
           {milestone.id && !milestone.id.startsWith("custom-def-") ? <MaterialListPanel key={milestone.id} milestoneId={milestone.id} milestoneCode={milestone.code} editable={!readOnly} embedded impact={usage ? `${usage.reusablePlanCount} current reusable plans, ${usage.historicalVersionCount} historical versions, ${usage.privateInstanceCount} private instances and ${usage.materialAffectedActiveTraineeCount} active trainees with shared-material access` : undefined} onCountChange={onMaterialCountChange} /> : <p className="text-xs text-beat-muted">Save the draft and reload it before attaching materials to a new custom milestone.</p>}
 
           {usage ? <MilestoneUsage usage={usage} /> : milestone.id && <section className="space-y-2 border-t border-beat-border pt-4 text-xs"><h4 className="font-semibold">Used in plans</h4><p role={usageError ? "alert" : "status"}>{usageError ? "Usage is unavailable. Material changes still affect every linked plan." : "Loading plan usage…"}</p>{usageError && <button type="button" className="beat-control min-h-11" onClick={() => setUsageRetry(value => value + 1)}>Retry usage</button>}</section>}
