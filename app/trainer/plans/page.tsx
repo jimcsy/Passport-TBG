@@ -1,5 +1,6 @@
 import { getLearningPathCatalog } from "@/lib/db/repositories/learning-paths";
 import { TrainingPlanCatalog } from "@/components/admin/TrainingPlanCatalog";
+import { TrainingContentHeader } from "@/components/admin/TrainingContentHeader";
 import { readPathTitles } from "@/lib/plans/paths";
 import type { PlanNodeInput, PlanEdgeInput } from "@/lib/validations/plans";
 
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 export default async function TrainingPlansPage({ searchParams }: { searchParams?: { create?: string } }) {
   const master = await getLearningPathCatalog();
   return <div className="space-y-6">
-    <header><h1 className="text-xl font-semibold text-beat-maroon md:text-2xl">Training plans</h1><p className="mt-2 max-w-2xl text-sm leading-relaxed text-beat-maroon/75">Manage the corporate foundation and reusable role variants. Individual trainee paths stay in their profiles.</p></header>
+    <TrainingContentHeader activeTab="plans" />
     {master ? <TrainingPlanCatalog master={{ title: master.title, planId: master.planId, nodeCount: master.plan.versions[0]?._count.nodes || 0 }} initiallyOpen={searchParams?.create === "1"} variants={master.children.map(path => {
       const version = path.plan.versions[0];
       return { id: path.id, planId: path.planId, title: path.title, targetDepartment: path.targetDepartment, targetPosition: path.targetPosition,

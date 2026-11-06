@@ -14,7 +14,7 @@ interface AdminNavigationProps {
 const links = [
   { href: "/trainer", label: "Hub", icon: Home },
   { href: "/trainer/queue", label: "Verifications", icon: ShieldCheck },
-  { href: "/trainer/plans", label: "Training Plans", icon: GitBranch },
+  { href: "/trainer/plans", label: "Training Content", icon: GitBranch },
   { href: "/trainer/trainees", label: "Trainees", icon: Users },
 ];
 

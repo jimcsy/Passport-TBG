@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Plus, GitBranch, UserPlus, CheckSquare } from "lucide-react";
 
 const actions = [
-  { href: "/trainer/plans?create=1", label: "New Course", icon: GitBranch },
+  { href: "/trainer/plans?create=1", label: "Create role variant", icon: GitBranch },
   { href: "/trainer/trainees/new", label: "Register Trainee", icon: UserPlus },
   { href: "/trainer/batch", label: "Batch Sign-Off", icon: CheckSquare },
 ];
