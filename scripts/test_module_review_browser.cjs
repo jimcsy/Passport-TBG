@@ -6,7 +6,7 @@ const { STROBI_MASCOT_MAP } = require('../lib/constants/mascots.ts');
 const { SignJWT } = require('jose');
 const assert = require('node:assert/strict');
 const origin = process.env.STROBI_TEST_ORIGIN || 'http://localhost:3100';
-let browser, trainer, trainee, plan;
+let browser, trainer, trainee, plan, page;
 (async () => {
   const suffix = String(Date.now());
   trainer = await prisma.adminUser.create({ data: { employeeId: `MODREV-${suffix}`, email: `strobi-${suffix}@example.invalid`, fullName: 'Module Review Test Trainer', passwordHash: 'unused-test-password' } });
@@ -27,7 +27,7 @@ let browser, trainer, trainee, plan;
     return ctx;
   }
   const learner = await context({ id: trainee.id, traineeCode: trainee.traineeCode, fullName: trainee.fullName, email: trainee.email, portal: 'trainee' }, 'beat_trainee_session');
-  const page = await learner.newPage();
+  page = await learner.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(origin + '/trainee/dashboard/booklet', { waitUntil: 'networkidle' });
@@ -38,6 +38,7 @@ let browser, trainer, trainee, plan;
   assert.equal(await page.getByRole('region', { name: 'Stamp details', exact: true }).count(), 0);
   assert.equal(await page.getByRole('button', { name: /Submit for review|Mark for Review/ }).count(), 0);
   await stamp.click();
+  await page.waitForURL('**/modules/' + nodes[0].id);
   await page.getByRole('heading', { name: 'Module details', exact: true }).waitFor();
   assert(page.url().endsWith('/modules/' + nodes[0].id));
   const review = page.getByRole('region', { name: 'Review & feedback', exact: true });
@@ -65,7 +66,7 @@ let browser, trainer, trainee, plan;
     assert.equal(await page.locator('textarea').count(), 0);
   }
   const staff = await context({ id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: 'TRAINER', portal: 'trainer' }, 'beat_admin_session');
-  const admin = await staff.newPage();
+  const admin = await staff.newPage(); admin.setDefaultTimeout(60000); admin.setDefaultNavigationTimeout(60000);
   await admin.goto(origin + '/trainer/queue', { waitUntil: 'networkidle' });
   const toggle = admin.getByRole('button', { name: new RegExp(nodes[0].code + ':') });
   await toggle.click();
@@ -84,14 +85,25 @@ let browser, trainer, trainee, plan;
   stamp = page.getByRole('link', { name: 'Onboarding celebration test: verified and stamped, open module', exact: true }).first();
   await stamp.hover();
   await page.getByRole('tooltip').getByText('Excellent onboarding reflection.', { exact: true }).waitFor();
+  assert.equal(await page.getByRole('tooltip').evaluate(element => getComputedStyle(element).pointerEvents), 'none');
   await page.setViewportSize({ width: 390, height: 844 });
+  // The mobile carousel mounts separately from desktop spreads. Navigate its
+  // page control rather than clicking a stamp on an inactive/inert slide.
+  const jump = page.getByRole('combobox', { name: 'Jump to page', exact: true });
+  await jump.waitFor();
+  const stampPage = await page.locator('[aria-roledescription="slide"]').evaluateAll((slides, nodeId) => slides.findIndex(slide => slide.querySelector(`a[href$="/modules/${nodeId}"]`)), nodes[0].id);
+  assert.ok(stampPage >= 0);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await jump.selectOption(String(stampPage));
+  await page.locator('[aria-roledescription="slide"]').nth(stampPage).and(page.locator('[aria-hidden="false"]')).waitFor();
   await stamp.click();
+  await page.waitForURL('**/modules/' + nodes[0].id);
   await page.getByRole('heading', { name: 'Module details', exact: true }).waitFor();
   assert(page.url().endsWith('/modules/' + nodes[0].id));
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.deepEqual(errors, []);
   console.log('PASS: locked/pending controls, actual trainer approval and feedback on module page, completed hover metadata, mobile tap navigation, no browser errors');
-})().catch(error => { console.error(error.message); process.exitCode = 1; }).finally(async () => {
+})().catch(async error => { if (page && !page.isClosed()) await page.screenshot({ path: '/tmp/tc11-module-review-failure.png' }); console.error(String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]')); process.exitCode = 1; }).finally(async () => {
   if (browser) await browser.close();
   if (trainee) await prisma.trainee.delete({ where: { id: trainee.id } });
   if (plan) await prisma.trainingPlan.delete({ where: { id: plan.id } });

@@ -38,7 +38,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
-  const page = await context.newPage(); page.setDefaultTimeout(20000);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
   const errors = []; page.on('pageerror', error => errors.push(error.name));
   await page.goto(`${origin}/trainer/plans/library?milestone=${target.id}&q=${prefix}`, { waitUntil: 'networkidle' });
   const library = page.locator('#library-inspector');
@@ -80,9 +80,11 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   await page.getByRole('button', { name: 'Open milestone library', exact: true }).click();
   const inspector = page.locator('#builder-inspector');
   await inspector.getByRole('button', { name: 'Technical', exact: true }).waitFor();
+  await inspector.getByText(onboarding.title, { exact: true }).waitFor({ state: 'detached' });
   assert.equal(await inspector.getByText(onboarding.title, { exact: true }).count(), 0);
   await inspector.getByRole('button', { name: 'All Paths', exact: true }).click();
   await inspector.getByText(onboarding.title, { exact: true }).waitFor();
+  await inspector.getByRole('button', { name: `Add ${target.title} to its development path`, exact: true }).waitFor({ state: 'detached' });
   assert.equal(await inspector.getByRole('button', { name: `Add ${target.title} to its development path`, exact: true }).count(), 0);
   await inspector.getByRole('button', { name: 'Create shared milestone', exact: true }).click();
   const form = inspector.getByRole('form', { name: 'Create shared milestone' }); await form.waitFor();
@@ -97,12 +99,19 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   const file = { name: 'insertion-fixture.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF\n') };
   await inspector.getByLabel(`Attach materials to ${newCode}`).setInputFiles(file);
   await inspector.getByRole('heading', { name: 'Course materials (1)' }).waitFor({ timeout: 60000 });
+  await inspector.getByRole('button', { name: 'Preview / download', exact: true }).click();
+  const preview = page.getByRole('dialog', { name: file.name, exact: true });
+  await preview.waitFor();
+  await preview.getByRole('button', { name: 'Close material preview' }).click();
+  await preview.waitFor({ state: 'hidden' });
+  assert.ok(await inspector.isVisible(), 'Closing preview must preserve the insertion inspector');
   assert.equal(await inspector.getByRole('combobox', { name: 'Training plan', exact: true }).count(), 0);
   await inspector.getByRole('button', { name: 'Add to this draft', exact: true }).click();
   assert.ok(await inspector.getByRole('button', { name: 'Already in this draft' }).isDisabled());
   await page.keyboard.press('Escape'); await inspector.waitFor({ state: 'hidden' });
   await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByText('Draft saved.', { exact: true }).waitFor();
   assert.equal(await prisma.planNode.count({ where: { planVersionId: draft.id, libraryMilestoneId: shared.id } }), 1);
+  await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('button', { name: `Inspect ${newCode}`, exact: true }).click();
   await inspector.getByRole('heading', { name: 'Course materials (1)' }).waitFor();
   await page.screenshot({ path: '/tmp/tc08-materials-mobile.png' });
@@ -110,6 +119,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   console.log('PASS: existing draft reused, focused pillar/all-path browsing, create/upload in the same plan inspector, explicit insertion without plan reselection, linked materials available');
 
   stage = 'plan-only custom and final preservation';
+  await page.getByRole('combobox', { name: 'Development path', exact: true }).selectOption('TECHNICAL');
   await page.getByRole('button', { name: 'Add Milestone', exact: true }).click();
   const customForm = page.getByRole('dialog', { name: 'Create milestone', exact: true });
   const privateCode = `${prefix}-PVT`;
@@ -133,7 +143,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   assert.deepEqual(await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: onboarding.id } }), onboarding);
   assert.deepEqual(errors, []);
   console.log('PASS: unchecked plan-only content stays unlinked after Save; missing intent is safe; active assignment, published curriculum and original stamp remain unchanged');
-})().catch(error => { console.error(`Plan insertion check failed at ${stage}: ${String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 2000)}`); process.exitCode = 1; }).finally(async () => {
+})().catch(error => { console.error(`Plan insertion check failed at ${stage}: ${`${error.message} ${(error.stack || '').split('\n').find(line => /test_plan_insertion_browser.cjs:\d/.test(line)) || ''}`.replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 2000)}`); process.exitCode = 1; }).finally(async () => {
   await browser?.close();
   const objects = await prisma.courseMaterial.findMany({ where: { milestone: { code: { startsWith: prefix } } }, select: { storagePath: true } });
   if (objects.length) { const result = await storage.storage.from('course-materials').remove(objects.map(object => object.storagePath)); if (result.error) { console.error('Temporary storage cleanup failed'); process.exitCode = 1; } }

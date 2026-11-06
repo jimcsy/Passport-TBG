@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/db/prisma";
 import { createTrainingPlan, savePlanVersion, publishPlanVersion, getPlanMilestoneProgressCounts } from "../lib/db/repositories/plans";
-import { assignPlanToTrainee } from "../lib/db/repositories/assignments";
 import { reconcileTraineeToPlanVersion } from "../lib/db/services/reconcile";
 import { getTraineePassportData } from "../lib/db/repositories/trainee";
 import { DevelopmentPath } from "../lib/types/models";
@@ -18,13 +17,19 @@ async function main() {
     await prisma.milestoneDefinition.createMany({ data: definitions });
     const plan = await createTrainingPlan({ title: "Path editing regression fixture", roleIdentifier: "PATH_EDIT_TEST", isDefault: false, createdById: trainer.id }); planId = plan.id;
     const baseNodes = definitions.map(node => ({ id: `local-${node.id}`, libraryMilestoneId: node.id, code: node.code, title: node.title, description: node.description, path: node.path, orderIndex: node.orderIndex, posX: 0, posY: node.orderIndex * 200, isCustom: false }));
+    // Deliberate legacy shared assignments exercise reconciliation directly.
+    // Modern assignment actions create private instances, tested separately.
+    const assignLegacy = async (traineeId: string, version: { id: string; nodes: { id: string }[] }) => {
+      await prisma.traineePlanAssignment.create({ data: { traineeId, planVersionId: version.id, assignedById: trainer.id } });
+      await prisma.traineeProgress.createMany({ data: version.nodes.map(node => ({ traineeId, planNodeId: node.id, status: "IN_PROGRESS" })) });
+    };
     const input = { planId, publishedById: trainer.id, status: "DRAFT" as const, nodes: baseNodes, edges: [] };
     assert.equal(SavePlanVersionSchema.safeParse({ ...input, nodes: [baseNodes[0], { ...baseNodes[1], code: baseNodes[0].code.toLowerCase() }] }).success, false);
     assert.equal(SavePlanVersionSchema.safeParse({ ...input, nodes: [baseNodes[0], { ...baseNodes[1], libraryMilestoneId: baseNodes[0].libraryMilestoneId }] }).success, false);
     const v1 = await savePlanVersion(input); await publishPlanVersion({ versionId: v1.id, syncTrainees: false }, trainer.id);
     for (let index = 0; index < 2; index++) {
       const trainee = await prisma.trainee.create({ data: { traineeCode: `PATH-${suffix}-${index}`, fullName: "Path edit fixture", email: "path-edit@example.invalid", restaurantBrand: "Test", branchLocation: "Test", cohortBatch: "Path editing regression", hireDate: new Date() } });
-      trainees.push(trainee.id); await assignPlanToTrainee({ traineeId: trainee.id, planVersionId: v1.id, assignedById: trainer.id });
+      trainees.push(trainee.id); await assignLegacy(trainee.id, v1);
     }
     const verified = v1.nodes.find(node => node.path === "TECHNICAL" && node.orderIndex === 1)!;
     const removed = v1.nodes.find(node => node.path === "TECHNICAL" && node.orderIndex === 2)!;
@@ -57,7 +62,7 @@ async function main() {
     console.log("PASS: rename, reorder, add two, remove verified and empty path; all row IDs, statuses, notes, dates and hashes preserved; passport labels/exemption and assignment pointers correct.");
     const v3 = await savePlanVersion({ ...input, nodes: [...nodesV2, ...additions], pathTitles: { TECHNICAL: "Daily operations", LEADERSHIP: "Team leadership" } }); await publishPlanVersion({ versionId: v3.id, syncTrainees: false }, trainer.id);
     const late = await prisma.trainee.create({ data: { traineeCode: `PATH-${suffix}-late`, fullName: "Later subscriber", email: "late@example.invalid", restaurantBrand: "Test", branchLocation: "Test", cohortBatch: "Path editing regression", hireDate: new Date() } }); trainees.push(late.id);
-    await assignPlanToTrainee({ traineeId: late.id, planVersionId: v3.id, assignedById: trainer.id });
+    await assignLegacy(late.id, v3);
     const v4 = await savePlanVersion({ ...input, nodes: [...nodesV2, ...additions], pathTitles: { TECHNICAL: "Final operations", LEADERSHIP: "Team leadership" } });
     const catchup = await publishPlanVersion({ versionId: v4.id, syncTrainees: true }, trainer.id); assert.equal(catchup.reconcileResult?.migratedTraineesCount, 3);
     assert.equal(await prisma.traineePlanAssignment.count({ where: { traineeId: { in: trainees }, status: "ACTIVE", planVersionId: v4.id } }), 3);

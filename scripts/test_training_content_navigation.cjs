@@ -53,6 +53,13 @@ const snapshot = async () => ({
       assert.equal(await mobile.getByRole('link').count(), 4);
       assert.ok(await mobile.getByRole('link', { name: 'Training Content', exact: true }).isVisible());
       assert.equal(await mobile.getByRole('link', { name: 'Training Content', exact: true }).getAttribute('aria-current'), 'page');
+      for (const link of await mobile.getByRole('link').all()) {
+        const bounds = await link.boundingBox();
+        assert.ok(bounds.width >= 44 && bounds.height >= 44, 'Mobile navigation has touch-sized targets');
+      }
+      await tabs.scrollIntoViewIfNeeded();
+      const tabBounds = await tabs.boundingBox(), navBounds = await mobile.boundingBox();
+      assert.ok(tabBounds.y + tabBounds.height <= navBounds.y, 'Bottom navigation does not cover content tabs');
       await page.getByRole('button', { name: 'Open quick actions' }).click();
       assert.equal(await page.getByRole('link', { name: 'New Course', exact: true }).count(), 0);
       await page.getByRole('link', { name: 'Create role variant', exact: true }).click();

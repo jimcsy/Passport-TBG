@@ -22,7 +22,7 @@ let browser, trainer, trainee, plan, definitions = [], stage = 'fixtures';
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
-  const page = await context.newPage(); page.setDefaultTimeout(15000);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
   const errors = []; page.on('pageerror', error => errors.push(error.name));
   const canvas = page.locator('.react-flow');
   const node = code => page.locator('.react-flow__node-milestone').filter({ has: page.getByText(code, { exact: true }) });

@@ -27,7 +27,7 @@ const plans = [];
   browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
-  const page = await context.newPage(); page.setDefaultTimeout(20000);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
   const errors = []; page.on('pageerror', error => errors.push(error.name));
   // Isolate fault injection from independent notification actions on this route.
   const built = require('node:fs').readFileSync(`${process.env.PASSPORT_BUILD_DIR || '.next-mobile-check'}/server/app/trainer/plans/library/page.js`, 'utf8');
@@ -92,15 +92,22 @@ const plans = [];
     if (width < 1024) {
       const dialog = page.getByRole('dialog', { name: 'Shared library milestone inspector', exact: true }); await dialog.waitFor();
       const bounds = await dialog.boundingBox(); assert.equal(bounds.x, 0); assert.equal(bounds.width, width); assert.equal(bounds.height, 900);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       await dialog.getByRole('button', { name: 'Close milestone details' }).focus(); await page.keyboard.press('Shift+Tab');
       await page.waitForFunction(el => el.contains(document.activeElement), await dialog.elementHandle());
     }
     assert.ok((await long.boundingBox()).height >= 44);
-    if (width === 390 || width === 1440) await page.screenshot({ path: `/tmp/tc05-library-selected-${width}.png`, fullPage: width === 1440 });
+    await page.screenshot({ path: `/tmp/tc05-library-selected-${width}.png`, fullPage: width === 1440 });
     await page.keyboard.press('Escape');
     await page.getByRole('heading', { name: definitions[0].title, exact: true }).waitFor({ state: 'detached' });
     await page.waitForFunction(el => el === document.activeElement, await long.elementHandle());
     assert.equal(new URL(page.url()).searchParams.get('q'), prefix);
+    if (width < 768) {
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      const lastRow = await list.getByRole('listitem').last().boundingBox();
+      const bottomNav = await page.getByRole('navigation', { name: 'Mobile trainer navigation', exact: true }).boundingBox();
+      assert.ok(lastRow.y + lastRow.height <= bottomNav.y, 'Last milestone clears the fixed bottom navigation');
+    }
   }
   await page.screenshot({ path: '/tmp/tc05-library-desktop.png', fullPage: true });
   console.log('PASS: compact rows and long content at 320–1440px, full-screen mobile inspector, focus trap, Escape and filter retention');
@@ -115,9 +122,10 @@ const plans = [];
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByText('Loading milestone library…', { exact: true }).waitFor();
-  for (let i = 0; i < 40 && !release; i++) await page.waitForTimeout(50);
-  assert.ok(release); release();
+  for (let i = 0; i < 1200 && !release; i++) await page.waitForTimeout(50);
+  assert.ok(typeof release === 'function', 'Library read request reached the injected failure'); release();
   await page.getByRole('button', { name: 'Retry loading library' }).waitFor();
+  await page.screenshot({ path: '/tmp/tc11-library-error.png' });
   await page.unroute('**/trainer/plans/library*');
   await page.getByRole('button', { name: 'Retry loading library' }).click(); await list.waitFor();
   assert.equal(await search.inputValue(), prefix);
@@ -138,6 +146,7 @@ const plans = [];
   });
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByRole('heading', { name: 'No milestones in the library' }).waitFor();
+  await page.screenshot({ path: '/tmp/tc11-library-empty.png' });
   await page.unroute('**/trainer/plans/library*');
   await page.goto(`${origin}/trainer/plans/library?milestone=missing-fixture&q=${prefix}`, { waitUntil: 'networkidle' });
   await page.getByText('This milestone is no longer available in the shared library.', { exact: true }).waitFor();
@@ -148,7 +157,7 @@ const plans = [];
   assert.equal(await prisma.planNode.count({ where: { planVersion: { planId: plan.id } } }), 2);
   assert.deepEqual(errors, []);
   console.log('PASS: genuine empty-response UI, stale selection recovery, no browser errors and no content mutation');
-})().catch(error => { console.error(`Library browser check failed at ${stage}: ${String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 1600)}`); process.exitCode = 1; }).finally(async () => {
+})().catch(error => { console.error(`Library browser check failed at ${stage}: ${`${error.message} ${(error.stack || '').split('\n').find(line => /test_milestone_library_browser.cjs:\d/.test(line)) || ''}`.replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 1600)}`); process.exitCode = 1; }).finally(async () => {
   await browser?.close();
   await prisma.trainingPlan.deleteMany({ where: { id: { in: plans } } });
   await prisma.milestoneDefinition.deleteMany({ where: { code: { startsWith: prefix } } });

@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:seed": "prisma db seed",
     "db:reset": "FORCE_RESET=true prisma db seed",
-    "test": "tsx scripts/test_flow.ts"
+    "test": "tsx scripts/test_flow.ts",
+    "test:trainer-content": "node --env-file=.env scripts/test_trainer_content_regressions.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

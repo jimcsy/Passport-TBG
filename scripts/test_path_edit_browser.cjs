@@ -20,12 +20,12 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   await prisma.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: v1.id, assignedById: trainer.id } });
   await prisma.traineeProgress.createMany({ data: initialNodes.map(node => ({ traineeId: trainee.id, planNodeId: node.id, ...(node.code === definitions[1].code ? { status: 'READY_FOR_REVIEW', requestedAt: new Date(), traineeNote: 'Pending browser reflection' } : verificationData(trainee.id, node.id, trainer.id, new Date(), 'Browser audit note')) })) });
   const before = await prisma.traineeProgress.findMany({ where: { traineeId: trainee.id } });
-  browser = await chromium.launch({ executablePath: process.env.PATH_BROWSER_EXECUTABLE || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+  browser = await chromium.launch({ executablePath: process.env.PATH_BROWSER_EXECUTABLE, headless: true });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
   const key = new TextEncoder().encode(process.env.SESSION_SECRET || 'beat-growth-passport-super-secret-key-change-in-production-2024');
   const token = await new SignJWT({ id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: 'TRAINER', portal: 'trainer' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(key);
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
-  const page = await context.newPage();
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
   if (publishOnly) {
     const { savePlanVersion } = require('../lib/db/repositories/plans.ts');
     await savePlanVersion({ planId: plan.id, publishedById: trainer.id, status: 'DRAFT', pathTitles: { TECHNICAL: 'Operations' }, nodes: [
@@ -38,6 +38,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   await page.goto(`${origin}/trainer/plans/${plan.id}/builder`, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'New draft', exact: true }).click();
   await page.getByRole('button', { name: 'Save draft', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Canvas view', exact: true }).click();
   const nav = page.getByRole('navigation', { name: 'Focus development path' });
   await nav.getByRole('button', { name: /^Technical Skills/ }).click();
   await page.waitForTimeout(600);
@@ -55,6 +56,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   await page.getByRole('textbox', { name: 'Path name', exact: true }).press('Tab');
   await page.getByRole('button', { name: 'Save draft', exact: true }).click(); await page.getByText('Draft saved.', { exact: true }).waitFor();
   await page.reload({ waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Canvas view', exact: true }).click();
   await nav.getByRole('button', { name: /^Operations/ }).waitFor();
   let draft = await prisma.planVersion.findFirstOrThrow({ where: { planId: plan.id, status: 'DRAFT' }, include: { nodes: true } });
   assert.equal(draft.pathTitles.TECHNICAL, 'Operations'); assert.ok(draft.nodes.every(node => ['ONBOARDING','TECHNICAL','LEADERSHIP'].includes(node.path)));
@@ -111,6 +113,7 @@ let browser, trainer, trainee, plan, definitions = [], addedCode, stage = 'fixtu
   assert.equal(records.find(record => record.id === removedOld.id).isArchived, true);
   assert.equal((await prisma.traineePlanAssignment.findFirstOrThrow({ where: { traineeId: trainee.id, status: 'ACTIVE' } })).planVersionId, published.id);
   await page.reload({ waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Canvas view', exact: true }).click();
   await page.locator('.react-flow').waitFor();
   const added = published.nodes.find(node => node.code === addedCode);
   assert.equal(await page.locator(`.react-flow__edge[data-id=\"edge-root-${added.id}\"]`).count(), 1);

@@ -21,8 +21,9 @@ export function PassportStamp({ milestone }: { milestone: EnrichedMilestone }) {
         <span className="text-[9px] font-bold text-beat-maroon">{milestone.code}</span>
       </Link>
       <span className="max-w-32 break-words text-[11px] font-semibold leading-snug text-beat-maroon">{milestone.title}</span>
+      {/* This informational overlay must not intercept taps on the module link. */}
       {open && (
-        <div id={id} role="tooltip" className="fixed bottom-4 left-4 right-4 z-50 md:absolute md:bottom-auto md:left-auto md:right-auto md:top-12 md:w-52 rounded-xl border border-beat-gold bg-white p-4 text-left text-xs text-beat-maroon shadow-xl">
+        <div id={id} role="tooltip" className="pointer-events-none fixed bottom-4 left-4 right-4 z-50 md:absolute md:bottom-auto md:left-auto md:right-auto md:top-12 md:w-52 rounded-xl border border-beat-gold bg-white p-4 text-left text-xs text-beat-maroon shadow-xl">
           <StampMetadata milestone={milestone} />
         </div>
       )}
