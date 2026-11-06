@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpRight, MoreHorizontal, Plus, Search, Trash2, Users } from "lucide-react";
 import { deleteVariant } from "@/lib/actions/learning-paths";
 import { VariantEditor, type EditableVariant } from "./VariantEditor";
@@ -73,6 +73,7 @@ export function TrainingPlanCatalog({ master, variants, initiallyOpen }: {
   initiallyOpen?: boolean;
 }) {
   const router = useRouter();
+  const createRequested = useSearchParams().get("create") === "1";
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [deleting, setDeleting] = useState<string>();
@@ -80,6 +81,9 @@ export function TrainingPlanCatalog({ master, variants, initiallyOpen }: {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const createButton = useRef<HTMLButtonElement>(null);
+  // The mobile shortcut can change only the query string on this same route.
+  // React preserves this component, so the initial state alone is insufficient.
+  useEffect(() => { if (createRequested) setCreating(true); }, [createRequested]);
   const search = query.trim().toLowerCase();
   const filtered = variants.filter(variant => (!status || variant.status === status) && [variant.title, variant.targetDepartment, variant.targetPosition].some(value => value?.toLowerCase().includes(search)));
 
@@ -109,7 +113,8 @@ export function TrainingPlanCatalog({ master, variants, initiallyOpen }: {
         <h2 id="role-variants-title" className="text-base font-semibold text-beat-maroon">Role variants <span className="ml-1 text-sm font-normal tabular-nums text-beat-maroon/75">({variants.length})</span></h2>
         <button ref={createButton} type="button" className="beat-primary" aria-expanded={creating} aria-controls="create-role-variant" onClick={() => setCreating(true)}><Plus aria-hidden="true" className="h-4 w-4" />Create role variant</button>
       </div>
-      {creating && <div id="create-role-variant" className="mt-4 border-y border-beat-border bg-white p-4 md:p-5"><VariantEditor inline initiallyOpen={initiallyOpen} onClose={() => { setCreating(false); createButton.current?.focus(); }} onSaved={() => setNotice("Role variant created. Open Edit plan to customize its milestones.")} /></div>}
+      <p className="mt-2 text-xs leading-relaxed text-beat-maroon/75">Individual paths are managed in <Link href="/trainer/trainees" className="inline-flex min-h-11 items-center font-semibold text-beat-maroon underline decoration-beat-gold underline-offset-4">trainee profiles</Link>, outside this reusable catalog.</p>
+      {creating && <div id="create-role-variant" className="mt-4 border-y border-beat-border bg-white p-4 md:p-5"><VariantEditor inline initiallyOpen={createRequested || initiallyOpen} onClose={() => { setCreating(false); createButton.current?.focus(); }} onSaved={() => setNotice("Role variant created. Open Edit plan to customize its milestones.")} /></div>}
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <label className="relative flex-1"><span className="sr-only">Search role variants</span><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-beat-maroon/70" /><input type="search" value={query} onChange={event => { setQuery(event.target.value); setNotice(""); }} placeholder="Search by title, department or position" className="min-h-11 w-full rounded-md border border-beat-border bg-white py-2 pl-10 pr-3 text-sm text-beat-maroon placeholder:text-beat-maroon/70" /></label>

@@ -28,6 +28,20 @@ let trainer, trainee, legacy, browser, stage = 'fixtures';
   assert.equal(await page.getByRole('region', { name: 'Master training plan' }).count(), 1);
   assert.equal(await page.getByRole('dialog').count(), 0);
   await page.getByRole('heading', { name: 'Foundation Level 1: TBG Corporate Onboarding', exact: true }).waitFor();
+  assert.equal(await page.getByRole('navigation', { name: 'Training content', exact: true }).getByRole('link', { name: 'Training Plans', exact: true }).getAttribute('aria-current'), 'page');
+  assert.equal(await page.getByRole('link', { name: 'trainee profiles', exact: true }).getAttribute('href'), '/trainer/trainees');
+  // Repeated quick-action entry on the mounted catalog must reopen the inline form.
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.getByRole('button', { name: 'Open quick actions', exact: true }).click();
+    await page.getByRole('link', { name: 'Create role variant', exact: true }).click();
+    const createForm = page.getByRole('form', { name: 'Create role variant', exact: true });
+    await createForm.waitFor();
+    assert.equal(await page.getByRole('dialog').count(), 0);
+    await createForm.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await createForm.waitFor({ state: 'detached' });
+  }
+  await page.setViewportSize({ width: 1280, height: 900 });
   const initialTitle = `ERP Browser ${suffix}`;
   await page.getByRole('button', { name: 'Create role variant', exact: true }).click();
   let dialog = page.getByRole('form', { name: 'Create role variant', exact: true });
@@ -53,6 +67,9 @@ let trainer, trainee, legacy, browser, stage = 'fixtures';
   stage = 'rename and edit nodes';
   await freshPage('/trainer/plans');
   const row = page.getByRole('article', { name: initialTitle, exact: true });
+  assert.equal(await page.getByRole('region', { name: 'Master training plan', exact: true }).count(), 1);
+  assert.ok(await row.getByText('1 enrolled trainee', { exact: true }).isVisible());
+  assert.equal(await page.locator(`a[href="/trainer/plans/${instance.planId}/builder"]`).count(), 0);
   await row.getByRole('button', { name: 'Edit details', exact: true }).click();
   dialog = page.getByRole('form', { name: `Edit details for ${initialTitle}`, exact: true });
   const renamed = `Renamed ERP ${suffix}`;
@@ -77,6 +94,7 @@ let trainer, trainee, legacy, browser, stage = 'fixtures';
   stage = 'profile promotion';
   await freshPage(`/trainer/trainees/${trainee.id}`);
   await page.getByRole('region', { name: 'Active path instance', exact: true }).waitFor();
+  assert.equal(await page.getByRole('link', { name: 'Customize Individual Path', exact: true }).getAttribute('href'), `/trainer/plans/${instance.planId}/builder`);
   await page.getByRole('button', { name: 'Promote to Reusable Variant', exact: true }).click();
   dialog = page.getByRole('dialog', { name: 'Promote to Reusable Variant', exact: true });
   const promotedTitle = `Promoted ERP ${suffix}`;
