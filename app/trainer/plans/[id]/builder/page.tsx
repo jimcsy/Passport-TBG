@@ -34,7 +34,7 @@ export default async function PlanBuilderPage({ params, searchParams }: BuilderP
   const publishedVersion = plan.versions.find((v) => v.status === "PUBLISHED");
 
   return (
-    <div className="relative w-full md:left-[calc(50%-50vw+1rem)] md:w-[calc(100vw-2rem)]">
+    <div className="relative w-full min-w-0">
       <PlanCanvasBuilder
         addMilestoneId={searchParams?.addMilestone}
         plan={{

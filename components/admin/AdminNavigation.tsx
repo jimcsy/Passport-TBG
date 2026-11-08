@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, CheckSquare, GitBranch, Inbox, ShieldCheck, Users } from "lucide-react";
 import { ReviewNotifications } from "./ReviewNotifications";
-import { SignOutButton } from "@/components/navigation/SignOutButton";
+import { TrainerAccountMenu } from "./TrainerAccountMenu";
 
 interface AdminNavigationProps {
   admin: { fullName: string; employeeId: string; role: string };
@@ -20,8 +20,6 @@ const links = [
 
 export function AdminNavigation({ admin, signOut }: AdminNavigationProps) {
   const pathname = usePathname();
-  const initials = admin.fullName.trim().split(/\s+/).filter(Boolean).map(part => part[0]).slice(0, 2).join("");
-  const role = admin.role.toLowerCase().replace(/_/g, " ");
 
   return (
     <>
@@ -56,14 +54,9 @@ export function AdminNavigation({ admin, signOut }: AdminNavigationProps) {
               })}
             </ul>
           </nav>
-          <div className="flex items-center gap-3 py-2 sm:gap-4">
+          <div className="ml-auto flex items-center gap-3 py-2 sm:gap-4">
             <ReviewNotifications />
-            <div className="hidden items-center gap-2.5 sm:flex">
-              <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-beat-canvas text-xs font-bold text-beat-maroon">{initials}</span>
-              <div className="hidden max-w-36 md:block"><p className="truncate text-xs font-semibold text-beat-maroon" title={admin.fullName}>{admin.fullName}</p><p className="mt-0.5 text-[10px] text-beat-maroon/60">{admin.employeeId} · <span className="capitalize">{role}</span></p></div>
-              <span className="sr-only md:hidden">Signed in as {admin.fullName}, {admin.employeeId}, {role}</span>
-            </div>
-            <form action={signOut} className="sm:border-l sm:border-beat-gold/20 sm:pl-2"><SignOutButton /></form>
+            <TrainerAccountMenu admin={admin} signOut={signOut} />
           </div>
         </div>
       </header>

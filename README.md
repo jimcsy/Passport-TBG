@@ -166,6 +166,11 @@ uses the header navigation; phones use icon-based bottom navigation. Trainer
 identity, notifications and Sign out remain available. Batch sign-off retains
 `/trainer/batch`; existing plan and builder links remain valid.
 
+The [Hub insights](docs/hub-insights.md) show registered trainees, unique module
+viewers and pending verifications, with an interactive engagement graph, pillar
+progress and the existing cohort drill-down. Module-view tracking starts with
+this update; historical reviews and stamps are not treated as page views.
+
 Authenticated trainee screens share `app/trainee/dashboard/layout.tsx` and
 `components/trainee/TraineeNavigation.tsx`. Dashboard, My passport and Notifications
 use bottom navigation on mobile. Modules retain Dashboard as their parent section.

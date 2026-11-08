@@ -47,6 +47,7 @@ model Trainee {
   progressRecords TraineeProgress[]
   stampNotificationReads StampNotificationRead[]
   stampRevocations StampRevocation[]
+  contentView     TraineeContentView?
 
   @@index([traineeCode, email])
   @@index([restaurantBrand, branchLocation, cohortBatch])
@@ -277,4 +278,13 @@ model ReviewNotificationRead {
   trainer    AdminUser @relation(fields: [trainerId], references: [id], onDelete: Cascade)
 
   @@id([trainerId, requestKey])
+}
+
+// One first actual module opening per trainee; never inferred from progress.
+model TraineeContentView {
+  traineeId     String @id
+  firstViewedAt DateTime @default(now())
+  trainee       Trainee @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+
+  @@index([firstViewedAt])
 }

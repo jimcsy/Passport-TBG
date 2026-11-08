@@ -1,0 +1,46 @@
+require('tsx/cjs');
+const assert = require('node:assert/strict');
+const Module = require('node:module');
+const { prisma } = require('../lib/db/prisma.ts');
+let session = null;
+const original = Module._load;
+Module._load = function(request, parent, main) {
+  if (request === '@/lib/auth/session') return { getTraineeSession: async () => session, getAdminSession: async () => null };
+  return original.call(this, request, parent, main);
+};
+const { recordModuleViewAction } = require('../lib/actions/content-views.ts');
+const { getHubInsightsAction } = require('../lib/actions/dashboard.ts');
+let trainer, plan;
+const trainees = [];
+const prefix = `HUBVIEW-${Date.now()}`;
+(async () => {
+  await assert.rejects(getHubInsightsAction(), /Unauthorized/);
+  assert.equal(await recordModuleViewAction('anything'), false);
+  trainer = await prisma.adminUser.create({ data: { employeeId: prefix, fullName: 'Insights fixture trainer', email: `${prefix}@example.invalid`, passwordHash: 'unused' } });
+  for (const suffix of ['A', 'B']) trainees.push(await prisma.trainee.create({ data: { traineeCode: `${prefix}-${suffix}`, fullName: 'Insights fixture trainee', email: `${prefix}-${suffix}@example.invalid`, restaurantBrand: 'Test', branchLocation: 'Test', cohortBatch: 'Test', hireDate: new Date() } }));
+  plan = await prisma.trainingPlan.create({ data: { title: 'Insights fixture', roleIdentifier: prefix, createdById: trainer.id } });
+  const version = await prisma.planVersion.create({ data: { planId: plan.id, versionNumber: 1, publishedById: trainer.id } });
+  const node = await prisma.planNode.create({ data: { planVersionId: version.id, code: prefix, title: 'View fixture', description: 'Only authorized module openings count.', path: 'ONBOARDING', orderIndex: 1, posX: 0, posY: 0 } });
+  await prisma.traineePlanAssignment.create({ data: { traineeId: trainees[0].id, planVersionId: version.id, assignedById: trainer.id } });
+  session = { id: trainees[1].id };
+  assert.equal(await recordModuleViewAction(node.id), false);
+  assert.equal(await prisma.traineeContentView.count({ where: { traineeId: trainees[1].id } }), 0);
+  session = { id: trainees[0].id };
+  assert.equal(await recordModuleViewAction('missing'), false);
+  assert.equal(await recordModuleViewAction(null), false);
+  const results = await Promise.all([recordModuleViewAction(node.id), recordModuleViewAction(node.id)]);
+  assert.ok(results.every(Boolean));
+  const first = await prisma.traineeContentView.findUniqueOrThrow({ where: { traineeId: trainees[0].id } });
+  assert.equal(await recordModuleViewAction(node.id), true);
+  assert.deepEqual(await prisma.traineeContentView.findUniqueOrThrow({ where: { traineeId: trainees[0].id } }), first);
+  assert.equal(await prisma.traineeContentView.count({ where: { traineeId: trainees[0].id } }), 1);
+  const rls = await prisma.$queryRaw`SELECT relrowsecurity FROM pg_class WHERE oid = 'public."TraineeContentView"'::regclass`;
+  assert.equal(rls[0].relrowsecurity, true);
+  console.log('PASS: trainer insights require auth; unauthorized module opens rejected; repeated/concurrent opens count once and preserve first-view date; RLS enabled');
+})().catch(error => { console.error(String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]').slice(0, 1200)); process.exitCode = 1; }).finally(async () => {
+  Module._load = original;
+  await prisma.trainee.deleteMany({ where: { id: { in: trainees.map(item => item.id) } } });
+  if (plan) await prisma.trainingPlan.delete({ where: { id: plan.id } });
+  if (trainer) await prisma.adminUser.delete({ where: { id: trainer.id } });
+  await prisma.$disconnect();
+});
