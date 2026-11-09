@@ -59,13 +59,20 @@ function coherentLimits(value: { traineeDailyLimit: number; traineeProjectDailyL
     ctx.addIssue({ code: "custom", path: ["traineeProjectDailyLimit"], message: "Trainee allowance must preserve ten requests within the shared project allowance." });
 }
 
+export const strobiTipsLimitsSchema = z.object({
+  traineeDailyLimit: positiveInteger(STROBI_TIPS_POLICY.traineeDailyLimit),
+  traineeProjectDailyLimit: positiveInteger(STROBI_TIPS_POLICY.traineeProjectDailyLimit),
+  projectDailyLimit: strobiConfigurationSchema.shape.projectDailyLimit,
+  requestTimeoutMs: strobiConfigurationSchema.shape.requestTimeoutMs,
+}).strict().superRefine(coherentLimits);
+
 /** Uses the existing project's limit/provider settings; never a second project pool. */
 export const strobiTipsConfigurationSchema = strobiConfigurationSchema.pick({
   apiKey: true, model: true, projectDailyLimit: true, requestTimeoutMs: true,
 }).extend({
   enabled: z.literal("true"),
-  traineeDailyLimit: positiveInteger(STROBI_TIPS_POLICY.traineeDailyLimit),
-  traineeProjectDailyLimit: positiveInteger(STROBI_TIPS_POLICY.traineeProjectDailyLimit),
+  traineeDailyLimit: strobiTipsLimitsSchema.shape.traineeDailyLimit,
+  traineeProjectDailyLimit: strobiTipsLimitsSchema.shape.traineeProjectDailyLimit,
 }).strict().superRefine(coherentLimits);
 
 export const strobiTipUsageSchema = z.object({
@@ -119,3 +126,4 @@ export type StrobiTipUsage = z.infer<typeof strobiTipUsageSchema>;
 export type StrobiTipFallbackReason = z.infer<typeof strobiTipFallbackReasonSchema>;
 export type StrobiTipErrorCode = z.infer<typeof strobiTipErrorCodeSchema>;
 export type StrobiTipResult = z.infer<typeof strobiTipResultSchema>;
+export type StrobiTipsLimits = z.infer<typeof strobiTipsLimitsSchema>;

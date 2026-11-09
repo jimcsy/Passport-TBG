@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { strobiProposalSchema, type StrobiGenerationInput, type StrobiProposal } from "@/lib/validations/strobi";
 import type { StrobiContext, StrobiErrorCode } from "./strobi-types";
+import { strobiTipAnswerSchema } from "@/lib/validations/strobi-tips";
 
 const geminiEnvelopeSchema = z.object({
   promptFeedback: z.object({ blockReason: z.string().optional() }).optional(),
@@ -41,10 +42,11 @@ async function readBoundedResponse(response: Response): Promise<unknown> {
 }
 
 /** Single fixed-host REST call, no automatic retries, model switches or paid fallback. */
-export async function requestGeminiProposal(
+async function requestGeminiStructured<T>(
   config: { apiKey: string; model: string; requestTimeoutMs: number }, body: string,
+  schema: z.ZodType<T>,
   signal?: AbortSignal, fetcher: typeof fetch = fetch,
-): Promise<StrobiProposal> {
+): Promise<T> {
   if (signal?.aborted) throw new StrobiProviderError("CANCELLED");
   const controller = new AbortController();
   let timedOut = false;
@@ -77,7 +79,7 @@ export async function requestGeminiProposal(
       if (!text) throw new StrobiProviderError("INVALID_OUTPUT");
       let raw: unknown;
       try { raw = JSON.parse(text); } catch { throw new StrobiProviderError("INVALID_OUTPUT"); }
-      const result = strobiProposalSchema.safeParse(raw);
+      const result = schema.safeParse(raw);
       if (!result.success) throw new StrobiProviderError("INVALID_OUTPUT");
       return result.data;
     })();
@@ -91,4 +93,19 @@ export async function requestGeminiProposal(
     signal?.removeEventListener("abort", cancel);
     if (abortListener) controller.signal.removeEventListener("abort", abortListener);
   }
+}
+
+/** Trainer behavior/signature is retained; both use the same bounded no-retry transport. */
+export function requestGeminiProposal(
+  config: { apiKey: string; model: string; requestTimeoutMs: number }, body: string,
+  signal?: AbortSignal, fetcher: typeof fetch = fetch,
+): Promise<StrobiProposal> {
+  return requestGeminiStructured(config, body, strobiProposalSchema, signal, fetcher);
+}
+
+export function requestGeminiTip(
+  config: { apiKey: string; model: string; requestTimeoutMs: number }, body: string,
+  signal?: AbortSignal, fetcher: typeof fetch = fetch,
+) {
+  return requestGeminiStructured(config, body, strobiTipAnswerSchema, signal, fetcher);
 }

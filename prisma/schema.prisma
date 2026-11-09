@@ -307,3 +307,34 @@ model StrobiRequestLease {
 
   @@index([expiresAt])
 }
+
+// Legacy trainer leases above remain untouched; new actors have explicit roles.
+model StrobiActorRequestLease {
+  scope     String
+  subjectId String
+  token     String @unique
+  cacheKey  String
+  day       String
+  expiresAt DateTime
+
+  @@id([scope, subjectId])
+  @@index([expiresAt])
+}
+
+// Validated generic tips only; no context, trainee IDs or conversation history.
+model StrobiTipCache {
+  key       String @id
+  tip       Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model StrobiTipCacheLease {
+  key       String @id
+  token     String @unique
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

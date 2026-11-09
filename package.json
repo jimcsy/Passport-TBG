@@ -13,7 +13,10 @@
     "test": "tsx scripts/test_flow.ts",
     "test:trainer-content": "node --env-file=.env scripts/test_trainer_content_regressions.cjs",
     "test:strobi": "node --env-file=.env scripts/test_strobi_regressions.cjs",
-    "test:strobi-tips": "node scripts/test_strobi_tips_contracts.cjs"
+    "test:strobi-tips": "node scripts/test_strobi_tips_contracts.cjs",
+    "test:strobi-tips-db": "node --env-file=.env scripts/test_strobi_tips_store.cjs",
+    "test:strobi-tips-api": "node scripts/test_strobi_tips_service.cjs && node scripts/test_strobi_tips_route.cjs",
+    "test:strobi-tips-access": "node --env-file=.env scripts/test_strobi_tips_access_db.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

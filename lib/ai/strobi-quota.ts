@@ -5,7 +5,7 @@ import type { StrobiUsage } from "./strobi-types";
 
 export const STROBI_PROJECT_SUBJECT = "strobi";
 // Serialize short reservations/cleanup across processes; never hold during HTTP.
-const QUOTA_LOCK = 734918501;
+export const STROBI_QUOTA_LOCK = 734918501;
 export function strobiDay(now: Date) {
   const day = new Date(now.getTime() + 8 * 3_600_000).toISOString().slice(0, 10);
   return { day, resetsAt: new Date(Date.parse(`${day}T00:00:00+08:00`) + 86_400_000).toISOString() };
@@ -17,7 +17,7 @@ export type ReservationResult = { success: true; reservation: StrobiReservation 
 
 export async function reserveStrobiQuota(db: PrismaClient, trainerId: string, limits: Limits): Promise<ReservationResult> {
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${QUOTA_LOCK})::text`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${STROBI_QUOTA_LOCK})::text`;
     const [{ now }] = await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`;
     const { day, resetsAt } = strobiDay(now);
     const projectKey = { scope: "PROJECT", subjectId: STROBI_PROJECT_SUBJECT, day };
@@ -43,7 +43,7 @@ export async function reserveStrobiQuota(db: PrismaClient, trainerId: string, li
 /** Refund only a proven pre-dispatch cancellation, exactly once while still owning the lease. */
 export async function releaseStrobiQuota(db: PrismaClient, reservation: StrobiReservation, refund = false) {
   await db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${QUOTA_LOCK})::text`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${STROBI_QUOTA_LOCK})::text`;
     const deleted = await tx.strobiRequestLease.deleteMany({ where: { trainerId: reservation.trainerId, token: reservation.token } });
     if (refund && deleted.count) {
       for (const key of [{ scope: "PROJECT", subjectId: STROBI_PROJECT_SUBJECT }, { scope: "TRAINER", subjectId: reservation.trainerId }]) {
@@ -56,7 +56,7 @@ export async function releaseStrobiQuota(db: PrismaClient, reservation: StrobiRe
 /** Run from an operator task, not a public endpoint; current-day quota is never removed. */
 export async function cleanupStrobiQuota(db: PrismaClient) {
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${QUOTA_LOCK})::text`;
+    await tx.$queryRaw`SELECT pg_advisory_xact_lock(${STROBI_QUOTA_LOCK})::text`;
     const [{ now }] = await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`;
     const cutoff = strobiDay(new Date(now.getTime() - 7 * 86_400_000)).day;
     await tx.strobiDailyQuota.deleteMany({ where: { day: { lt: cutoff } } });

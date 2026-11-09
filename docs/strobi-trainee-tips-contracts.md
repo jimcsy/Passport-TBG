@@ -4,10 +4,11 @@ Issue: [#56](https://github.com/jimcsy/Passport-TBG/issues/56), part of
 [epic #55](https://github.com/jimcsy/Passport-TBG/issues/55).
 The complete agreed design is in [the implementation plan](strobi-trainee-tips-plan.md).
 
-This phase defines pure contracts, instructions, prewritten tips and server-only
-availability. It does **not** add a database migration, cache, quota admission,
-trainee API route, provider dispatch or chat UI. Setting the flag now does not
-expose a working trainee chatbot. Those are phases #57–#61.
+Phase #56 defines pure contracts, instructions, prewritten tips and server-only
+availability. Phase #57 adds [shared accounting/cache primitives](strobi-trainee-tips-storage.md).
+Phase #58 adds the [trainee API and authorized provider service](strobi-trainee-tips-api.md).
+There is still no chat UI. Setting the flag alone does not expose a trainee
+chatbot; UI/integration and final verification are phases #59–#61.
 
 ## Server setup
 
@@ -114,7 +115,7 @@ service's responsibility; cancellation must not append an unsolicited new answer
 Usage requires numeric configured limits, nonnegative integer remaining counts
 within each corresponding limit, an ISO timestamp with timezone for `resetsAt`,
 and the literal timezone `Asia/Manila`. Unknown fields/invalid dates are rejected.
-The database implementation in #57 is responsible for computing actual current
+  The database implementation in #57 is responsible for computing actual current
 counts and midnight boundaries; these contracts do not manufacture usage values.
 
 ## Guidance, fallbacks and privacy
