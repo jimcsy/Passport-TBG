@@ -5,16 +5,17 @@ Its `useStrobiAssistant` hook owns temporary prompt/request/proposal state.
 `lib/ai/strobi-client.ts` calls only the existing authenticated same-origin API
 and validates response shapes; it contains no Gemini key/configuration access.
 
-This phase deliberately does **not** mount it in the production creation forms.
-#52 integrates shared milestone creation; #53 integrates the Path Builder and its
-code/parent-destination handling. The feature flag remains disabled until rollout.
+The component is now mounted in shared milestone creation in the library and the
+builder’s shared-library inspector (#52). The separate custom milestone modal,
+including plan-only content, remains #53. The saved feature flag remains disabled
+until rollout.
 No backend, database, Save/Add, materials, publication, progress or stamp behavior
 is changed in #51. The fixture below is browser-test scaffolding, not an app route.
 
 ## Parent integration contract
 
 Pass a stable `contextKey` for the open creation session, `isOpen`, optional real
-`planId`, selected pillar, current title/description and safe availability state
+`planId`, selected pillar, current title/description, optional `isSaving`, and safe availability state
 (`available`, `disabled`, `unconfigured`). Compute availability on the server or
 from a safe server response; never serialize the server configuration/key.
 
@@ -82,3 +83,52 @@ manual completion; keyboard shortcuts/focus; no implicit saves; and
 320/390/768/1280 layouts with long wording and the longest pillar label.
 Screenshots are written under the system temporary directory's
 `strobi-ui-evidence` folder for visual inspection.
+
+## Shared form integration (#52)
+
+Both trainer server pages resolve configuration and pass only availability to
+client components. They never pass the Gemini key/configuration object. The
+library form omits plan context; the builder’s shared-library creation passes its
+real plan ID so the generation service can resolve approved context on the server.
+
+A local `LIB-{pillar}-{sequence}` code suggestion chooses the first free code in
+the loaded library list. It is editable and is not a uniqueness guarantee: existing
+server validation/create-only duplicate and canonical protection remain authoritative.
+Untouched suggestions refresh with the chosen pillar. Once edited (including
+cleared), a code stays manual across both suggested and dropdown pillar changes.
+
+Each open form has its own mounted session. Close/cancel discards temporary fields
+and assistant state. During explicit Save, `isSaving` invalidates pending AI work
+and disables assistant changes while preserving prompt/proposal on save failure.
+The submitted payload is captured before awaiting; successful creation still hands
+the real saved ID to the existing inspector/material panel. No generation action
+saves content, uploads materials, adds a plan node or publishes a version.
+
+Additional verification:
+
+```sh
+node --import tsx scripts/test_shared_milestone_codes.ts
+# Isolated built server: STROBI_AI_ENABLED=true PASSPORT_BUILD_DIR=.next-mobile-check npm run start -- -p 3100
+# The browser test intercepts EVERY generation call; it never uses live Gemini.
+node --env-file=.env scripts/test_strobi_shared_browser.cjs
+STROBI_SHARED_SURFACE=builder node --env-file=.env scripts/test_strobi_shared_browser.cjs
+node --env-file=.env scripts/test_milestone_creation_actions.cjs
+node --env-file=.env scripts/test_milestone_library_reads.cjs
+```
+
+The integration test uses fixture trainers/definitions and a tiny real PDF upload.
+It deletes only its fixtures and storage object after testing. Coverage includes
+plain text and /strobi, independent pillar acceptance, code ownership, canonical
+rejection with retained details/prompt, explicit saves, generated/manual 2,000-
+character creation/editing, real-ID material access, cancelled sessions and mobile
+layouts. Existing upload limits and independent Save draft/Publish behavior remain.
+
+Verification on 2026-11-09 passed for both shared creation surfaces, the reusable
+UI suite, code suggestions, existing creation actions, library read/browser suites,
+TypeScript and production build. The complete existing plan-insertion browser suite
+also passed, including preserved assignment, published curriculum and original
+stamp. Longer builder checks required Playwright's matching test browser; system
+Chrome 156 disconnected during those checks. Use the installed matching browser
+(or set `CHROME_EXECUTABLE_PATH`) rather than treating a browser disconnect as an
+application assertion failure. Browser downloads were temporary, not new app dependencies.
+The saved disabled flag was separately verified with manual entry/save available.

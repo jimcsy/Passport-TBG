@@ -35,7 +35,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   const assignment = await prisma.traineePlanAssignment.create({ data: { traineeId: trainee.id, planVersionId: live.id, assignedById: trainer.id } });
   const progress = await prisma.traineeProgress.create({ data: { traineeId: trainee.id, planNodeId: originalNodes[0].id, ...verificationData(trainee.id, originalNodes[0].id, trainer.id, new Date(), 'Original insertion stamp') } });
   const token = await new SignJWT({ id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: 'TRAINER', portal: 'trainer' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE_PATH ? { executablePath: process.env.CHROME_EXECUTABLE_PATH } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
   const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
@@ -96,7 +96,7 @@ const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.S
   await inspector.getByLabel(`Attach materials to ${newCode}`).waitFor();
   const shared = await prisma.milestoneDefinition.findUniqueOrThrow({ where: { code: newCode } });
   assert.equal(await prisma.planNode.count({ where: { planVersionId: draft.id, libraryMilestoneId: shared.id } }), 0);
-  const file = { name: 'insertion-fixture.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n%%EOF\n') };
+  const file = { name: 'insertion-fixture.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF') };
   await inspector.getByLabel(`Attach materials to ${newCode}`).setInputFiles(file);
   await inspector.getByRole('heading', { name: 'Course materials (1)' }).waitFor({ timeout: 60000 });
   await inspector.getByRole('button', { name: 'Preview / download', exact: true }).click();

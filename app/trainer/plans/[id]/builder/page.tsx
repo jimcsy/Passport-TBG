@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getTrainingPlanById, getLibraryMilestones, getPlanMilestoneProgressCounts } from "@/lib/db/repositories/plans";
 import { PlanCanvasBuilder } from "@/components/canvas/PlanCanvasBuilder";
 
+import { getStrobiConfiguration } from "@/lib/ai/strobi-config";
+
 export const dynamic = "force-dynamic";
 
 interface BuilderPageProps {
@@ -33,9 +35,12 @@ export default async function PlanBuilderPage({ params, searchParams }: BuilderP
 
   const publishedVersion = plan.versions.find((v) => v.status === "PUBLISHED");
 
+  const configuration = getStrobiConfiguration();
+  const availability = configuration.available ? "available" : configuration.reason;
   return (
     <div className="relative w-full min-w-0">
       <PlanCanvasBuilder
+        strobiAvailability={availability}
         addMilestoneId={searchParams?.addMilestone}
         plan={{
           id: plan.id,

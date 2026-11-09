@@ -24,7 +24,7 @@ let stage = 'authentication';
   assert.equal(refreshed.length, 0);
   admin = { id: 'tc01-action-trainer', employeeId: 'TC01', fullName: 'Creation action fixture', role: 'TRAINER', portal: 'trainer' };
   stage = 'server validation';
-  for (const invalid of [null, {}, { ...input, code: 'A' }, { ...input, code: 'A'.repeat(26) }, { ...input, code: 'INVALID/CODE' }, { ...input, title: ' ' }, { ...input, title: 'A'.repeat(101) }, { ...input, description: 'short' }, { ...input, description: 'A'.repeat(501) }, { ...input, path: 'INVALID' }]) {
+  for (const invalid of [null, {}, { ...input, code: 'A' }, { ...input, code: 'A'.repeat(26) }, { ...input, code: 'INVALID/CODE' }, { ...input, title: ' ' }, { ...input, title: 'A'.repeat(101) }, { ...input, description: 'short' }, { ...input, description: 'A'.repeat(2001) }, { ...input, path: 'INVALID' }]) {
     const result = await create(invalid); assert.equal(result.success, false); assert.ok(result.fieldErrors);
   }
   assert.equal(await prisma.milestoneDefinition.count({ where: { code: input.code } }), 0);

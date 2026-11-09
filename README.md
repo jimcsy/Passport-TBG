@@ -286,4 +286,5 @@ The integration script uses a disposable PostgreSQL schema, including a forced f
 
 The server-side Gemini service, quota setup and verification commands are documented
 in [Strobi service setup](docs/strobi-service.md). AI is disabled by default; the
-creation-form UI is tracked separately in issues #51–#53.
+shared creation UI is integrated behind the flag; the custom builder modal remains
+tracked in #53. See the [assistant integration guide](docs/strobi-assistant-ui.md).

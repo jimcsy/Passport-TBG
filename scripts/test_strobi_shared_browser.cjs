@@ -1,0 +1,130 @@
+require('tsx/cjs');
+const assert = require('node:assert/strict');
+const { prisma } = require('../lib/db/prisma.ts');
+const { SignJWT } = require('jose');
+const { createClient } = require('@supabase/supabase-js');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/tmp/passport-account-check/node_modules/playwright');
+const origin = process.env.STROBI_TEST_BASE_URL || 'http://localhost:3100';
+const prefix = `ST52-${Date.now()}`;
+const builderSurface = process.env.STROBI_SHARED_SURFACE === 'builder';
+const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+let trainer, plan, browser, stage = 'fixtures'; const createdIds = [];
+(async () => {
+  trainer = await prisma.adminUser.create({ data: { employeeId: prefix, fullName: 'Strobi shared fixture', email: `${prefix}@example.invalid`, passwordHash: 'unused', role: 'TRAINER' } });
+  if (builderSurface) { plan = await prisma.trainingPlan.create({ data: { title: 'Shared AI inspector fixture', roleIdentifier: prefix, createdById: trainer.id, versions: { create: { versionNumber: 1, status: 'DRAFT', publishedById: trainer.id } } } }); }
+  const canonical = await prisma.milestoneDefinition.create({ data: { code: `${prefix}-STD`, title: 'Protected standard fixture', description: 'Canonical content remains unchanged through custom creation.', path: 'ONBOARDING', isStandard: true } }); createdIds.push(canonical.id);
+  const token = await new SignJWT({ portal: 'trainer', id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: trainer.role }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
+  const errors = []; page.on('pageerror', e => errors.push(e.name));
+  const queue = []; const requests = []; let unexpected = 0;
+  await page.route('**/api/trainer/strobi', async route => {
+    requests.push(route.request().postDataJSON()); const item = queue.shift();
+    if (!item) unexpected++;
+    if (item?.delay) await new Promise(resolve => setTimeout(resolve, item.delay));
+    await route.fulfill({ status: item?.status || 200, contentType: 'application/json', body: JSON.stringify(item?.body || { success: false, code: 'UNAVAILABLE' }) }).catch(() => {});
+  });
+  const longDescription = 'A'.repeat(2000);
+  const result = title => ({ success: true, proposal: { title, description: longDescription, suggestedPillar: 'TECHNICAL', pillarRationale: 'Practices operational tools.' }, usage: { trainerRemaining: 9, projectRemaining: 49, resetsAt: '2026-11-09T16:00:00.000Z' } });
+  await page.goto(builderSurface ? `${origin}/trainer/plans/${plan.id}/builder` : `${origin}/trainer/plans/library`, { waitUntil: 'networkidle' });
+  const inspector = () => page.locator(builderSurface ? '#builder-inspector' : '#library-inspector');
+  const form = () => page.getByRole('form', { name: 'Create shared milestone', exact: true });
+  const field = name => form().locator(`[name="${name}"]`);
+  async function open() { if (builderSurface) { await page.getByRole('button', { name: 'Open milestone library', exact: true }).click(); await inspector().getByRole('button', { name: 'Create shared milestone', exact: true }).click(); } else { await page.getByRole('button', { name: 'Create milestone', exact: true }).click(); } await form().waitFor(); }
+  async function generate(prompt, title, delay = 0) { queue.push({ body: result(title), delay }); await form().getByLabel('What should the trainee demonstrate?').fill(prompt); await form().getByRole('button', { name: 'Generate', exact: true }).click(); }
+  stage = 'generation and code ownership';
+  await open(); assert(await form().getByRole('button', { name: 'Generate', exact: true }).isEnabled());
+  const initialCode = await field('code').inputValue(); assert.match(initialCode, /^LIB-ONB-\d+$/);
+  await generate('Practice inventory reconciliation', `${prefix} generated competency`);
+  await form().getByRole('heading', { name: 'Suggested wording' }).waitFor();
+  assert.equal(await field('description').inputValue(), longDescription);
+  assert.equal(await form().getByLabel('Pillar', { exact: true }).inputValue(), 'ONBOARDING');
+  assert.equal(await prisma.milestoneDefinition.count({ where: { title: { startsWith: prefix } } }), 0);
+  assert.equal(await form().locator('input[type=file]').count(), 0);
+  await form().getByRole('button', { name: 'Dismiss', exact: true }).click();
+  assert.equal(await field('code').inputValue(), initialCode);
+  await generate('/strobi Practice using the inventory tool', `${prefix} replacement competency`);
+  await form().getByRole('button', { name: 'Apply suggestion', exact: true }).waitFor();
+  assert.equal(await field('title').inputValue(), `${prefix} generated competency`);
+  await form().getByRole('button', { name: 'Use Technical Skills', exact: true }).click();
+  assert.match(await field('code').inputValue(), /^LIB-TECH-\d+$/);
+  assert.equal(await field('title').inputValue(), `${prefix} generated competency`);
+  await field('code').fill(`${prefix}-NEW`);
+  await form().getByLabel('Pillar', { exact: true }).selectOption('LEADERSHIP');
+  assert.equal(await field('code').inputValue(), `${prefix}-NEW`);
+  await form().getByRole('button', { name: 'Apply suggestion', exact: true }).click();
+  assert.equal(await form().getByLabel('Pillar', { exact: true }).inputValue(), 'LEADERSHIP');
+  assert.equal(requests[0].prompt, 'Practice inventory reconciliation'); assert.equal(requests[1].prompt, 'Practice using the inventory tool');
+  if (builderSurface) assert.equal(requests[0].planId, plan.id); else assert(!('planId' in requests[0]));
+  stage = 'canonical and duplicate protection';
+  await field('code').fill(canonical.code);
+  await form().getByRole('button', { name: 'Save shared milestone', exact: true }).click();
+  await form().getByText('This code already exists in the shared library. Choose another code or add the existing milestone.', { exact: true }).waitFor();
+  assert.equal(await field('description').inputValue(), longDescription);
+  assert.equal(await form().getByLabel('What should the trainee demonstrate?').inputValue(), '/strobi Practice using the inventory tool');
+  assert.deepEqual(await prisma.milestoneDefinition.findUnique({ where: { id: canonical.id } }), canonical);
+  stage = 'explicit saved ID and generated description';
+  await field('code').fill(`${prefix}-NEW`);
+  await form().getByRole('button', { name: 'Save shared milestone', exact: true }).click();
+  await inspector().getByRole('heading', { name: /Course materials/ }).waitFor();
+  const saved = await prisma.milestoneDefinition.findUniqueOrThrow({ where: { code: `${prefix}-NEW` } }); createdIds.push(saved.id);
+  assert.equal(saved.description.length, 2000); assert.equal(saved.path, 'LEADERSHIP'); if (!builderSurface) assert.equal(new URL(page.url()).searchParams.get('milestone'), saved.id);
+  assert(!saved.id.startsWith('custom-'));
+  console.log('PASS shared-form generation, code ownership, canonical rejection and explicit generated-2000-character save.');
+  stage = 'material upload';
+  const attach = inspector().getByLabel(`Attach materials to ${saved.code}`, { exact: true }); await attach.waitFor();
+  await attach.setInputFiles({ name: `${prefix}.pdf`, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF') });
+  await inspector().getByRole('heading', { name: 'Course materials (1)', exact: true }).waitFor();
+  const material = await prisma.courseMaterial.findFirst({ where: { milestoneId: saved.id } }); assert(material); assert.equal(material.fileType, 'PDF');
+  console.log('PASS real saved-ID material handoff and PDF upload.');
+  stage = 'manual editing at 2000';
+  // Existing inspector uses explicit IDs for editable metadata.
+  const textArea = inspector().locator('textarea').first(); await textArea.fill('B'.repeat(2000));
+  const save = inspector().getByRole('button', { name: 'Save shared details', exact: true });
+  await save.click();
+  await page.waitForFunction(() => !Array.from(document.querySelectorAll('button')).some(b => b.textContent?.includes('Saving…')));
+  for (let i = 0; i < 40; i++) { if ((await prisma.milestoneDefinition.findUnique({ where: { id: saved.id } })).description === 'B'.repeat(2000)) break; await page.waitForTimeout(200); }
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: saved.id } })).description.length, 2000);
+  assert.equal((await prisma.milestoneDefinition.findUniqueOrThrow({ where: { id: saved.id } })).description[0], 'B');
+  await inspector().waitFor({ state: 'hidden' });
+  stage = 'cancellation and manual creation';
+  await open(); await generate('/strobi A cancelled competency', `${prefix} cancelled`, 350);
+  await form().getByRole('button', { name: 'Cancel', exact: true }).click();
+  await form().waitFor({ state: 'detached' }); await page.waitForTimeout(400);
+  assert.equal(await prisma.milestoneDefinition.count({ where: { title: `${prefix} cancelled` } }), 0);
+  await open(); assert.equal(await field('title').inputValue(), ''); assert.equal(await form().getByLabel('What should the trainee demonstrate?').inputValue(), '');
+  const manualCode = await field('code').inputValue();
+  await field('title').fill(`${prefix} manual competency`); await field('description').fill('C'.repeat(2000));
+  await form().getByRole('button', { name: 'Save shared milestone', exact: true }).click();
+  await inspector().getByRole('heading', { name: /Course materials/ }).waitFor();
+  const manual = await prisma.milestoneDefinition.findFirstOrThrow({ where: { code: manualCode, title: `${prefix} manual competency` } }); createdIds.push(manual.id); assert.equal(manual.description.length, 2000);
+  await inspector().getByRole('button', { name: 'Close milestone details', exact: true }).click();
+  stage = 'native mobile Escape cancellation';
+  await page.setViewportSize({ width: 390, height: 900 }); await open();
+  await generate('/strobi Cancel with Escape', `${prefix} escape`, 350);
+  await form().getByLabel('What should the trainee demonstrate?').focus(); await page.keyboard.press('Escape');
+  await page.waitForTimeout(400); assert(await form().isVisible()); assert.equal(await field('title').inputValue(), '');
+  await form().getByRole('button', { name: 'Cancel', exact: true }).click(); await form().waitFor({ state: 'detached' });
+  stage = 'responsive shared surface';
+  for (const width of [320, 390, 1440]) {
+    await page.setViewportSize({ width, height: 900 }); await open();
+    await page.screenshot({ path: `/tmp/strobi-shared-${builderSurface ? "builder-" : ""}${width}.png`, fullPage: false });
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await form().getByRole('button', { name: 'Cancel', exact: true }).click(); await form().waitFor({ state: 'detached' });
+  }
+  if (builderSurface) { assert.equal(await prisma.planNode.count({ where: { planVersion: { planId: plan.id } } }), 0); assert.equal(await prisma.planVersion.count({ where: { planId: plan.id } }), 1); }
+  assert.equal(unexpected, 0); assert.equal(queue.length, 0); assert.deepEqual(errors, []);
+  console.log('PASS shared Strobi: plain/command requests, explicit save/pillar, auto/manual codes, canonical guard, 2000-character generated/manual creation/edit, real-ID PDF upload, cancelled session isolation and 320/390/1440 layouts.');
+})().catch(error => { let detail = String(error.message).replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL]'); for (const key of ['GEMINI_API_KEY', 'DATABASE_URL', 'DIRECT_URL', 'SESSION_SECRET', 'SUPABASE_SERVICE_ROLE_KEY']) if (process.env[key]) detail = detail.split(process.env[key]).join('[secret]'); console.error(`FAIL shared Strobi at ${stage}: ${error.name}: ${detail.slice(0, 1200)}`); process.exitCode = 1; }).finally(async () => {
+  await browser?.close();
+  const definitions = await prisma.milestoneDefinition.findMany({ where: { OR: [{ id: { in: createdIds } }, { title: { startsWith: prefix } }] }, select: { id: true } });
+  const ids = definitions.map(row => row.id);
+  const objects = await prisma.courseMaterial.findMany({ where: { milestoneId: { in: ids } }, select: { storagePath: true } });
+  if (objects.length) { const result = await storage.storage.from('course-materials').remove(objects.map(row => row.storagePath)); if (result.error) { console.error('Fixture storage cleanup failed'); process.exitCode = 1; } }
+  await prisma.milestoneDefinition.deleteMany({ where: { id: { in: ids } } });
+  if (plan) await prisma.trainingPlan.delete({ where: { id: plan.id } });
+  if (trainer) await prisma.adminUser.delete({ where: { id: trainer.id } });
+  await prisma.$disconnect();
+});

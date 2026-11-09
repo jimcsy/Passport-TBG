@@ -24,7 +24,7 @@ const plans = [];
   for (let i = 0; i < 2; i++) await prisma.planNode.create({ data: { planVersionId: draft.id, libraryMilestoneId: target.id, code: target.code, title: target.title, description: target.description, path: 'TECHNICAL', orderIndex: i, posX: 0, posY: 0, isCustom: true } });
   const before = await prisma.milestoneDefinition.findMany({ where: { code: { startsWith: prefix } }, orderBy: { code: 'asc' } });
   const token = await new SignJWT({ id: trainer.id, fullName: trainer.fullName, employeeId: trainer.employeeId, role: 'TRAINER', portal: 'trainer' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE_PATH ? { executablePath: process.env.CHROME_EXECUTABLE_PATH } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
   const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);

@@ -17,13 +17,13 @@ export function AskStrobi(props: StrobiAssistantProps) {
   const applied = !!assistant.proposal && props.fields.title === assistant.proposal.title && props.fields.description === assistant.proposal.description;
   const reset = assistant.usage ? new Intl.DateTimeFormat("en-PH", { timeZone: "Asia/Manila", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(assistant.usage.resetsAt)) : null;
   return <section aria-labelledby={`${id}-heading`} className="min-w-0 space-y-3 border-y border-beat-border py-4 text-beat-maroon" onKeyDown={event => {
-    if (event.key === "Escape" && assistant.pending) { event.stopPropagation(); assistant.cancel(); promptRef.current?.focus(); }
+    if (event.key === "Escape" && assistant.pending) { event.preventDefault(); event.stopPropagation(); assistant.cancel(); promptRef.current?.focus(); }
   }}>
     <div className="flex items-center gap-2"><WandSparkles aria-hidden="true" className="h-4 w-4 shrink-0 text-beat-maroon" /><h3 id={`${id}-heading`} className="text-sm font-semibold">Ask Strobi</h3><span className="text-xs text-beat-maroon/75">Optional</span></div>
     <p id={`${id}-privacy`} className="text-xs leading-relaxed text-beat-maroon/75">Describe the skill to practice. Use only nonconfidential information; Google may use free-tier prompts to improve its products.</p>
     <div className="space-y-2">
       <label htmlFor={`${id}-prompt`} className="block text-xs font-semibold">What should the trainee demonstrate?</label>
-      <textarea ref={promptRef} id={`${id}-prompt`} rows={3} maxLength={STROBI_PROMPT_MAX + 8} value={assistant.prompt} disabled={unavailable}
+      <textarea ref={promptRef} id={`${id}-prompt`} rows={3} maxLength={STROBI_PROMPT_MAX + 8} value={assistant.prompt} disabled={unavailable || props.isSaving}
         onChange={event => assistant.changePrompt(event.target.value)} aria-describedby={`${id}-privacy ${id}-hint${assistant.error ? ` ${id}-error` : ""}`} aria-invalid={assistant.error === "INVALID_INPUT"}
         placeholder="/strobi Practice explaining a monthly report to another department"
         onKeyDown={event => { if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) { event.preventDefault(); void assistant.generate(); } }}
@@ -32,7 +32,7 @@ export function AskStrobi(props: StrobiAssistantProps) {
         <p id={`${id}-hint`} className="min-w-0 text-xs text-beat-maroon/75">Plain text or /strobi. Generate when ready.</p>
         <div className="flex flex-wrap gap-2">
           {assistant.pending && <button type="button" className="beat-control min-h-11" onClick={() => { assistant.cancel(); promptRef.current?.focus(); }}>Cancel generation</button>}
-          <button type="button" disabled={unavailable || assistant.pending} onClick={() => void assistant.generate()} className="beat-primary min-h-11">{assistant.pending ? "Generating…" : assistant.error ? "Try again" : "Generate"}</button>
+          <button type="button" disabled={unavailable || assistant.pending || props.isSaving} onClick={() => void assistant.generate()} className="beat-primary min-h-11">{assistant.pending ? "Generating…" : assistant.error ? "Try again" : "Generate"}</button>
         </div>
       </div>
     </div>
@@ -49,11 +49,11 @@ export function AskStrobi(props: StrobiAssistantProps) {
       </div>}
       {assistant.proposal.suggestedPillar !== props.selectedPillar && <div className="space-y-2">
         <p className="text-xs leading-relaxed">Suggested pillar: <strong>{DEVELOPMENT_PATHS[assistant.proposal.suggestedPillar].title}</strong>. {assistant.proposal.pillarRationale}</p>
-        <button type="button" className="beat-control min-h-11 max-w-full !whitespace-normal text-left" onClick={() => { props.onUsePillar(assistant.proposal!.suggestedPillar); promptRef.current?.focus(); }}>Use {DEVELOPMENT_PATHS[assistant.proposal.suggestedPillar].title}</button>
+        <button type="button" disabled={props.isSaving} className="beat-control min-h-11 max-w-full !whitespace-normal text-left" onClick={() => { props.onUsePillar(assistant.proposal!.suggestedPillar); promptRef.current?.focus(); }}>Use {DEVELOPMENT_PATHS[assistant.proposal.suggestedPillar].title}</button>
       </div>}
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={applied || assistant.pending} onClick={assistant.apply} className="beat-control min-h-11">{applied ? "Wording applied" : "Apply suggestion"}</button>
-        <button type="button" onClick={() => { assistant.dismiss(); promptRef.current?.focus(); }} className="beat-control min-h-11">Dismiss</button>
+        <button type="button" disabled={applied || assistant.pending || props.isSaving} onClick={assistant.apply} className="beat-control min-h-11">{applied ? "Wording applied" : "Apply suggestion"}</button>
+        <button type="button" disabled={props.isSaving} onClick={() => { assistant.dismiss(); promptRef.current?.focus(); }} className="beat-control min-h-11">Dismiss</button>
       </div>
       <p className="text-xs leading-relaxed text-beat-maroon/75">Review the wording and criteria. Nothing is saved until you use the form’s Save or Add action. Attach materials manually.</p>
     </div>}

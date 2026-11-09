@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { getLayoutedElements } from "@/lib/canvas/layout";
 import { getMilestonePlacement } from "@/lib/canvas/placement";
+import type { StrobiAssistantProps } from "@/components/admin/strobi/useStrobiAssistant";
 import { DevelopmentPath } from "@/lib/types/models";
 import {
   savePlanVersionAction,
@@ -223,6 +224,7 @@ export interface PlanCanvasBuilderProps {
     }>;
   };
   libraryMilestones?: LibraryMilestone[];
+  strobiAvailability?: StrobiAssistantProps["availability"];
   addMilestoneId?: string;
   progressCounts?: Record<string, number>;
   activeTraineeCount?: number;
@@ -242,6 +244,7 @@ function PlanCanvasBuilderInner({
   plan,
   initialVersion,
   libraryMilestones = [],
+  strobiAvailability = "disabled",
   addMilestoneId,
   progressCounts = {},
   activeTraineeCount = 0,
@@ -1490,7 +1493,7 @@ function PlanCanvasBuilderInner({
           onDeleteMilestone={!isViewingReadOnly ? handleDeleteLibraryMilestone : undefined}
           className="flex min-h-0 flex-1 flex-col bg-white text-beat-maroon"
         />
-        <CreateSharedMilestoneForm isOpen={creatingShared} initialPath={focusedPath || DevelopmentPath.ONBOARDING} onClose={closeInspector} onCreated={sharedCreated} onPendingChange={pending => { milestoneSaving.current = pending; }} />
+        <CreateSharedMilestoneForm planId={plan.id} existingCodes={availableMilestones.map(item => item.code)} strobiAvailability={strobiAvailability} isOpen={creatingShared} initialPath={focusedPath || DevelopmentPath.ONBOARDING} onClose={closeInspector} onCreated={sharedCreated} onPendingChange={pending => { milestoneSaving.current = pending; }} />
         <EditMilestoneModal
           notice={editingMilestone?.id === createdSharedId ? "Saved to the shared library. Upload materials here, then explicitly add it to this draft. Saving shared content does not add a plan node." : undefined}
           focusMaterials={!!createdSharedId && editingMilestone?.id === createdSharedId}

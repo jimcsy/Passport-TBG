@@ -2,30 +2,47 @@
 
 import { MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import type { MilestoneDefinition } from "@prisma/client";
 import { X } from "lucide-react";
 import { createCustomLibraryMilestoneAction } from "@/lib/actions/plans";
 import { customMilestoneSchema } from "@/lib/validations/milestones";
 import { FOUNDATION_PILLARS } from "@/lib/constants/foundation";
+import { AskStrobi } from "@/components/admin/strobi/AskStrobi";
+import type { StrobiAssistantProps } from "@/components/admin/strobi/useStrobiAssistant";
+import { suggestSharedMilestoneCode } from "@/lib/milestones/shared-code";
 import { DevelopmentPath } from "@/lib/types/models";
 
 /** Shared creation ends at a real definition ID; file management reuses the existing editor. */
-export function CreateSharedMilestoneForm({ isOpen, initialPath, onClose, onCreated, onPendingChange }: {
+interface CreateSharedMilestoneProps {
   isOpen: boolean;
   initialPath: DevelopmentPath;
+  planId?: string;
+  existingCodes: readonly string[];
+  strobiAvailability: StrobiAssistantProps["availability"];
   onClose: () => void;
   onCreated: (milestone: MilestoneDefinition) => void;
   onPendingChange: (pending: boolean) => void;
-}) {
+}
+export function CreateSharedMilestoneForm(props: CreateSharedMilestoneProps) {
+  // A closed creation session owns no prompt, proposal or manual-field state.
+  return props.isOpen ? <SharedMilestoneCreationSession {...props} /> : null;
+}
+function SharedMilestoneCreationSession({ initialPath, planId, existingCodes, strobiAvailability, onClose, onCreated, onPendingChange }: CreateSharedMilestoneProps) {
   const [fields, setFields] = useState({ code: "", title: "", description: "", path: initialPath });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const submitting = useRef(false);
   const [pathTouched, setPathTouched] = useState(false);
-  const hasMetadata = !!(fields.code || fields.title || fields.description);
+  const [codeEdited, setCodeEdited] = useState(false);
+  const hasMetadata = !!(codeEdited || fields.title || fields.description);
   const effectivePath = pathTouched || hasMetadata ? fields.path : initialPath;
-  if (!isOpen) return null;
+  const automaticCode = useMemo(() => suggestSharedMilestoneCode(effectivePath, existingCodes), [effectivePath, existingCodes]);
+  const effectiveCode = codeEdited ? fields.code : automaticCode;
+  function changePillar(path: DevelopmentPath) {
+    if (submitting.current) return;
+    setPathTouched(true); setFields(previous => ({ ...previous, path })); setErrors({});
+  }
   function cancel() {
     if (submitting.current) return;
     setFields({ code: "", title: "", description: "", path: initialPath }); setPathTouched(false); setErrors({}); onClose();
@@ -33,7 +50,7 @@ export function CreateSharedMilestoneForm({ isOpen, initialPath, onClose, onCrea
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (submitting.current) return;
-    const parsed = customMilestoneSchema.safeParse({ ...fields, path: effectivePath });
+    const parsed = customMilestoneSchema.safeParse({ ...fields, code: effectiveCode, path: effectivePath });
     if (!parsed.success) {
       setErrors(Object.fromEntries(parsed.error.issues.map(issue => [String(issue.path[0]), issue.message])));
       return;
@@ -51,14 +68,17 @@ export function CreateSharedMilestoneForm({ isOpen, initialPath, onClose, onCrea
   return <div className="min-h-0 flex-1 overflow-y-auto p-4 text-beat-maroon">
     <header className="flex items-start justify-between gap-3 border-b border-beat-border pb-4">
       <div><h3 className="text-base font-semibold">Create milestone</h3><p className="mt-2 text-xs leading-relaxed text-beat-maroon/75">Save shared content first, then attach materials here. This does not add a milestone to a plan draft or publish a plan.</p></div>
-      <button type="button" disabled={pending} onClick={onClose} aria-label="Close milestone creation" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-beat-canvas"><X aria-hidden="true" className="h-5 w-5" /></button>
+      <button type="button" disabled={pending} onClick={cancel} aria-label="Close milestone creation" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-beat-canvas"><X aria-hidden="true" className="h-5 w-5" /></button>
     </header>
     <form aria-label="Create shared milestone" aria-busy={pending} onSubmit={submit} className="mt-5 space-y-4">
+      <AskStrobi contextKey="shared-library-creation" planId={planId} isOpen={true} isSaving={pending} availability={strobiAvailability} selectedPillar={effectivePath} fields={fields}
+        onApplyFields={patch => { if (!submitting.current) { setFields(previous => ({ ...previous, ...patch, path: effectivePath })); setErrors({}); } }}
+        onUsePillar={changePillar} />
       <fieldset disabled={pending} className="min-w-0 space-y-4">
-        <label className="block space-y-1 text-xs font-semibold">Milestone code<input name="code" value={fields.code} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, code: event.target.value.toUpperCase() }))} aria-invalid={!!errors.code} aria-describedby={errors.code ? "shared-create-code-error" : undefined} className={fieldClass} />{errors.code && <span id="shared-create-code-error" role="alert" className="block font-normal">{errors.code}</span>}</label>
+        <label className="block space-y-1 text-xs font-semibold">Milestone code<span className="block font-normal text-beat-maroon/75">Suggested automatically; editable. Checked when saved.</span><input name="code" aria-label="Milestone code" value={effectiveCode} onChange={event => { setCodeEdited(true); setFields(previous => ({ ...previous, path: effectivePath, code: event.target.value.toUpperCase() })); }} aria-invalid={!!errors.code} aria-describedby={errors.code ? "shared-create-code-error" : undefined} className={fieldClass} />{errors.code && <span id="shared-create-code-error" role="alert" className="block font-normal">{errors.code}</span>}</label>
         <label className="block space-y-1 text-xs font-semibold">Milestone title<input name="title" value={fields.title} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, title: event.target.value }))} aria-invalid={!!errors.title} aria-describedby={errors.title ? "shared-create-title-error" : undefined} className={fieldClass} />{errors.title && <span id="shared-create-title-error" role="alert" className="block font-normal">{errors.title}</span>}</label>
         <label className="block space-y-1 text-xs font-semibold">Description and criteria<textarea maxLength={MILESTONE_DESCRIPTION_MAX} name="description" rows={4} value={fields.description} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, description: event.target.value }))} aria-invalid={!!errors.description} aria-describedby={errors.description ? "shared-create-description-error" : undefined} className={fieldClass} />{errors.description && <span id="shared-create-description-error" role="alert" className="block font-normal">{errors.description}</span>}</label>
-        <label className="block space-y-1 text-xs font-semibold">Pillar<select value={effectivePath} onChange={event => { setPathTouched(true); setFields(previous => ({ ...previous, path: event.target.value as DevelopmentPath })); }} className={fieldClass}>{FOUNDATION_PILLARS.map(pillar => <option key={pillar.path} value={pillar.path}>{pillar.title}</option>)}</select></label>
+        <label className="block space-y-1 text-xs font-semibold">Pillar<select aria-label="Pillar" value={effectivePath} onChange={event => changePillar(event.target.value as DevelopmentPath)} className={fieldClass}>{FOUNDATION_PILLARS.map(pillar => <option key={pillar.path} value={pillar.path}>{pillar.title}</option>)}</select></label>
         <p className="text-xs leading-relaxed text-beat-maroon/75">Materials become available after saving. MP4, PDF, and PPTX files up to 50 MB each are supported. A milestone can also have no materials.</p>
         {errors.form && <p role="alert" className="text-sm">{errors.form}</p>}
         <div className="flex flex-wrap justify-end gap-3 border-t border-beat-border pt-4"><button type="button" onClick={cancel} className="beat-control min-h-11">Cancel</button><button type="submit" className="beat-primary min-h-11">{pending ? "Saving…" : "Save shared milestone"}</button></div>

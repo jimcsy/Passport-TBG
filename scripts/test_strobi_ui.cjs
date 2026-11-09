@@ -106,6 +106,17 @@ let server, browser, directory;
   // An external pillar change invalidates the in-flight result.
   await generate({ delay: 250 }); await page.evaluate(() => window.strobiHarness.setPillar('TECHNICAL')); await page.waitForTimeout(300);
   assert.equal(await title().inputValue(), '');
+  // Parent saving aborts late work but keeps prompt/proposal available after a failed save.
+  await fresh(); await generate({ delay: 250 });
+  await page.evaluate(() => window.strobiHarness.setSaving(true)); await page.waitForTimeout(300);
+  assert.equal(await title().inputValue(), ''); assert.equal(await prompt().inputValue(), '/strobi Explain a report');
+  assert(await page.getByRole('button', { name: 'Generate', exact: true }).isDisabled());
+  await page.evaluate(() => window.strobiHarness.setSaving(false));
+  await generate(); await suggestion();
+  await page.evaluate(() => window.strobiHarness.setSaving(true));
+  assert(await page.getByRole('button', { name: 'Use Communication Skills', exact: true }).isDisabled());
+  await page.evaluate(() => window.strobiHarness.setSaving(false));
+  assert.equal(await page.getByRole('heading', { name: 'Suggested wording' }).count(), 1);
   // Error leaves manual creation usable, with no retries until explicitly requested.
   await fresh(); await title().fill('Keep on failure'); const before = requests.length;
   await generate({ status: 429, body: { success: false, code: 'PROVIDER_QUOTA', usage } });

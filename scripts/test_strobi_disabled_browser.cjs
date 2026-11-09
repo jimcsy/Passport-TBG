@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const { PrismaClient } = require('@prisma/client');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/tmp/passport-account-check/node_modules/playwright');
+const db = new PrismaClient(); let browser;
+const origin = process.env.STROBI_DISABLED_TEST_ORIGIN || 'http://localhost:3102';
+(async () => {
+  const { SignJWT } = await import('jose');
+  const trainer = await db.adminUser.findFirst({ where: { role: { in: ['TRAINER', 'ADMIN', 'SUPER_ADMIN'] } }, select: { id: true, role: true } }); assert(trainer);
+  const token = await new SignJWT({ portal: 'trainer', id: trainer.id, role: trainer.role, employeeId: 'check', fullName: 'Strobi manual fallback check' }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('5m').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } }); await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
+  let calls = 0; await page.route('**/api/trainer/strobi', async route => { calls++; await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ success: false, code: 'DISABLED' }) }); });
+  await page.goto(`${origin}/trainer/plans/library`, { waitUntil: 'networkidle' }); await page.getByRole('button', { name: 'Create milestone', exact: true }).click();
+  const form = page.getByRole('form', { name: 'Create shared milestone', exact: true }); await form.waitFor();
+  assert(await form.getByRole('button', { name: 'Generate', exact: true }).isDisabled());
+  assert(await form.getByText('Strobi is currently turned off. You can complete the milestone manually.', { exact: true }).isVisible());
+  await form.locator('[name=title]').fill('Manual fallback check'); await form.locator('[name=description]').fill('Demonstrate a manually described competency.');
+  assert(await form.getByRole('button', { name: 'Save shared milestone', exact: true }).isEnabled());
+  await form.getByRole('button', { name: 'Cancel', exact: true }).click(); await form.waitFor({ state: 'detached' }); assert.equal(calls, 0);
+  console.log('PASS saved disabled flag: shared assistant disabled, manual fields/save available, cancel works and no generation or content writes.');
+})().catch(() => { console.error('FAIL disabled shared assistant browser check (credentials suppressed)'); process.exitCode = 1; }).finally(async () => { await browser?.close(); await db.$disconnect(); });

@@ -14,6 +14,8 @@ export interface StrobiAssistantProps {
   /** Stable for one open creation session; do not include the accepted pillar. */
   contextKey: string;
   isOpen: boolean;
+  /** Pause generation/application during the parent form’s explicit save. */
+  isSaving?: boolean;
   planId?: string;
   selectedPillar: DevelopmentPath;
   availability: "available" | "disabled" | "unconfigured";
@@ -56,6 +58,13 @@ export function useStrobiAssistant(props: StrobiAssistantProps) {
     if (active.current) { invalidate(); setPending(false); setMessage("Destination changed. Generate again when ready."); }
   }, [props.selectedPillar, invalidate]);
 
+  useCommitEffect(() => {
+    if (props.isSaving && active.current) {
+      invalidate(); setPending(false);
+      setMessage("Generation stopped to keep the submitted details unchanged.");
+    }
+  }, [props.isSaving, invalidate]);
+
   function cancel() {
     invalidate(); setPending(false); setError(null); setMessage("Generation cancelled. Your manual entries are kept. Requests already sent may count toward your allowance.");
   }
@@ -65,7 +74,7 @@ export function useStrobiAssistant(props: StrobiAssistantProps) {
   }
   async function generate() {
     const current = latest.current;
-    if (active.current || !current.isOpen || current.availability !== "available") return;
+    if (active.current || current.isSaving || !current.isOpen || current.availability !== "available") return;
     const input = strobiGenerationInputSchema.safeParse({ prompt, selectedPillar: current.selectedPillar, ...(current.planId ? { planId: current.planId } : {}) });
     if (!input.success) { setError("INVALID_INPUT"); return; }
     const id = ++sequence.current;
@@ -94,7 +103,7 @@ export function useStrobiAssistant(props: StrobiAssistantProps) {
     setMessage("Suggestion ready. Your entries are kept until you choose Apply suggestion.");
   }
   function apply() {
-    if (!proposal || pending) return;
+    if (!proposal || pending || latest.current.isSaving) return;
     latest.current.onApplyFields({ title: proposal.title, description: proposal.description });
     setMessage("Wording applied. Review the milestone before saving.");
   }
