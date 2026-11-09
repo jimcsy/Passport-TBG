@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { HubInsights as Insights } from "@/lib/dashboard/insights";
 import { HubEngagementChart } from "./HubEngagementChart";
-import { CohortProgressHeatmap } from "./CohortProgressHeatmap";
 
 export function HubInsights({ data }: { data: Insights }) {
   const summaries = [
@@ -10,7 +9,7 @@ export function HubInsights({ data }: { data: Insights }) {
     { title: "Training Content", value: data.viewers, detail: `of ${data.registered} trainees have viewed content`, note: `${data.milestones} shared ${data.milestones === 1 ? "milestone" : "milestones"} · ${data.materials} ${data.materials === 1 ? "material" : "materials"}. Counts each trainee’s first module opening.`, href: "/trainer/plans", action: "Explore training content" },
     { title: "Awaiting verification", value: data.pendingReviews, detail: `${data.verified} verified milestones in current plans`, note: data.pendingReviews ? "Review trainee reflections and award their next milestone stamp." : "You’re up to date. New review requests will appear here.", href: "/trainer/queue", action: "Open verifications" },
   ];
-  return <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
+  return <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
     <div className="min-w-0 space-y-6">
       <nav aria-label="Trainer insights and tools" className="grid gap-4 sm:grid-cols-3">{summaries.map(item => <section key={item.title} aria-label={item.title} className="flex min-w-0 flex-col rounded-xl border border-beat-border bg-white p-5">
         <h2 className="text-xs font-semibold text-beat-maroon/75">{item.title}</h2>
@@ -20,7 +19,6 @@ export function HubInsights({ data }: { data: Insights }) {
         <Link href={item.href} className="beat-control mt-auto min-h-11 justify-between text-xs">{item.action}<ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-beat-gold" /></Link>
       </section>)}</nav>
       <HubEngagementChart series={data.series} />
-      <CohortProgressHeatmap data={data.cohorts} />
     </div>
     <aside aria-label="Training insights" className="min-w-0 rounded-xl border border-beat-border bg-white p-5">
       <h2 className="text-base font-semibold text-beat-maroon">Pillar progress</h2>

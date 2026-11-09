@@ -112,7 +112,7 @@ export function MilestoneLibrary({ strobiAvailability = "disabled" }: { strobiAv
       : error ? <div role="alert" className="space-y-3 py-8"><p className="text-sm text-beat-maroon">{error}</p><button type="button" onClick={() => void load()} className="beat-control min-h-11">Retry loading library</button></div>
       : <>
         <p role="status" className="text-xs text-beat-maroon/75">{filtered.length} of {rows?.length || 0} milestones · Plan counts include current reusable master and role variants.</p>
-        <div className={`grid min-w-0 items-start gap-6 ${selected || creating ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : ""}`}>
+        <div className={`grid min-w-0 items-start gap-6 ${creating ? "lg:grid-cols-[minmax(0,1fr)_28rem] xl:grid-cols-[minmax(0,1fr)_34rem]" : selected ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : ""}`}>
           <div className="min-w-0">
             {filtered.length > 0 ? <div className="border-y border-beat-border bg-white px-4">
               <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1fr)_8rem_5rem_7rem] gap-4 border-b border-beat-border py-3 text-xs font-semibold text-beat-maroon/75 md:grid"><span>Code / title</span><span>Pillar</span><span>Materials</span><span>Reusable plans</span></div>
