@@ -2,27 +2,15 @@
 
 import { MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { X, Plus, AlertCircle, Loader2 } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
 import { customMilestoneSchema, type MilestoneCreationOutcome } from "@/lib/validations/milestones";
 
-const PATH_PREFIX_MAP: Record<DevelopmentPath, string> = {
-  [DevelopmentPath.ONBOARDING]: "ONB",
-  [DevelopmentPath.COMMUNICATION]: "COMM",
-  [DevelopmentPath.TECHNICAL]: "TECH",
-  [DevelopmentPath.CULTURE]: "CULT",
-  [DevelopmentPath.LEADERSHIP]: "LEAD",
-};
-
-const ROLE_PREFIX_MAP: Record<string, string> = {
-  BARISTA: "BAR",
-  KITCHEN_STAFF: "KIT",
-  FLOOR_SERVER: "FLR",
-  STORE_SUPERVISOR: "SUP",
-  IT_INTERN: "IT",
-};
+import { AskStrobi } from "@/components/admin/strobi/AskStrobi";
+import type { StrobiAssistantProps } from "@/components/admin/strobi/useStrobiAssistant";
+import { suggestCustomMilestoneCode } from "@/lib/milestones/custom-code";
 
 export const CreateCustomMilestoneSchema = customMilestoneSchema.extend({
   addToLibrary: z.boolean().default(true),
@@ -35,20 +23,18 @@ interface CreateMilestoneModalProps {
   onClose: () => void;
   path: DevelopmentPath | null;
   pathDisplayName?: string;
+  planId: string;
+  strobiAvailability: StrobiAssistantProps["availability"];
+  onPathChange: (path: DevelopmentPath) => void;
   roleIdentifier: string;
   existingCodes: Set<string>;
   onSubmit: (data: CreateCustomMilestoneForm) => Promise<MilestoneCreationOutcome>;
 }
 
-export function CreateMilestoneModal({
-  isOpen,
-  onClose,
-  path,
-  pathDisplayName,
-  roleIdentifier,
-  existingCodes,
-  onSubmit,
-}: CreateMilestoneModalProps) {
+export function CreateMilestoneModal(props: CreateMilestoneModalProps) {
+  return props.isOpen && props.path ? <CustomMilestoneSession key={`${props.planId}:${props.roleIdentifier}`} {...props} path={props.path} /> : null;
+}
+function CustomMilestoneSession({ onClose, path, pathDisplayName, planId, strobiAvailability, onPathChange, roleIdentifier, existingCodes, onSubmit }: Omit<CreateMilestoneModalProps, "path"> & { path: DevelopmentPath }) {
   const [code, setCode] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -56,37 +42,24 @@ export function CreateMilestoneModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
   const submitting = useRef(false);
-  const openContext = useRef<string | null>(null);
-
-  // Auto-generate sequential code when path or modal opens
+  const [codeEdited, setCodeEdited] = useState(false);
+  const automaticCode = useMemo(() => suggestCustomMilestoneCode(path, roleIdentifier, existingCodes), [path, roleIdentifier, existingCodes]);
+  const effectiveCode = codeEdited ? code : automaticCode;
+  const dialog = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!isOpen || !path) { openContext.current = null; return; }
-    const context = `${path}:${roleIdentifier}`;
-    if (openContext.current === context) return;
-    openContext.current = context;
-
-    const pathPrefix = PATH_PREFIX_MAP[path] || "GEN";
-    const rolePrefix =
-      ROLE_PREFIX_MAP[roleIdentifier.toUpperCase()] ||
-      roleIdentifier.replace(/[^A-Za-z0-9]/g, "").slice(0, 3).toUpperCase() ||
-      "TBG";
-
-    // Find lowest available sequential number (e.g. BAR-TECH-01)
-    let seq = 1;
-    let candidate = "";
-    do {
-      const padded = seq.toString().padStart(2, "0");
-      candidate = `${rolePrefix}-${pathPrefix}-${padded}`;
-      seq++;
-    } while (existingCodes.has(candidate) && seq < 100);
-
-    setCode(candidate);
-    setTitle("");
-    setDescription("");
-    setErrors({});
-  }, [isOpen, path, roleIdentifier, existingCodes]);
-
-  if (!isOpen || !path) return null;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const overflow = document.body.style.overflow; document.body.style.overflow = "hidden";
+    // Disabling the focused submit button can move focus to body. Keep Tab in
+    // this modal even while every action is paused for the explicit Add request.
+    const containTab = (event: KeyboardEvent) => {
+      if (event.key === "Tab" && dialog.current && !dialog.current.contains(document.activeElement)) {
+        event.preventDefault(); dialog.current.focus();
+      }
+    };
+    document.addEventListener("keydown", containTab, true);
+    dialog.current?.querySelector<HTMLElement>("textarea:not(:disabled), input:not(:disabled), button")?.focus();
+    return () => { document.removeEventListener("keydown", containTab, true); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus({ preventScroll: true }); };
+  }, []);
 
   function close() { if (!submitting.current) onClose(); }
 
@@ -96,7 +69,7 @@ export function CreateMilestoneModal({
     setErrors({});
 
     const result = CreateCustomMilestoneSchema.safeParse({
-      code: code.trim().toUpperCase(),
+      code: effectiveCode.trim().toUpperCase(),
       title: title.trim(),
       description: description.trim(),
       path,
@@ -113,7 +86,7 @@ export function CreateMilestoneModal({
       return;
     }
 
-    if (existingCodes.has(result.data.code)) {
+    if (Array.from(existingCodes).some(existing => existing.toUpperCase() === result.data.code)) {
       setErrors({ code: `Milestone code "${result.data.code}" already exists in this plan.` });
       return;
     }
@@ -133,24 +106,30 @@ export function CreateMilestoneModal({
 
   return (
     <div
-      className="portal-modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
+      className="portal-modal-overlay fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in"
       onClick={close}
     >
       <div
-        role="dialog" aria-modal="true" aria-label="Create milestone" className="portal-modal-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
+        ref={dialog} tabIndex={-1} onKeyDown={event => {
+          if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); }
+          if (event.key !== "Tab") return;
+          const controls = Array.from(dialog.current?.querySelectorAll<HTMLElement>("button,input,textarea,select,[tabindex]") || []).filter(element => !element.matches(":disabled") && element.tabIndex >= 0 && element.getClientRects().length > 0);
+          if (!controls.length) { event.preventDefault(); dialog.current?.focus(); return; }
+          const first = controls[0], last = controls[controls.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }} role="dialog" aria-modal="true" aria-label="Create milestone" className="portal-modal-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-lg border border-beat-gold/30 animate-in zoom-in-95 text-beat-maroon"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-beat-border">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-beat-maroon text-beat-gold shadow-sm">
-            </div>
+          <div className="flex min-w-0 items-center gap-2.5">
             <div>
               <h3 className="text-base font-semibold text-beat-maroon">
                 Create Custom Milestone
               </h3>
               <p className="text-xs text-beat-muted">
-                Add a role-specific competency to Track {path}
+                Add a role-specific competency to {pathDisplayName || DEVELOPMENT_PATHS[path].title}
               </p>
             </div>
           </div>
@@ -160,17 +139,20 @@ export function CreateMilestoneModal({
             onClick={close}
             disabled={pending}
             aria-label="Close milestone creation"
-            className="rounded-full p-2 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full p-2 text-beat-maroon/60 hover:bg-beat-canvas hover:text-beat-maroon transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} aria-busy={pending} className="mt-5 space-y-4">
+        <form aria-label="Create custom milestone" onSubmit={handleSubmit} aria-busy={pending} className="mt-5 space-y-4">
+          <AskStrobi contextKey="custom-milestone" isOpen={true} isSaving={pending} planId={planId} availability={strobiAvailability} selectedPillar={path} fields={{ title, description }}
+            onApplyFields={patch => { if (submitting.current) return; if (patch.title !== undefined) setTitle(patch.title); if (patch.description !== undefined) setDescription(patch.description); setErrors({}); }}
+            onUsePillar={pillar => { if (!submitting.current) { onPathChange(pillar); setErrors({}); } }} />
           <fieldset disabled={pending} className="space-y-4">
           {/* Target Track & Role Badge */}
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-beat-canvas border border-beat-border">
+          <div className="flex flex-wrap items-center gap-2 p-3 rounded-lg bg-beat-canvas border border-beat-border">
             <span className="text-[10px] uppercase font-bold text-beat-gold tracking-wider">
               Assigned Path:
             </span>
@@ -193,10 +175,10 @@ export function CreateMilestoneModal({
             <input
               id="milestoneCode"
               type="text"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              value={effectiveCode}
+              onChange={(e) => { setCodeEdited(true); setCode(e.target.value.toUpperCase()); }}
               placeholder="e.g. BAR-TECH-03"
-              className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 font-mono text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
+              className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 font-mono text-xs text-beat-maroon placeholder:text-beat-maroon/75 focus:outline-hidden ${
                 errors.code ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
@@ -219,7 +201,7 @@ export function CreateMilestoneModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Espresso Machine Dial-in & Extraction"
-              className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
+              className={`w-full rounded-xl border bg-beat-canvas px-3.5 py-2.5 text-xs text-beat-maroon placeholder:text-beat-maroon/75 focus:outline-hidden ${
                 errors.title ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
@@ -243,7 +225,7 @@ export function CreateMilestoneModal({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what the trainee must demonstrate to earn the verified stamp from the trainer..."
-              className={`w-full rounded-xl border bg-beat-canvas p-3 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${
+              className={`w-full rounded-xl border bg-beat-canvas p-3 text-xs text-beat-maroon placeholder:text-beat-maroon/75 focus:outline-hidden ${
                 errors.description ? "border-beat-maroon/25 focus:border-beat-maroon/25" : "border-beat-border focus:border-beat-gold"
               }`}
             />
@@ -276,17 +258,17 @@ export function CreateMilestoneModal({
           {errors.form && <p role="alert" className="text-sm text-beat-maroon">{errors.form}</p>}
           <p className="text-xs leading-relaxed text-beat-maroon/75">Adds to this working draft. Save draft persists the plan; Publish controls assignment updates.</p>
           {/* Action Footer */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-beat-border">
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-3 border-t border-beat-border">
             <button
               type="button"
               onClick={close}
-              className="rounded-xl border border-beat-border px-4 py-2.5 text-xs font-bold text-beat-muted hover:bg-beat-canvas transition-colors cursor-pointer"
+              className="min-h-11 rounded-xl border border-beat-border px-4 py-2.5 text-xs font-bold text-beat-muted hover:bg-beat-canvas transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl bg-beat-maroon px-5 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-beat-maroon-dark transition-all cursor-pointer"
             >
               {pending ? <Loader2 aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-beat-gold" /> : <Plus aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />}
               <span>{pending ? "Adding…" : "Add to draft"}</span>

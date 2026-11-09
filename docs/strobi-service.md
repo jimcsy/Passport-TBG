@@ -1,7 +1,7 @@
 # Strobi generation service (#50)
 
-The server now supports `POST /api/trainer/strobi`. There is no Ask Strobi UI yet:
-#51 builds the controls, #52/#53 integrate the two forms. Manual workflows are
+The server now supports `POST /api/trainer/strobi`. Shared and custom creation forms now use Ask Strobi behind the feature flag
+(#51–#53). See `strobi-assistant-ui.md`; #54 covers final rollout verification. Manual workflows are
 unchanged. AI remains unavailable until server configuration is enabled and valid.
 
 ## Local setup

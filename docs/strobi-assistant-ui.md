@@ -6,8 +6,8 @@ Its `useStrobiAssistant` hook owns temporary prompt/request/proposal state.
 and validates response shapes; it contains no Gemini key/configuration access.
 
 The component is now mounted in shared milestone creation in the library and the
-builder’s shared-library inspector (#52). The separate custom milestone modal,
-including plan-only content, remains #53. The saved feature flag remains disabled
+builder’s shared-library inspector (#52). The custom milestone modal also uses the assistant (#53), including plan-only
+content and explicitly opted-in shared creation. The saved feature flag remains disabled
 until rollout.
 No backend, database, Save/Add, materials, publication, progress or stamp behavior
 is changed in #51. The fixture below is browser-test scaffolding, not an app route.
@@ -132,3 +132,47 @@ Chrome 156 disconnected during those checks. Use the installed matching browser
 (or set `CHROME_EXECUTABLE_PATH`) rather than treating a browser disconnect as an
 application assertion failure. Browser downloads were temporary, not new app dependencies.
 The saved disabled flag was separately verified with manual entry/save available.
+
+## Custom Path Builder integration (#53)
+
+`CreateMilestoneModal` owns one open session, keyed by plan/role rather than pillar.
+Accepting Use [pillar] updates the parent `addingToPath` destination and its display
+name while retaining wording, proposal and the shared-library checkbox. The existing
+Add handler still creates the node beneath that accepted pillar and focuses it.
+
+Untouched role/pillar codes refresh locally on a pillar change; manually edited or
+cleared codes stay manual. Suggestions use the existing role-prefix mapping, scan
+codes case-insensitively and continue past sequence 99 rather than returning a
+collision. Normal schema/placed-code checks and shared create-only canonical/unique
+protection remain authoritative.
+
+Generation and pillar selection never add/save/publish. With the checkbox off,
+Add changes only the working graph; Save draft persists an unlinked private node.
+With it on, explicit Add saves the shared definition through the existing action
+and links the working node to its real ID; Save draft still persists the graph.
+Publish remains a separate operation. Materials remain outside AI generation and
+use the existing shared-material workflow.
+
+The modal traps keyboard focus (including when every control is disabled during Add), restores available trigger focus on close, locks
+background scroll, and cancels generation with Escape before Escape closes the
+modal. Its overlay stays above background save notifications. Pending Add pauses
+assistant actions while preserving entered details on failure. Closing discards
+its temporary session; disabled/provider failures leave manual creation usable.
+
+Additional verification:
+
+```sh
+node --import tsx scripts/test_custom_milestone_codes.ts
+# Matching Playwright browser recommended; no live AI requests are made:
+PLAYWRIGHT_BROWSERS_PATH=/tmp/passport-strobi-browsers node --env-file=.env scripts/test_strobi_custom_browser.cjs
+```
+
+The isolated browser test intercepts all generation requests, checks actual plan ID,
+accepted/rejected/renamed pillar placement, manual and automatic codes, invalid and
+canonical conflicts, the retained checkbox, private/shared Add versus Save draft,
+2,000-character wording, cancel/reopen, provider fallback, focus trap and
+320/390/1440 layouts. It compares the existing published node, active assignment
+and original verification/hash exactly. Fixtures are removed afterward. The
+existing complete plan-insertion regression also verifies published/private
+boundaries and shared-material workflows. Saved feature configuration is unchanged;
+#54 covers final rollout verification/documentation.

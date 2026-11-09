@@ -1514,6 +1514,9 @@ function PlanCanvasBuilderInner({
 
       {/* Custom Milestone Creation Modal */}
       <CreateMilestoneModal
+        planId={plan.id}
+        strobiAvailability={strobiAvailability}
+        onPathChange={setAddingToPath}
         isOpen={addingToPath !== null}
         onClose={() => setAddingToPath(null)}
         path={addingToPath}
