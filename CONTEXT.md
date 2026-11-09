@@ -24,3 +24,8 @@ _Avoid_: Published milestone, saved milestone, working draft
 **Working draft**:
 The editable version of an existing training plan before its publication.
 _Avoid_: Strobi proposal
+
+**Strobi tip**:
+Learning guidance for a trainee's selected milestone, explaining the skill,
+suggesting practice, illustrating an example or helping prepare for trainer review.
+_Avoid_: Strobi proposal, verification, earned stamp

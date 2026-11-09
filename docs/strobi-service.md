@@ -9,6 +9,12 @@ stamp behavior remains unchanged.
 The saved feature flag was left disabled during implementation. Verification uses
 separate temporary processes; it does not enable the feature for normal users.
 
+Trainee Strobi Tips is a separate feature under development. Phase #56 defines
+its independently gated contracts and static tips only; it does not yet add a
+working trainee chatbot. See [trainee setup and contracts](strobi-trainee-tips-contracts.md)
+and [the implementation sequence](strobi-trainee-tips-plan.md). Trainer behavior
+and the existing setup below remain unchanged.
+
 ## Configure and enable
 
 1. Use a Google AI Studio **Free** project and create a Gemini key. Keep billing
