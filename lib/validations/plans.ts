@@ -1,4 +1,5 @@
 import { STAMP_DESIGNS } from "@/lib/stamps/catalog";
+import { milestoneDescriptionSchema } from "@/lib/validations/milestones";
 import { z } from "zod";
 import { DevelopmentPath } from "@/lib/types/models";
 
@@ -31,7 +32,7 @@ export const PlanNodeInputSchema = z.object({
   path: DevelopmentPathEnum,
   code: z.string().trim().min(2).max(30),
   title: z.string().trim().min(2).max(150),
-  description: z.string().trim().min(2).max(1000),
+  description: milestoneDescriptionSchema,
   orderIndex: z.number().int().nonnegative().default(1),
   posX: z.number().default(0),
   posY: z.number().default(0),

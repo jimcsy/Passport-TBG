@@ -1,4 +1,6 @@
 "use client";
+
+import { MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
 import { PathTitleEditor } from "./PathTitleEditor";
 import { useRef } from "react";
 import type { Node } from "@xyflow/react";
@@ -40,7 +42,7 @@ export function PlanTreeView({ nodes, readOnly = false, onDeleteNode, onAddMiles
                 <div className="mt-3 space-y-3">
                   {!readOnly && node.data.isCustom && onUpdateNode ? <form key={`${node.data.title}:${node.data.description}`} onSubmit={event => { event.preventDefault(); const form = new FormData(event.currentTarget); onUpdateNode(node.id, { title: String(form.get("title")).trim(), description: String(form.get("description")).trim() }); }} className="space-y-2">
                     <label className="block text-xs">Milestone title<input aria-label={`Title for ${node.data.code}`} name="title" defaultValue={String(node.data.title)} required minLength={3} maxLength={100} className="mt-1 w-full rounded border border-beat-border bg-white p-2" /></label>
-                    <label className="block text-xs">Description<textarea aria-label={`Description for ${node.data.code}`} name="description" defaultValue={String(node.data.description)} required minLength={10} maxLength={500} rows={3} className="mt-1 w-full rounded border border-beat-border bg-white p-2" /></label>
+                    <label className="block text-xs">Description<textarea aria-label={`Description for ${node.data.code}`} name="description" defaultValue={String(node.data.description)} required minLength={10} maxLength={MILESTONE_DESCRIPTION_MAX} rows={3} className="mt-1 w-full rounded border border-beat-border bg-white p-2" /></label>
                     <button type="submit" className="beat-primary">Apply to draft</button><p className="text-xs text-beat-maroon/75">Updates this working plan only. Use Save draft to persist it.</p>
                   </form> : <p className="break-words text-xs text-beat-muted">{String(node.data.description)}</p>}
                   {!readOnly && onEditNode && <button type="button" onClick={() => onEditNode(node.id)} className="beat-control">Stamp design / materials</button>}

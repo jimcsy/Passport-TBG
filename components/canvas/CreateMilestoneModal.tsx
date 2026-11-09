@@ -1,5 +1,7 @@
 "use client";
 
+import { MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
+
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { X, Plus, AlertCircle, Loader2 } from "lucide-react";
@@ -235,6 +237,7 @@ export function CreateMilestoneModal({
               Competency Description & Verification Criteria <span className="text-beat-maroon">*</span>
             </label>
             <textarea
+              maxLength={MILESTONE_DESCRIPTION_MAX}
               id="milestoneDesc"
               rows={3}
               value={description}

@@ -8,25 +8,11 @@ import { resolveStampDesign, STAMP_DESIGNS, type StampDesignKey } from "@/lib/st
 import { StampDesignPicker } from "./StampDesignPicker";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
+import { customMilestoneSchema, MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
 import { X, Check, AlertCircle, Edit3 } from "lucide-react";
 import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
 
-export const EditCustomMilestoneSchema = z.object({
-  code: z
-    .string()
-    .min(3, "Code must be at least 3 characters")
-    .max(25, "Code cannot exceed 25 characters")
-    .regex(/^[A-Z0-9_-]+$/, "Code must contain only uppercase letters, numbers, hyphens, or underscores"),
-  title: z
-    .string()
-    .min(3, "Title must be at least 3 characters")
-    .max(100, "Title cannot exceed 100 characters"),
-  description: z
-    .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(500, "Description cannot exceed 500 characters"),
-  path: z.nativeEnum(DevelopmentPath),
-});
+export const EditCustomMilestoneSchema = customMilestoneSchema;
 
 export type EditCustomMilestoneForm = z.infer<typeof EditCustomMilestoneSchema>;
 
@@ -321,6 +307,7 @@ export function EditMilestoneModal({
               id="editMilestoneDesc"
               rows={3}
               value={description}
+              maxLength={MILESTONE_DESCRIPTION_MAX}
               onChange={(e) => { stage({ description: e.target.value }); }}
               placeholder="Describe the skills and verification criteria for this milestone..."
               className={`min-h-11 w-full rounded-xl border bg-beat-canvas p-3 text-xs text-beat-maroon placeholder:text-beat-maroon/40 focus:outline-hidden ${

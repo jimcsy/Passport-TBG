@@ -1,5 +1,7 @@
 "use client";
 
+import { MILESTONE_DESCRIPTION_MAX } from "@/lib/validations/milestones";
+
 import { useRef, useState, type FormEvent } from "react";
 import type { MilestoneDefinition } from "@prisma/client";
 import { X } from "lucide-react";
@@ -55,7 +57,7 @@ export function CreateSharedMilestoneForm({ isOpen, initialPath, onClose, onCrea
       <fieldset disabled={pending} className="min-w-0 space-y-4">
         <label className="block space-y-1 text-xs font-semibold">Milestone code<input name="code" value={fields.code} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, code: event.target.value.toUpperCase() }))} aria-invalid={!!errors.code} aria-describedby={errors.code ? "shared-create-code-error" : undefined} className={fieldClass} />{errors.code && <span id="shared-create-code-error" role="alert" className="block font-normal">{errors.code}</span>}</label>
         <label className="block space-y-1 text-xs font-semibold">Milestone title<input name="title" value={fields.title} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, title: event.target.value }))} aria-invalid={!!errors.title} aria-describedby={errors.title ? "shared-create-title-error" : undefined} className={fieldClass} />{errors.title && <span id="shared-create-title-error" role="alert" className="block font-normal">{errors.title}</span>}</label>
-        <label className="block space-y-1 text-xs font-semibold">Description and criteria<textarea name="description" rows={4} value={fields.description} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, description: event.target.value }))} aria-invalid={!!errors.description} aria-describedby={errors.description ? "shared-create-description-error" : undefined} className={fieldClass} />{errors.description && <span id="shared-create-description-error" role="alert" className="block font-normal">{errors.description}</span>}</label>
+        <label className="block space-y-1 text-xs font-semibold">Description and criteria<textarea maxLength={MILESTONE_DESCRIPTION_MAX} name="description" rows={4} value={fields.description} onChange={event => setFields(previous => ({ ...previous, path: effectivePath, description: event.target.value }))} aria-invalid={!!errors.description} aria-describedby={errors.description ? "shared-create-description-error" : undefined} className={fieldClass} />{errors.description && <span id="shared-create-description-error" role="alert" className="block font-normal">{errors.description}</span>}</label>
         <label className="block space-y-1 text-xs font-semibold">Pillar<select value={effectivePath} onChange={event => { setPathTouched(true); setFields(previous => ({ ...previous, path: event.target.value as DevelopmentPath })); }} className={fieldClass}>{FOUNDATION_PILLARS.map(pillar => <option key={pillar.path} value={pillar.path}>{pillar.title}</option>)}</select></label>
         <p className="text-xs leading-relaxed text-beat-maroon/75">Materials become available after saving. MP4, PDF, and PPTX files up to 50 MB each are supported. A milestone can also have no materials.</p>
         {errors.form && <p role="alert" className="text-sm">{errors.form}</p>}
