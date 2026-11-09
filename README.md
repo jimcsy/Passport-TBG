@@ -281,3 +281,9 @@ npm run build
 ```
 
 The integration script uses a disposable PostgreSQL schema, including a forced failure to verify all-or-nothing rollback. `scripts/test_individual_publish_browser.cjs` checks defaults, cancellation/reset, recipient selection, impact review, conflict retention, curated variants and mobile controls using its own self-cleaning fixtures. No schema migration is required for publish scopes.
+
+### Optional Strobi AI assistance
+
+The server-side Gemini service, quota setup and verification commands are documented
+in [Strobi service setup](docs/strobi-service.md). AI is disabled by default; the
+creation-form UI is tracked separately in issues #51–#53.

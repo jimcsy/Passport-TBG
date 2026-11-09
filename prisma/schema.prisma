@@ -288,3 +288,22 @@ model TraineeContentView {
 
   @@index([firstViewedAt])
 }
+
+// Operational metadata only; never store prompts or generated content.
+model StrobiDailyQuota {
+  scope     String
+  subjectId String
+  day       String
+  attempts  Int @default(0)
+
+  @@id([scope, subjectId, day])
+  @@index([day])
+}
+
+model StrobiRequestLease {
+  trainerId String @id
+  token     String @unique
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
