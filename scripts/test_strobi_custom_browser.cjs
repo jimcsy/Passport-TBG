@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { prisma } = require('../lib/db/prisma.ts');
 const { SignJWT } = require('jose');
 const { verificationData } = require('../lib/stamps/hash.ts');
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/tmp/passport-account-check/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const prefix = `ST53-${Date.now()}`;
 const origin = process.env.STROBI_TEST_BASE_URL || 'http://localhost:3100';
 let releaseShared;

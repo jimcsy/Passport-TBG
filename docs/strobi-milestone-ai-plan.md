@@ -1,7 +1,7 @@
 # Strobi milestone assistance — implementation plan
 
 Status: Plan and engineering defaults approved by the user on 2026-11-09.
-Implementation is tracked by the GitHub issues linked below.
+Implementation and acceptance verification are complete through #54. See [final verification](strobi-rollout.md) for evidence and deployment/operator steps; the saved feature flag remains off.
 
 ## Confirmed decisions
 
@@ -156,17 +156,17 @@ Publish retain their current independent effects.
 
 ## Acceptance checklist
 
-- [ ] Both creation forms offer the same optional Ask Strobi workflow.
-- [ ] Trainers review/edit generated wording before the existing Save/Add action.
-- [ ] Pillar changes are explicit and preserve text and manual codes.
-- [ ] Codes pass application validation; materials are never AI generated.
-- [ ] Description limits are aligned at 2,000 across affected flows.
-- [ ] All authenticated trainers can use the enabled feature; trainees cannot.
-- [ ] Daily limits and active-request protection work across server processes.
-- [ ] Errors and cancellation preserve manual work and permit manual completion.
-- [ ] Prompt/context privacy restrictions and free-tier notice are visible.
-- [ ] Generation leaves draft/publish behavior, progress and stamps unchanged.
-- [ ] Relevant checks/build pass and setup/rollback documentation is complete.
+- [x] Both creation forms offer the same optional Ask Strobi workflow.
+- [x] Trainers review/edit generated wording before the existing Save/Add action.
+- [x] Pillar changes are explicit and preserve text and manual codes.
+- [x] Codes pass application validation; materials are never AI generated.
+- [x] Description limits are aligned at 2,000 across affected flows.
+- [x] All authenticated trainers can use the enabled feature; trainees cannot.
+- [x] Daily limits and active-request protection work across server processes.
+- [x] Errors and cancellation preserve manual work and permit manual completion.
+- [x] Prompt/context privacy restrictions and free-tier notice are visible.
+- [x] Generation leaves draft/publish behavior, progress and stamps unchanged.
+- [x] Relevant checks/build pass and setup/rollback documentation is complete.
 
 ## Provider research
 

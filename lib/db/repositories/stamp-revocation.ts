@@ -10,7 +10,7 @@ export async function revokeAward(input: StampRevocationInput, trainerId: string
   return db.$transaction(async tx => {
     const trainer = await tx.adminUser.findUnique({ where: { id: trainerId }, select: { role: true } });
     if (!trainer || !["TRAINER", "ADMIN", "SUPER_ADMIN"].includes(trainer.role)) return { success: false, error: "Unauthorized trainer session." };
-    await tx.$queryRaw`SELECT "id" FROM "Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "public"."Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
     const assignment = await tx.traineePlanAssignment.findFirst({ where: { traineeId, status: "ACTIVE" }, orderBy: { assignedAt: "desc" }, select: { planVersionId: true } });
     const progress = await tx.traineeProgress.findFirst({ where: { id: progressId, traineeId, isArchived: false, planNode: { planVersionId: assignment?.planVersionId || "" } }, include: { planNode: true } });
     if (!progress || progress.status !== "VERIFIED" || progress.verificationHash !== expectedHash) return { success: false, error: "This stamp changed or is no longer active. Refresh the profile and try again." };

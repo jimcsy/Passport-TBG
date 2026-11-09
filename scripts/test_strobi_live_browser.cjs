@@ -1,0 +1,37 @@
+// Explicit opt-in only: one real provider request, no content save or raw output capture.
+const assert = require('node:assert/strict');
+const { PrismaClient } = require('@prisma/client');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const db = new PrismaClient(); let trainer, browser, stage = "configuration";
+(async () => {
+  if (process.env.STROBI_LIVE_CHECK !== 'true') throw new Error('Live check requires explicit STROBI_LIVE_CHECK=true and a separate enabled server.');
+  const origin = process.env.STROBI_LIVE_ORIGIN || 'http://127.0.0.1:3104';
+  const { SignJWT } = await import('jose');
+  const prefix = `ST54-LIVE-${Date.now()}`;
+  stage = "fixture";
+  trainer = await db.adminUser.create({ data: { employeeId: prefix, fullName: 'Live Strobi verification', email: `${prefix}@example.invalid`, passwordHash: 'unused', role: 'TRAINER' } });
+  const token = await new SignJWT({ portal: 'trainer', id: trainer.id, role: 'TRAINER', employeeId: trainer.employeeId, fullName: trainer.fullName }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('5m').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
+  stage = "browser startup";
+  browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE_PATH ? { executablePath: process.env.CHROME_EXECUTABLE_PATH } : {}) });
+  const context = await browser.newContext({ viewport: { width: 390, height: 900 } }); await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
+  const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);
+  let requests = 0; page.on('request', request => { if (request.url().endsWith('/api/trainer/strobi') && request.method() === 'POST') requests++; });
+  stage = "library navigation";
+  await page.goto(`${origin}/trainer/plans/library`, { waitUntil: 'networkidle' }); await page.getByRole('button', { name: 'Create milestone', exact: true }).click();
+  stage = 'open shared form';
+  const form = page.getByRole('form', { name: 'Create shared milestone', exact: true });
+  await form.getByLabel('What should the trainee demonstrate?').fill('Draft one generic milestone for practicing active listening in a team meeting, with observable trainer verification criteria. No personal data or company policies.');
+  const response = page.waitForResponse(response => response.url().endsWith('/api/trainer/strobi') && response.request().method() === 'POST', { timeout: 90000 });
+  stage = 'generation';
+  await form.getByRole('button', { name: 'Generate', exact: true }).click(); const result = await response; const payload = await result.json().catch(() => ({}));
+  if (!result.ok() || !payload.success) throw new Error(`Live generation failed: HTTP ${result.status()} (${/^[A-Z_]+$/.test(payload.code || '') ? payload.code : 'UNAVAILABLE'}). No automatic retry.`);
+  stage = 'editable proposal';
+  await form.getByRole('heading', { name: 'Suggested wording' }).waitFor();
+  const title = await form.locator('[name=title]').inputValue(), description = await form.locator('[name=description]').inputValue();
+  assert(title.length >= 3 && title.length <= 100); assert(description.length >= 10 && description.length <= 2000); assert.equal(requests, 1);
+  stage = 'discard proposal';
+  await form.getByRole('button', { name: 'Cancel', exact: true }).click(); await form.waitFor({ state: 'detached' });
+  assert.equal(await db.trainingPlan.count({ where: { createdById: trainer.id } }), 0);
+  assert.equal(await db.strobiRequestLease.count({ where: { trainerId: trainer.id } }), 0);
+  console.log(JSON.stringify({ liveBrowserVerified: true, httpStatus: result.status(), titleLength: title.length, descriptionLength: description.length, providerRequests: requests, milestoneSaveClicked: false }));
+})().catch(error => { console.error(/^Live generation failed: HTTP \d+ \([A-Z_]+\)\. No automatic retry\.$/.test(error.message) ? error.message : `Live browser verification failed at ${stage} (${error.name}); sensitive details suppressed.`); process.exitCode = 1; }).finally(async () => { await browser?.close(); if (trainer) await db.adminUser.delete({ where: { id: trainer.id } }); await db.$disconnect(); });

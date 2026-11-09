@@ -175,4 +175,4 @@ canonical conflicts, the retained checkbox, private/shared Add versus Save draft
 and original verification/hash exactly. Fixtures are removed afterward. The
 existing complete plan-insertion regression also verifies published/private
 boundaries and shared-material workflows. Saved feature configuration is unchanged;
-#54 covers final rollout verification/documentation.
+#54 completed final verification/documentation. See [recorded results and operator steps](strobi-rollout.md).

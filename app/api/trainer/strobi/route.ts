@@ -17,7 +17,16 @@ function reply(result: StrobiResult) {
 export async function POST(request: Request) {
   if (!await getAdminSession()) return reply({ success: false, code: "UNAUTHORIZED" });
   // Fetch from the same-origin form only; reject cross-site cookie-based requests.
-  if (request.headers.get("origin") !== new URL(request.url).origin) return new Response(null, { status: 403 });
+  // Next may construct request.url with its internal listening hostname. Host is
+  // the browser-facing authority (including LAN/IP aliases); browsers cannot set
+  // it independently of the URL. Do not trust a client-supplied forwarded host.
+  const expected = new URL(request.url);
+  const host = request.headers.get("host");
+  if (host) {
+    try { expected.host = new URL(`${expected.protocol}//${host}`).host; }
+    catch { return new Response(null, { status: 403 }); }
+  }
+  if (request.headers.get("origin") !== expected.origin) return new Response(null, { status: 403 });
   if (!request.headers.get("content-type")?.startsWith("application/json")) return reply({ success: false, code: "INVALID_INPUT" });
   if (!request.body) return reply({ success: false, code: "INVALID_INPUT" });
   const reader = request.body.getReader(); let size = 0; const chunks: Uint8Array[] = [];

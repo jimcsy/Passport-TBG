@@ -13,12 +13,17 @@ if (process.env.STROBI_QUOTA_TEST_WORKER === 'true') {
   process.on('message', async ({ trainerId, limits }) => {
     try { process.send(await reserveStrobiQuota(db, trainerId, limits)); }
     catch { process.send({ error: true }); }
-    finally { await db.$disconnect(); process.exit(); }
+    finally { await db.$executeRawUnsafe('RESET search_path').catch(() => {}); await db.$disconnect(); process.exit(); }
   });
 } else {
   const schema = `strobi_test_${Date.now()}_${process.pid}`;
   const root = new PrismaClient();
-  const url = new URL(process.env.DATABASE_URL); url.searchParams.set('schema', schema);
+  // Never point temporary-schema clients at a transaction pool: SET search_path
+  // can survive on a backend session after that schema is dropped.
+  if (!process.env.DIRECT_URL) throw new Error('DIRECT_URL is required for isolated schema tests.');
+  const url = new URL(process.env.DIRECT_URL);
+  if (url.port === '6543' || url.searchParams.get('pgbouncer') === 'true') throw new Error('Use a direct/session DIRECT_URL for isolated schema tests.');
+  url.searchParams.set('schema', schema);
   const db = new PrismaClient({ datasources: { db: { url: url.toString() } } });
   const db2 = new PrismaClient({ datasources: { db: { url: url.toString() } } });
   function worker(trainerId, overrides = limits) {
@@ -130,8 +135,12 @@ if (process.env.STROBI_QUOTA_TEST_WORKER === 'true') {
     console.log('PASS Strobi real DB service: persisted trainer authorization, archived/missing context rejection, private-instance title omission, safe context and no domain mutations.');
     if (process.env.STROBI_CONTEXT_TEST_ONLY !== 'true') console.log('PASS Strobi database quotas: independent-process contention, trainer/project caps, stale recovery, token-safe release, one-time refunds, day rollover and private-table RLS.');
   })().catch(error => { console.error('FAIL Strobi quota assertions at ' + stage + ' (' + (error.meta?.code || error.code || error.name) + ')'); if (error.name === 'AssertionError') console.error(error.message);  process.exitCode = 1; }).finally(async () => {
+    await db.$executeRawUnsafe('RESET search_path').catch(() => {});
+    await db2.$executeRawUnsafe('RESET search_path').catch(() => {});
     await db.$disconnect(); await db2.$disconnect();
     await root.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+    const namespace = await root.$queryRaw`SELECT to_regclass('"Trainee"') IS NOT NULL AS visible`;
+    assert(namespace[0].visible, "Quota test must not leak a temporary search_path into application connections");
     await root.$disconnect(); Module._load = originalLoad;
   });
 }

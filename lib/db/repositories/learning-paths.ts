@@ -93,7 +93,7 @@ export async function promotePathInstance(input: { instanceId: string; variantTi
 /** Upgrade a legacy shared assignment once; lock the trainee to avoid duplicate instances on concurrent requests. */
 export async function ensureTraineePathInstance(traineeId: string, db: PrismaClient = prisma) {
   return db.$transaction(async tx => {
-    await tx.$queryRaw`SELECT "id" FROM "Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
+    await tx.$queryRaw`SELECT "id" FROM "public"."Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
     const assignment = await tx.traineePlanAssignment.findFirst({ where: { traineeId, status: "ACTIVE" }, orderBy: { assignedAt: "desc" }, include: { planVersion: { include: { plan: { include: { learningPath: true } } } } } });
     if (!assignment) return null;
     const current = assignment.planVersion.plan.learningPath;

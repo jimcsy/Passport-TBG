@@ -16,7 +16,7 @@ const selected = process.argv.slice(2);
 const failures = [];
 function redact(value) {
   let text = String(value || '').replace(/(?:postgres(?:ql)?|https?):\/\/\S+/g, '[URL redacted]');
-  for (const key of ['DATABASE_URL', 'DIRECT_URL', 'SESSION_SECRET', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
+  for (const key of ['DATABASE_URL', 'DIRECT_URL', 'SESSION_SECRET', 'GEMINI_API_KEY', 'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY']) {
     if (process.env[key]) text = text.replaceAll(process.env[key], '[redacted]');
   }
   return text;

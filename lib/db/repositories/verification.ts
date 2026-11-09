@@ -11,7 +11,7 @@ export async function verifyAssignedMilestones(traineeIds: string[], milestoneId
     const code = reference?.code || definition!.code;
     const libraryId = reference?.libraryMilestoneId || definition?.id;
     for (const traineeId of Array.from(new Set(traineeIds)).sort()) {
-      await tx.$queryRaw`SELECT "id" FROM "Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
+      await tx.$queryRaw`SELECT "id" FROM "public"."Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
       const assignment = await tx.traineePlanAssignment.findFirst({ where: { traineeId, status: "ACTIVE" }, orderBy: { assignedAt: "desc" }, include: { planVersion: { include: { nodes: true } } } });
       const nodes = assignment?.planVersion.nodes || [];
       const node = nodes.find(item => item.id === milestoneId) || nodes.find(item => item.code.toUpperCase() === code.toUpperCase()) || (libraryId ? nodes.find(item => item.libraryMilestoneId === libraryId) : null);

@@ -118,9 +118,9 @@ export async function commitIndividualPublish(input: IndividualPublishInput, pre
   return db.$transaction(async tx => {
     const initial = await prepare(input, tx);
     const traineeIds = initial.targets.map(target => target.traineeId).sort();
-    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Trainee" WHERE "id" IN (${Prisma.join(traineeIds)}) ORDER BY "id" FOR UPDATE`);
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "public"."Trainee" WHERE "id" IN (${Prisma.join(traineeIds)}) ORDER BY "id" FOR UPDATE`);
     const planIds = Array.from(new Set([input.planId, ...initial.targets.map(target => target.planId), ...(initial.variant ? [initial.variant.planId] : [])])).sort();
-    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "TrainingPlan" WHERE "id" IN (${Prisma.join(planIds)}) ORDER BY "id" FOR UPDATE`);
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "public"."TrainingPlan" WHERE "id" IN (${Prisma.join(planIds)}) ORDER BY "id" FOR UPDATE`);
     const state = await prepare(input, tx);
     if (state.preview.token !== previewToken) throw new IndividualPublishError("The plan, enrollment or progress changed after your preview. Review a fresh preview before publishing.");
     const publishGraph = async (planId: string, graph: EditableGraph) => {

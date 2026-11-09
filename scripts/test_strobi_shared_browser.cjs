@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const { prisma } = require('../lib/db/prisma.ts');
 const { SignJWT } = require('jose');
 const { createClient } = require('@supabase/supabase-js');
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/tmp/passport-account-check/node_modules/playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const origin = process.env.STROBI_TEST_BASE_URL || 'http://localhost:3100';
 const prefix = `ST52-${Date.now()}`;
 const builderSurface = process.env.STROBI_SHARED_SURFACE === 'builder';
@@ -14,7 +14,7 @@ let trainer, plan, browser, stage = 'fixtures'; const createdIds = [];
   if (builderSurface) { plan = await prisma.trainingPlan.create({ data: { title: 'Shared AI inspector fixture', roleIdentifier: prefix, createdById: trainer.id, versions: { create: { versionNumber: 1, status: 'DRAFT', publishedById: trainer.id } } } }); }
   const canonical = await prisma.milestoneDefinition.create({ data: { code: `${prefix}-STD`, title: 'Protected standard fixture', description: 'Canonical content remains unchanged through custom creation.', path: 'ONBOARDING', isStandard: true } }); createdIds.push(canonical.id);
   const token = await new SignJWT({ portal: 'trainer', id: trainer.id, employeeId: trainer.employeeId, fullName: trainer.fullName, role: trainer.role }).setProtectedHeader({ alg: 'HS256' }).setExpirationTime('1h').sign(new TextEncoder().encode(process.env.SESSION_SECRET));
-  browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' });
+  browser = await chromium.launch({ headless: true, ...(process.env.CHROME_EXECUTABLE_PATH ? { executablePath: process.env.CHROME_EXECUTABLE_PATH } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.addCookies([{ name: 'beat_admin_session', value: token, url: origin }]);
   const page = await context.newPage(); page.setDefaultTimeout(60000); page.setDefaultNavigationTimeout(60000);

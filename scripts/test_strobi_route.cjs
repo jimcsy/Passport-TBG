@@ -19,6 +19,15 @@ function request(body = '{}', origin = 'http://localhost', type = 'application/j
   assert.equal((await POST(request('{}', 'http://localhost', 'text/plain'))).status, 400);
   assert.equal((await POST(request('{bad-json'))).status, 400);
   assert.equal((await POST(request('x'.repeat(17000)))).status, 400); assert.equal(calls, 0);
+  // A valid browser Host can differ from Next's internal request URL hostname.
+  const alias = new Request('http://localhost:3100/api/trainer/strobi', { method: 'POST', headers: { origin: 'http://127.0.0.1:3100', host: '127.0.0.1:3100', 'content-type': 'application/json' }, body: '{}' });
+  assert.equal((await POST(alias)).status, 503);
+  const forged = new Request('http://localhost:3100/api/trainer/strobi', { method: 'POST', headers: { origin: 'http://evil.invalid', host: '127.0.0.1:3100', 'x-forwarded-host': 'evil.invalid', 'content-type': 'application/json' }, body: '{}' });
+  assert.equal((await POST(forged)).status, 403);
+  const crossPort = new Request('http://localhost:3100/api/trainer/strobi', { method: 'POST', headers: { origin: 'http://127.0.0.1:3101', host: '127.0.0.1:3100', 'content-type': 'application/json' }, body: '{}' });
+  assert.equal((await POST(crossPort)).status, 403);
+  const crossScheme = new Request('http://localhost:3100/api/trainer/strobi', { method: 'POST', headers: { origin: 'https://127.0.0.1:3100', host: '127.0.0.1:3100', 'content-type': 'application/json' }, body: '{}' });
+  assert.equal((await POST(crossScheme)).status, 403);
   for (const [errorCode, status] of [['DISABLED', 503], ['UNAUTHORIZED', 401], ['DAILY_LIMIT', 429], ['BUSY', 429], ['PROVIDER_QUOTA', 429], ['INACCESSIBLE_PLAN', 404], ['TIMEOUT', 504], ['CANCELLED', 499]]) {
     code = errorCode; const result = await POST(request());
     assert.equal(result.status, status); assert.equal(result.headers.get('cache-control'), 'no-store');

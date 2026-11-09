@@ -11,7 +11,8 @@
     "db:seed": "prisma db seed",
     "db:reset": "FORCE_RESET=true prisma db seed",
     "test": "tsx scripts/test_flow.ts",
-    "test:trainer-content": "node --env-file=.env scripts/test_trainer_content_regressions.cjs"
+    "test:trainer-content": "node --env-file=.env scripts/test_trainer_content_regressions.cjs",
+    "test:strobi": "node --env-file=.env scripts/test_strobi_regressions.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -40,6 +41,7 @@
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
+    "playwright": "1.65.0",
     "postcss": "^8.4.47",
     "prisma": "^5.21.1",
     "tailwindcss": "^3.4.13",

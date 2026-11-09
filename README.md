@@ -286,5 +286,6 @@ The integration script uses a disposable PostgreSQL schema, including a forced f
 
 The server-side Gemini service, quota setup and verification commands are documented
 in [Strobi service setup](docs/strobi-service.md). AI is disabled by default; the
-shared and custom builder creation UI is integrated behind the flag; final rollout
-verification is tracked in #54. See the [assistant integration guide](docs/strobi-assistant-ui.md).
+shared and custom builder creation UI is integrated behind the flag.
+[Final verification and rollout guidance](docs/strobi-rollout.md) records the checks
+and operator steps; `npm run test:strobi` runs the deterministic acceptance suite. See the [assistant integration guide](docs/strobi-assistant-ui.md).

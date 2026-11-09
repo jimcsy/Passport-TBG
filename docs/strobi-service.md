@@ -1,176 +1,216 @@
-# Strobi generation service (#50)
+# Strobi milestone assistance: setup and operations
 
-The server now supports `POST /api/trainer/strobi`. Shared and custom creation forms now use Ask Strobi behind the feature flag
-(#51–#53). See `strobi-assistant-ui.md`; #54 covers final rollout verification. Manual workflows are
-unchanged. AI remains unavailable until server configuration is enabled and valid.
+Ask Strobi is integrated into shared-library creation (including the builder's
+library inspector) and the custom Path Builder modal. It generates **temporary,
+editable wording**, not saved content. Codes are generated/validated by the app;
+materials remain manual. Existing Save/Add, Save draft, Publish, progress and
+stamp behavior remains unchanged.
 
-## Local setup
+The saved feature flag was left disabled during implementation. Verification uses
+separate temporary processes; it does not enable the feature for normal users.
 
-1. Sign in to https://aistudio.google.com/api-keys and create/select a **Free** tier
-   project. Keep billing unlinked for this prototype; code cannot turn a billed
-   Google project into a free project.
-2. Create a key and put it directly in local `.env`, never chat or source control:
+## Configure and enable
+
+1. Use a Google AI Studio **Free** project and create a Gemini key. Keep billing
+   unlinked for this prototype; the app cannot force a billed Google project onto
+   free-tier pricing.
+2. Put these server-only entries in local `.env` or the deployment's secret store:
 
    ```dotenv
    STROBI_AI_ENABLED=false
    GEMINI_API_KEY="your-real-key"
    GEMINI_MODEL="gemini-3.1-flash-lite"
+   # Optional: these are the application defaults.
    STROBI_TRAINER_DAILY_LIMIT=10
    STROBI_PROJECT_DAILY_LIMIT=50
    STROBI_REQUEST_TIMEOUT_MS=30000
    ```
 
-3. Google recommends Gemini 3.5 Flash-Lite for new projects; 2.5 access is restricted
-   to prior users and may return 404 despite appearing in the model catalog. Verify
-   free-tier text generation and structured-output support for the selected model. Confirm availability and actual RPM/TPM/RPD in your
-   project's **Usage → Rate limits**. There is no universally guaranteed free
-   allowance. Lower application caps to match your project if necessary.
-4. Deploy migrations with the project's usual `prisma migrate deploy` workflow,
-   then regenerate Prisma client. This phase adds only `StrobiDailyQuota` and
-   `StrobiRequestLease`, with RLS and revoked public/API-role access. Existing
-   milestone, progress, stamp and plan tables are untouched.
-5. Enable `STROBI_AI_ENABLED=true` only when ready to admit requests; restart the
-   app after changing environment variables. For the current phase it is fine to
-   keep false and validate the provider separately before UI rollout.
+   Never use NEXT_PUBLIC names for Gemini, put keys in chat, or commit `.env`.
+   The app sends only availability to client components, never this configuration.
+3. Check the selected project's **Usage → Rate limits** in AI Studio. On
+   2026-11-09 the user confirmed Free tier and **15 RPM, 250,000 TPM, 500 RPD** for
+   Gemini 3.1 Flash Lite. These observed limits can change. Application caps are
+   separate and remain 10/trainer/day and 50/project/day by default.
+4. Apply the normal deployment migrations and generate Prisma client:
 
-## Request/response boundary
+   ```sh
+   npx prisma migrate deploy
+   npx prisma generate
+   ```
 
-Authenticated same-origin JSON fetch (include `Origin`, normally set by the browser):
+   `20261109000000_strobi_quotas` adds only `StrobiDailyQuota` and
+   `StrobiRequestLease`. RLS is enabled and public/anon/authenticated table access
+   revoked. Existing milestone, plan, progress and stamp tables are not altered.
+5. When ready, set `STROBI_AI_ENABLED=true`, restart/redeploy, and reload the form.
+   All authenticated persisted trainers/admins are eligible; there is no allowlist.
+   Disabled/missing/invalid configuration leaves manual creation usable.
+
+Gemini 3.1 Flash-Lite was explicitly selected and live-tested for this project.
+The earlier 2.5 model returned 404 despite appearing in the model catalog. Catalog
+presence alone is not proof of generation eligibility. Select/configure supported
+models explicitly; the service never switches models or enables paid fallback.
+Final verification observed one 30-second timeout and one successful browser check
+with a temporary 60-second limit. Operators can explicitly set
+`STROBI_REQUEST_TIMEOUT_MS=60000` if appropriate; the saved/default setting was not
+changed and this is not an automatic fallback.
+Use a host request timeout that accommodates the configured provider timeout plus
+short database reservation/cleanup work.
+
+## Trainer workflow
+
+- Open **Create milestone** in the library/builder library, or **Add Milestone**
+  inside a working plan. Describe the competency with plain text or `/strobi …`.
+  Typing alone does not generate; choose **Generate**.
+- First generation can fill untouched empty title/description fields. Existing
+  wording or edits made while pending remain intact. **Apply suggestion** explicitly
+  replaces wording; **Use [pillar]** separately changes the destination.
+- Review the app-suggested code. Untouched codes refresh with the pillar; edited
+  codes stay manual. Codes still undergo format and duplicate checks when submitted.
+- In the library, **Save shared milestone** creates the reusable definition, then
+  the material inspector uses its real ID. In the custom builder modal, **Add to
+  draft** preserves the checkbox choice: shared definition plus working node when
+  checked; plan-only working node when unchecked. **Save draft** persists the graph;
+  **Publish** remains a separate recipient/progress-preserving operation.
+- Cancel/dismiss or finish manually at any time. Closing discards temporary AI
+  state. A trainer's explicit Save stores the reviewed milestone wording normally;
+  generation alone does not store a proposal or conversation.
+
+The input/proposal contracts retain code 3–25 with existing restricted syntax,
+title 3–100, description/criteria 10–2,000 and the five existing pillar values.
+Materials/links/codes are not AI response fields. Implementation details and parent
+integration contracts are in [the assistant guide](strobi-assistant-ui.md).
+
+## Privacy and authorization
+
+Free-tier prompts/responses may be used by Google to improve products. The form
+notice asks trainers to exclude personal/confidential information. Only prompt,
+selected pillar, optional plan title and available department/position tags are
+sent. Plan context is resolved on the server; forged client context is rejected.
+Private-instance titles are omitted because they can contain trainee names. No
+trainee relation, reflection, progress, stamp or material content is queried/sent.
+Trainer prompts and plan/tag wording must themselves remain nonconfidential.
+
+Generation stores only quota counts, subject IDs, calendar days and lease token/
+expiry. Raw prompts, provider outputs/errors and keys are not logged or saved in
+analytics. Temporary browser state is cleared when the creation session ends.
+
+## API and failures
+
+`POST /api/trainer/strobi` requires a trainer session, same-origin JSON and a valid
+persisted trainer/admin. Available plans follow the existing trainer workspace's
+shared access; missing/archived plans are rejected before quota reservation.
 
 ```json
-{"prompt":"/strobi A milestone for reconciling sample ledger entries","selectedPillar":"TECHNICAL","planId":"an-existing-active-plan-id"}
+{"prompt":"/strobi Practice reconciling sample entries","selectedPillar":"TECHNICAL","planId":"an-existing-plan-id"}
 ```
 
-`planId` is optional for library creation. Client-supplied department/position,
-identities or extra fields are rejected. Server context includes only selected
-pillar, request, optional plan title and available department/position tags.
-All authenticated persisted trainers/admins may manage available plans, consistent
-with existing workspace access. Missing/archived plans are rejected before quota.
-Private-instance titles are omitted because they can contain a trainee name.
-No trainee relation, reflection, progress, stamp or material content is queried.
-Trainers must still keep their own prompts and plan/tag wording nonconfidential;
-free-tier prompts/responses may be used by Google to improve products.
+Omit planId for library creation. The service returns a validated proposal
+(title, description, suggestedPillar, pillarRationale) and last-reported usage
+(trainerRemaining, projectRemaining, resetsAt). Responses are no-store. JSON input
+is bounded at 16 KiB and provider output at 64 KiB. Keys use a server request header,
+not a URL. Structured output is validated again before application to fields.
 
-Success returns `success`, `proposal` (title, description, suggestedPillar,
-pillarRationale) and `usage` (trainerRemaining, projectRemaining, resetsAt).
-Nothing is persisted to milestone/path/progress/stamp tables. The existing Save/Add
-controls remain the only creation steps. Codes and materials are not AI output.
+| Result | Behavior / recovery |
+| --- | --- |
+| UNAUTHORIZED (401) | Sign in as a trainer; trainees cannot generate. |
+| INVALID_INPUT (400) | Correct the prompt/fields; rejected input is not charged. |
+| INACCESSIBLE_PLAN (404) | Reopen an available plan or create manually. |
+| DISABLED / UNCONFIGURED (503) | Continue manually; administrator checks server configuration. |
+| BUSY / DAILY_LIMIT (429) | Wait for the active request/reset; manual creation remains available. |
+| PROVIDER_QUOTA (429) | Google minute/token/day limits may exhaust first; wait or continue manually. |
+| TIMEOUT (504) | Retry explicitly or complete manually. |
+| REFUSED / INVALID_OUTPUT / PROVIDER_UNAVAILABLE / UNAVAILABLE (503) | Rephrase/check model availability or try later; entries are preserved. |
+| CANCELLED (499) | No late result is applied; already dispatched work may count. |
 
-Failures expose only safe `code` values, optionally usage. Authentication is 401;
-invalid input 400; inaccessible plan 404; quota/busy/provider quota 429; timeout
-504; cancellation 499; other unavailability/refusal/invalid output 503. Disabled
-or misconfigured AI does not throw errors into existing manual creation.
-Cross-origin requests are 403. Request bodies are bounded at 16 KiB; provider
-responses at 64 KiB. Responses are no-store. Keys use `x-goog-api-key`, not URLs.
+Cross-origin requests return 403. Origin matching uses the incoming Host authority
+with the request protocol, so legitimate LAN/IP aliases work even when Next uses an
+internal hostname. A client-supplied forwarded host cannot bypass this check. No automatic retries, model switches or paid
+fallback occur. Check AI Studio model availability/quota when provider errors
+persist; do not paste raw responses, signed URLs or credentials into issue reports.
 
-## Dispatch, quota and cancellation
+## Quota, cancellation and retention
 
-The atomic PostgreSQL implementation follows `strobi-quota-design.md`. A fixed
-project-wide transaction advisory lock serializes short reservation/release work
-across processes. No transaction spans a provider request. Every admitted request
-increments trainer/project counters together and acquires an expiring token-owned
-lease. Lease duration is configured request timeout plus 30 seconds.
+Short PostgreSQL transactions use a shared advisory lock to reserve trainer/project
+counters and an expiring trainer lease atomically across processes. Defaults are
+10 attempts/trainer/day, 50/project/day and one active request/trainer. A lease
+lasts the provider timeout plus 30 seconds; no transaction spans an HTTP request.
 
-Validation/auth/config/context/pre-admission cancellation consume no attempt.
-Cancellation detected after reservation but before dispatch refunds both counters
-once while still owning the lease. At dispatch, uncertain network delivery counts;
-timeout, provider rejection and cancellation after dispatch are never refunded.
-Crashes between reservation and dispatch conservatively count the attempt. Expiry
-recovers abandoned guards. Old requests cannot release/refund a newer lease.
-A cleanup failure leaves the lease to expire; it never retries provider work.
+Auth/input/config/context rejection and pre-admission cancellation consume nothing.
+Proven cancellation after reservation but before dispatch refunds once while the
+request owns its lease. Once dispatch is attempted, failure, timeout, cancellation
+or uncertain delivery counts. A crash between reservation and dispatch conservatively
+counts. Expiry recovers abandoned guards; old tokens cannot release a newer lease.
+Cleanup failure leaves the lease to expire without retrying provider work.
 
-The route passes the request's abort signal to a bounded Gemini fetch; the UI in
-#51 must use AbortController and reject stale results. Hosts can vary in how
-quickly disconnects propagate, so timeout/lease recovery also bound server work.
-Client cancellation cannot guarantee that Google stops a request already received.
+App days/reset times use **Asia/Manila** and database time at reservation. Google's
+provider RPD reset is Pacific time; other tools using the same provider project
+also consume its allowance. Remaining app counts are a response-time snapshot.
+All deployments sharing one Gemini project must share the quota database for the
+application's project-wide cap to cover them together.
 
-Daily app quotas reset at Manila midnight, based on database time at reservation.
-Google's RPD resets use Pacific time and project/model quotas may exhaust earlier.
-Remaining counts are a reservation-time snapshot, not a guarantee against another
-trainer's simultaneous request. No automatic retries, model switches or paid fallback.
+The server-only `cleanupStrobiQuota(prisma)` helper removes daily rows older than
+seven days and leases expired over one day. Production operators must schedule
+that helper in their trusted server maintenance job. **No host scheduler is
+configured by this repository**, so the age policy is not automatic until scheduled.
+Never delete current-day counts to reset allowances or expose cleanup publicly.
+Cancellation propagates an AbortController signal where the host supports it;
+timeout/lease recovery also handle disconnected clients. Google may still finish
+work it already received. Stale results never overwrite newer manual input.
 
-## Retention and rollback
+## Rollback
 
-Only subject IDs, calendar days, counts and request lease token/expiry are stored.
-No raw prompts, generated text, keys or provider error bodies are logged/stored.
-The exported server-only `cleanupStrobiQuota` can be called by an operator job to
-remove quota rows older than seven days and leases expired over one day; configure
-its schedule when deploying. It is intentionally not exposed as a public route.
-Current-day records must never be deleted to reset quotas.
+Set `STROBI_AI_ENABLED=false` and restart/redeploy; reload open forms. New admissions
+stop, while in-flight requests finish or time out. Manual creation stays available.
+Keep additive tables and usage counters during rollback. Do not reset the database,
+remove training content or alter trainee progress/stamps. A separate reviewed
+migration would be required to remove operational tables after all callers stop.
 
-Set the feature flag false and restart/redeploy to stop new admissions. In-flight
-requests finish/timeout normally. Keep additive tables and usage counts during
-rollback; do not reset any learning/progress data. Manual creation remains usable.
-All deployments sharing a Gemini project must share the same quota database;
-other tools using that provider project can still consume Google's quota.
-
-## Verification commands
+## Verification
 
 ```sh
-node --import tsx scripts/test_strobi_contracts.ts
-node scripts/test_strobi_config.cjs
-node scripts/test_strobi_service.cjs
-node scripts/test_strobi_route.cjs
-node --env-file=.env scripts/test_strobi_quota.cjs
-# With the built app running on port 3100 and AI disabled:
-node --env-file=.env scripts/test_strobi_http.cjs
-npx tsc --noEmit
+npm ci
+npx playwright install chromium
 PASSPORT_BUILD_DIR=.next-mobile-check npm run build
+npm run test:strobi
 ```
 
-Quota integration tests use an isolated temporary schema and independent OS
-processes, then drop only that schema. They do not consume real portal quota.
-They also verify real-table RLS, persisted trainer authorization, private context
-omission, and no domain mutations. Provider failure tests use deterministic mocks.
-Live model availability and actual account quotas require the configured Google
-project; mock tests do not establish those facts.
+The 14-check suite owns temporary enabled/disabled servers on 3100/3102, fails if
+ports are occupied, uses non-secret fake provider configuration and intercepts all
+browser generation. It runs contract/config/provider/API/code tests, independent-
+process PostgreSQL quota tests, a row-lock namespace regression and both shared/custom UI workflows, then stops
+only its own servers. Database/storage fixtures are removed. The isolated schema test requires
+DIRECT_URL to use a direct/session connection, never a transaction pool; it resets
+session settings before disconnecting and checks that public tables remain visible. It makes no live
+Gemini calls and never changes `.env`. Use STROBI_TEST_PORT and
+STROBI_DISABLED_TEST_PORT to choose other unused ports; use PASSPORT_BUILD_DIR for
+another prebuilt directory. Playwright is a pinned development dependency.
 
-## Official references (checked 2026-11-09)
+A **separate, explicit** one-request live browser check uses real server credentials:
 
-- https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite
-- https://ai.google.dev/gemini-api/docs/pricing
-- https://ai.google.dev/gemini-api/docs/structured-output
-- https://ai.google.dev/api/generate-content
-- https://ai.google.dev/gemini-api/docs/rate-limits
-- https://ai.google.dev/gemini-api/docs/api-key
-- https://ai.google.dev/gemini-api/terms
+```sh
+# Terminal 1: temporary local server; saved .env can stay disabled.
+STROBI_AI_ENABLED=true PASSPORT_BUILD_DIR=.next-mobile-check npm run start -- -p 3104 -H 127.0.0.1
+# Terminal 2: consumes one real project request; generic prompt, no Save.
+STROBI_LIVE_CHECK=true node --env-file=.env scripts/test_strobi_live_browser.cjs
+# Stop the temporary server afterward.
+```
 
-## Live check — 2026-11-09
+The live check creates/removes a fixture trainer, generates editable fields, then
+cancels without saving. It logs only status, lengths and request count; no raw
+prompt/output, key, session token or signed URL. The real quota attempt remains
+accounted for. It never runs automatically in the deterministic suite.
 
-Saved key/model presence and default limits validated without printing values.
-One generic, quota-accounted generation request to the initially recommended
-2.5 Flash-Lite returned HTTP 404 / NOT_FOUND. A read-only model catalog request
-succeeded (200), and listed the configured model and newer Flash-Lite models.
-Catalog presence therefore does not establish generation eligibility. Google’s
-current model overview restricts 2.5 access for new projects and recommends 3.5
-Flash-Lite. No automatic model fallback or retry was made. Feature remains disabled;
-no .env values were changed. Issue #50 awaits an explicitly selected supported model,
-a successful live proposal, and project quota confirmation in AI Studio.
+[Final verification evidence and acceptance matrix](strobi-rollout.md) records the
+commands/results and remaining operator actions. Mocked checks do not establish
+live provider availability.
 
-Reference: https://ai.google.dev/gemini-api/docs/models
+## Official references
 
-For this free-tier pilot, select `gemini-3.1-flash-lite` explicitly: it appears in
-the authenticated catalog and Google documents its free-tier text generation.
-Verify project eligibility/quota before another generation test; this is a manual
-configuration change, not runtime model fallback.
-
-### Successful live verification
-
-After the user explicitly selected Gemini 3.1 Flash-Lite, one quota-accounted
-request returned HTTP 200 and passed the strict proposal validator (title 37
-characters, description 523, COMMUNICATION pillar). The lease was released through
-the normal service path. Feature remained disabled and no milestone was saved.
-Two total dispatched test attempts used app allowance; failed dispatches count as
-specified. No secret or generated text was logged. Actual free-tier project limits
-still need confirmation in AI Studio; successful generation does not disclose them.
-
-### Project quota confirmed
-
-On 2026-11-09, the user provided an AI Studio screenshot confirming **Free tier**
-and Gemini 3.1 Flash Lite limits of **15 RPM, 250,000 TPM and 500 RPD**. These are
-observed project limits, not permanent provider guarantees. Screenshot usage is
-peak usage over the selected 28-day range. The prior pending account-quota gate is
-now satisfied; issue #50 is verified. Application defaults remain **10 attempts per
-trainer/day and 50 project/day** with one active request per trainer. Provider
-minute/token limits can still reject bursts; existing safe quota errors handle
-this without automatic retries. No flag/key/model changes were made at closure.
+- [API keys](https://ai.google.dev/gemini-api/docs/api-key)
+- [Models](https://ai.google.dev/gemini-api/docs/models)
+- [Pricing](https://ai.google.dev/gemini-api/docs/pricing)
+- [Structured output](https://ai.google.dev/gemini-api/docs/structured-output)
+- [Generate content API](https://ai.google.dev/api/generate-content)
+- [Rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
+- [Terms](https://ai.google.dev/gemini-api/terms)

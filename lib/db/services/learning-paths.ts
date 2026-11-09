@@ -29,7 +29,7 @@ export async function cloneVersionGraph(tx: PathDb, source: Graph, planId: strin
 
 /** Every catalog assignment gets an independent version graph, including initial registration. */
 export async function createInstanceForVersion(tx: PathDb, traineeId: string, sourceVersionId: string, authorId: string, allowHistorical = false) {
-  await tx.$queryRaw`SELECT "id" FROM "Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT "id" FROM "public"."Trainee" WHERE "id" = ${traineeId} FOR UPDATE`;
   const source = await tx.planVersion.findUniqueOrThrow({ where: { id: sourceVersionId }, include: { nodes: true, edges: true, plan: { include: { learningPath: true } } } });
   if (!allowHistorical && (source.status !== "PUBLISHED" || source.plan.status === "ARCHIVED")) throw new Error("Only published, available paths may be assigned.");
   if (source.plan.learningPath?.type === "INSTANCE") {
