@@ -35,6 +35,7 @@ erDiagram
     
     Trainee ||--o{ TraineePlanAssignment : "enrolled in (traineeId)"
     Trainee ||--o{ TraineeProgress : "earns progress (traineeId)"
+    Trainee ||--o| TraineeContentView : "tracks first module view (traineeId)"
 
     AdminUser {
         string id PK "cuid()"
@@ -177,6 +178,11 @@ erDiagram
         datetime createdAt
         datetime updatedAt
     }
+
+    TraineeContentView {
+        string traineeId PK, FK "Trainee.id"
+        datetime firstViewedAt "Default: now()"
+    }
 ```
 
 ---
@@ -285,3 +291,7 @@ The review token fingerprints submitted graph data and the relevant assignments,
 ### Trainer review notifications
 
 `ReviewNotificationRead` stores a request key and first-open time independently for each trainer. Notifications mirror the shared Review Queue: non-archived milestones awaiting review. Each item includes the trainee, milestone, and request time and opens the corresponding expanded queue card. Request keys incorporate trainee identity, original submission time, and milestone identity, preserving read state across ordinary plan revisions. Verified or archived requests leave the pending notification list. Opening a request does not verify it or clear another trainer's unread state.
+
+### Trainee content views (Hub insights)
+
+`TraineeContentView` records the first actual module open timestamp for a trainee (`traineeId` PK/FK to `Trainee.id`, indexed on `firstViewedAt`). Module engagement is recorded explicitly upon opening content rather than inferred from progress status transitions, providing accurate Hub engagement metrics without counting passive enrollments.
