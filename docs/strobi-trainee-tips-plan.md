@@ -1,6 +1,6 @@
 # Strobi trainee tips — planning decisions
 
-Status: approved by the user; implementation tracked by [epic #55](https://github.com/jimcsy/Passport-TBG/issues/55) and phases #56–#61. Phases #56–#58 contracts/configuration, private cache/shared accounting and authorized trainee API are implemented. No chat UI yet. See [contracts/setup](strobi-trainee-tips-contracts.md), [storage verification](strobi-trainee-tips-storage.md) and [API verification](strobi-trainee-tips-api.md).
+Status: approved by the user; implementation tracked by [epic #55](https://github.com/jimcsy/Passport-TBG/issues/55) and phases #56–#61. Phases #56–#59 contracts/configuration, private cache/shared accounting, authorized trainee API and reusable floating chat UI are implemented and verified. The widget is not mounted on trainee pages until #60. See [contracts/setup](strobi-trainee-tips-contracts.md), [storage](strobi-trainee-tips-storage.md), [API](strobi-trainee-tips-api.md) and [UI/host handoff](strobi-trainee-tips-ui.md).
 
 ## Confirmed decisions
 
@@ -269,7 +269,7 @@ Epic: [#55 — Trainee Strobi Tips chatbot](https://github.com/jimcsy/Passport-T
 - [x] [#56 — [ST-01] Phase 1: Define trainee tips contracts, configuration and fallback content](https://github.com/jimcsy/Passport-TBG/issues/56)
 - [x] [#57 — [ST-02] Phase 2: Add shared tip cache, trainee quotas and cross-process leases](https://github.com/jimcsy/Passport-TBG/issues/57)
 - [x] [#58 — [ST-03] Phase 3: Implement authorized trainee Gemini tips API and cache-first service](https://github.com/jimcsy/Passport-TBG/issues/58)
-- [ ] [#59 — [ST-04] Phase 4: Build accessible Strobi floating chat and combined session timeline](https://github.com/jimcsy/Passport-TBG/issues/59)
+- [x] [#59 — [ST-04] Phase 4: Build accessible Strobi floating chat and combined session timeline](https://github.com/jimcsy/Passport-TBG/issues/59)
 - [ ] [#60 — [ST-05] Phase 5: Integrate trainee chat across dashboard, passport and module routes](https://github.com/jimcsy/Passport-TBG/issues/60)
 - [ ] [#61 — [ST-06] Phase 6: Verify trainee Strobi end to end and document rollout](https://github.com/jimcsy/Passport-TBG/issues/61)
 

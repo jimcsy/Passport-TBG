@@ -5,8 +5,8 @@ Phase [#58](https://github.com/jimcsy/Passport-TBG/issues/58) of
 [contracts/configuration](strobi-trainee-tips-contracts.md) and
 [shared accounting/cache](strobi-trainee-tips-storage.md) for prerequisites.
 
-The backend is implemented; the floating chat UI is phase #59 and trainee-wide
-integration is #60. This phase does not enable a saved feature flag, migrate more
+The backend and phase #59's [floating chat component](strobi-trainee-tips-ui.md)
+are implemented; trainee-wide route integration is #60. This phase does not enable a saved feature flag, migrate more
 tables, deploy an app or perform live Gemini generation. Live smoke is #61.
 
 ## Endpoint

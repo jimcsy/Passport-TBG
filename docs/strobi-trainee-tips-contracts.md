@@ -7,8 +7,9 @@ The complete agreed design is in [the implementation plan](strobi-trainee-tips-p
 Phase #56 defines pure contracts, instructions, prewritten tips and server-only
 availability. Phase #57 adds [shared accounting/cache primitives](strobi-trainee-tips-storage.md).
 Phase #58 adds the [trainee API and authorized provider service](strobi-trainee-tips-api.md).
-There is still no chat UI. Setting the flag alone does not expose a trainee
-chatbot; UI/integration and final verification are phases #59–#61.
+Phase #59 adds the [floating chat component](strobi-trainee-tips-ui.md), not yet
+mounted on trainee pages. Setting the flag alone does not expose it; route
+integration and final verification remain phases #60–#61.
 
 ## Server setup
 
