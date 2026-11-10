@@ -1,6 +1,6 @@
 # Strobi trainee tips — planning decisions
 
-Status: approved by the user; implementation tracked by [epic #55](https://github.com/jimcsy/Passport-TBG/issues/55) and phases #56–#61. Phases #56–#60 contracts/configuration, private cache/shared accounting, authorized trainee API, floating chat UI and authenticated layout integration are implemented. Final verification remains #61. See [contracts/setup](strobi-trainee-tips-contracts.md), [storage](strobi-trainee-tips-storage.md), [API](strobi-trainee-tips-api.md) and [UI](strobi-trainee-tips-ui.md) and [layout integration](strobi-trainee-tips-integration.md).
+Status: approved by the user; implementation tracked by [epic #55](https://github.com/jimcsy/Passport-TBG/issues/55) and phases #56–#61. Phases #56–#60 contracts/configuration, private cache/shared accounting, authorized trainee API, floating chat UI and authenticated layout integration are implemented. Deterministic final verification passed; #61 remains open for successful live generation/cache reuse after provider HTTP 503. See [contracts/setup](strobi-trainee-tips-contracts.md), [storage](strobi-trainee-tips-storage.md), [API](strobi-trainee-tips-api.md) and [UI](strobi-trainee-tips-ui.md) and [layout integration](strobi-trainee-tips-integration.md).
 
 ## Confirmed decisions
 
@@ -221,29 +221,29 @@ confidentiality filter; do not claim arbitrary authored text has been sanitized.
 
 ## Acceptance checklist
 
-- [ ] Only authenticated trainees can request tips for their currently eligible
+- [x] Only authenticated trainees can request tips for their currently eligible
   assigned milestones; locked, archived, foreign and stale requests are handled.
-- [ ] All four preset questions work; arbitrary/free-text prompts are rejected.
-- [ ] Provider receives only the agreed context; output is bounded and safely
+- [x] All four preset questions work; arbitrary/free-text prompts are rejected.
+- [x] Provider receives only the agreed context; output is bounded and safely
   rendered. No history/materials/personal records are sent.
-- [ ] Cross-trainee cache hits consume no request; correct context/question/model
+- [x] Cross-trainee cache hits consume no request; correct context/question/model
   changes and seven-day expiry invalidate reuse; unauthorized cache reads fail.
-- [ ] Concurrent identical misses coalesce; different requests enforce personal,
+- [x] Concurrent identical misses coalesce; different requests enforce personal,
   aggregate and combined caps without changing trainer quota semantics.
-- [ ] Trainer/trainee races, Manila midnight, lease expiry, pre-dispatch refund,
+- [x] Trainer/trainee races, Manila midnight, lease expiry, pre-dispatch refund,
   stale tokens and dispatched failure/cancel accounting are tested in a real DB.
-- [ ] One combined timeline preserves milestone headings/context under switching,
+- [x] One combined timeline preserves milestone headings/context under switching,
   pending work, navigation, repeated questions and close/reopen. Refresh/sign-out
   clears in-memory history; previous messages never influence AI generation.
-- [ ] AI/generated cache/prewritten sources are distinct; failures, exhausted
+- [x] AI/generated cache/prewritten sources are distinct; failures, exhausted
   limits and disabled configuration preserve usable static guidance.
-- [ ] Desktop/mobile views fit; keyboard, focus return, Escape, screen-reader
+- [x] Desktop/mobile views fit; keyboard, focus return, Escape, screen-reader
   announcements, reduced motion and bottom navigation remain usable.
-- [ ] Generation changes no curriculum, assignment, materials, progress, review,
+- [x] Generation changes no curriculum, assignment, materials, progress, review,
   stamp/hash or trainer verification record; existing regressions pass.
 - [ ] Separate flags work in both directions, keys remain server-only, type checks
   and production build pass, and real Gemini smoke results are safely recorded.
-- [ ] Migrations, cleanup scheduling, current project quota verification,
+- [x] Migrations, cleanup scheduling, current project quota verification,
   diagnostics and rollback are documented. No auto-retry or paid fallback exists.
 
 ## Provider references
@@ -274,3 +274,5 @@ Epic: [#55 — Trainee Strobi Tips chatbot](https://github.com/jimcsy/Passport-T
 - [ ] [#61 — [ST-06] Phase 6: Verify trainee Strobi end to end and document rollout](https://github.com/jimcsy/Passport-TBG/issues/61)
 
 Work in the listed dependency order. Keep issue checklists open until acceptance evidence passes. Phase #61 verifies all earlier phases before closing the epic.
+
+Current final-verification status: [#61 rollout/evidence guide](strobi-trainee-tips-rollout.md). Live readiness remains unverified after Gemini HTTP 503; saved flags remain off.

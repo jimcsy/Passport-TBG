@@ -191,3 +191,5 @@ remains separate in #61; successful mocked generation is not a live smoke result
 All seven #58 acceptance criteria are covered. No saved environment/flag change,
 live Gemini request, new migration, app deployment, commit or push was performed.
 Subsequent phases #59–#60 implement the UI and authenticated layout integration. Final end-to-end/live verification remains #61.
+
+Current final-verification status: [#61 rollout/evidence guide](strobi-trainee-tips-rollout.md). Live readiness remains unverified after Gemini HTTP 503; saved flags remain off.

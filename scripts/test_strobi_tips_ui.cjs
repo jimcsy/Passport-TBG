@@ -73,6 +73,15 @@ const screenshots='/tmp/passport-strobi-tips-ui';
   assert.equal(await page.getByText('Outdated milestone tip.',{exact:true}).count(),0);assert(await dialog().getByText('Updated milestone tip.',{exact:true}).isVisible());
   console.log('PASS one combined milestone-grouped timeline, captured pending context, no relabeling, cancelled ignored-abort stale output and hidden-panel completion');
 
+  stage='all four generated question outputs';await fresh();await open();await select().selectOption('a');count=requests.length;
+  for(const [id,label] of Object.entries(labels)){
+    const text=`Practice guidance for ${label}`;await ask(id,{body:success(text)});await settled();
+    assert.equal(requests.at(-1).questionId,id);assert.deepEqual(Object.keys(requests.at(-1)).sort(),['nodeId','questionId']);
+    assert(await dialog().getByText(text,{exact:true}).isVisible());
+  }
+  assert.equal(requests.length,count+4);assert.equal(await dialog().getByText('AI-generated tip',{exact:true}).count(),4);
+  console.log('PASS all four explicit question outputs render in the combined timeline with only node/question request fields');
+
   stage='sources, zero allowance and failures';await fresh();await open();await select().selectOption('a');
   await ask('EXPLAIN_MILESTONE',{body:success('Reused listening tip.','REUSED',{traineeRemaining:0,traineeProjectRemaining:0,projectRemaining:0})});await settled();assert(await question('SHOW_EXAMPLE').isEnabled());assert(await dialog().getByText(/Last reported: 0 of 3/).isVisible());
   await ask('SHOW_EXAMPLE',{status:429,body:{success:false,code:'DAILY_LIMIT',usage:{...usage,traineeRemaining:0}}});await settled();assert(await dialog().getByText('Prewritten practice tip',{exact:true}).isVisible());

@@ -155,3 +155,5 @@ after server-denial history clearing. Visual reviewer rechecked that hardening
 against recaptured states and retained **ship** at the component scope. No saved
 flags, backend behavior, actual trainee routes or public assets changed; no new
 dependencies, database access, real Gemini call, deployment, commit or push.
+
+Current final-verification status: [#61 rollout/evidence guide](strobi-trainee-tips-rollout.md). Live readiness remains unverified after Gemini HTTP 503; saved flags remain off.

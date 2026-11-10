@@ -100,3 +100,5 @@ The visual reviewer found the three captures valid and the scoped interface
 consistent; its sole persistence fix was to record the confirmed product contract
 in `PRODUCT.md`. It scored that fix resolved with disposition **ship**, at that
 fix's scope. System documentation comparison preserved the incumbent design.
+
+Current final-verification status: [#61 rollout/evidence guide](strobi-trainee-tips-rollout.md). Live readiness remains unverified after Gemini HTTP 503; saved flags remain off.

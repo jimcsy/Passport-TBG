@@ -18,7 +18,10 @@
     "test:strobi-tips-api": "node scripts/test_strobi_tips_service.cjs && node scripts/test_strobi_tips_route.cjs",
     "test:strobi-tips-access": "node --env-file=.env scripts/test_strobi_tips_access_db.cjs",
     "test:strobi-tips-ui": "node scripts/test_strobi_tips_ui.cjs",
-    "test:strobi-tips-integration": "node --env-file=.env scripts/test_strobi_tips_integration.cjs"
+    "test:strobi-tips-integration": "node --env-file=.env scripts/test_strobi_tips_integration.cjs",
+    "test:strobi-tips-final": "node --env-file=.env scripts/test_strobi_tips_regressions.cjs",
+    "test:strobi-tips-live": "node --env-file=.env scripts/test_strobi_tips_live.cjs",
+    "strobi:tips-cleanup": "node --env-file=.env scripts/cleanup_strobi_tips.cjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

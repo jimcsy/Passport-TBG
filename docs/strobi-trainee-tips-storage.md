@@ -179,3 +179,5 @@ regressions remain separate and must pass before closing #57.
 No live Gemini request, saved feature-flag change, hosting scheduler, trainee API,
 chat UI, deployment, commit or push was performed. Other environments still need
 their own migration deployment. Next implementation phase: #58.
+
+Current operator command and scheduler status: [final rollout guide](strobi-trainee-tips-rollout.md#retention-and-scheduler-status). No hosted cleanup job is configured.

@@ -185,3 +185,5 @@ exercise the existing trainer assistant's unchanged contracts/config/service/API
 Live trainee generation belongs to final phase #61, after service/UI integration.
 
 Recorded phase #56 result: all listed focused/trainer checks and TypeScript passed; `git diff --check` passed. The browser-safe content bundle excludes configuration/prompt modules and environment access; bundling either server-only module as a client entry is rejected. No provider request or saved feature-flag change was made.
+
+Current final-verification status: [#61 rollout/evidence guide](strobi-trainee-tips-rollout.md). Live readiness remains unverified after Gemini HTTP 503; saved flags remain off.
