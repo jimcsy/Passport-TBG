@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { BookOpen, LayoutDashboard } from "lucide-react";
 import { StampNotifications } from "./StampNotifications";
 import { AccountMenu } from "@/components/navigation/AccountMenu";
+import { useClearStrobiSession, useStrobiNotificationOverlay } from "./strobi/StrobiChatHost";
 
 interface TraineeNavigationProps {
   fullName: string;
@@ -14,6 +15,8 @@ interface TraineeNavigationProps {
 
 export function TraineeNavigation({ fullName, traineeCode, signOut }: TraineeNavigationProps) {
   const pathname = usePathname();
+  const clearChat = useClearStrobiSession();
+  const notificationOverlay = useStrobiNotificationOverlay();
   const inBooklet = pathname === "/trainee/dashboard/booklet";
   const inNotifications = pathname === "/trainee/dashboard/notifications";
   const inModule = pathname.startsWith("/trainee/dashboard/modules/");
@@ -42,12 +45,12 @@ export function TraineeNavigation({ fullName, traineeCode, signOut }: TraineeNav
                   </Link>
                 </li>
               ))}
-              <li className="flex items-center justify-center lg:ml-auto"><StampNotifications /></li>
+              <li className="flex items-center justify-center lg:ml-auto"><StampNotifications onOverlayChange={notificationOverlay} /></li>
             </ul>
           </nav>
 
           <div className="ml-auto flex items-center py-2">
-            <AccountMenu fullName={fullName} detail={traineeCode} label="Trainee account" signOut={signOut} />
+            <AccountMenu fullName={fullName} detail={traineeCode} label="Trainee account" signOut={signOut} beforeSignOut={clearChat} />
           </div>
         </div>
       </header>

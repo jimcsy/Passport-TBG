@@ -13,7 +13,7 @@ Trainee Strobi Tips is a separate feature under development. Phase #56 defines
 its independently gated contracts and static tips; phase #57 adds private cache
 and shared accounting primitives. Phase #58 adds the [authorized trainee API](strobi-trainee-tips-api.md);
 phase #59 adds the [reusable floating chat UI](strobi-trainee-tips-ui.md). The
-widget is not mounted on trainee pages until phase #60.
+widget is mounted across authenticated trainee pages by [phase #60](strobi-trainee-tips-integration.md); final verification remains #61.
 See [trainee setup and contracts](strobi-trainee-tips-contracts.md)
 and [the implementation sequence](strobi-trainee-tips-plan.md). Trainer behavior
 and the existing setup below remain unchanged.

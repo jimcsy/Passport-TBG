@@ -9,6 +9,7 @@ import { createCustomLibraryMilestoneAction } from "@/lib/actions/plans";
 import { customMilestoneSchema } from "@/lib/validations/milestones";
 import { FOUNDATION_PILLARS } from "@/lib/constants/foundation";
 import { AskStrobi } from "@/components/admin/strobi/AskStrobi";
+import { StrobiAuthorNotice } from "@/components/admin/strobi/StrobiAuthorNotice";
 import type { StrobiAssistantProps } from "@/components/admin/strobi/useStrobiAssistant";
 import { suggestSharedMilestoneCode } from "@/lib/milestones/shared-code";
 import { DevelopmentPath } from "@/lib/types/models";
@@ -71,6 +72,7 @@ function SharedMilestoneCreationSession({ initialPath, planId, existingCodes, st
       <button type="button" disabled={pending} onClick={cancel} aria-label="Close milestone creation" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-beat-canvas"><X aria-hidden="true" className="h-5 w-5" /></button>
     </header>
     <form aria-label="Create shared milestone" aria-busy={pending} onSubmit={submit} className="mt-5 space-y-4">
+      <StrobiAuthorNotice />
       <AskStrobi contextKey="shared-library-creation" planId={planId} isOpen={true} isSaving={pending} availability={strobiAvailability} selectedPillar={effectivePath} fields={fields}
         onApplyFields={patch => { if (!submitting.current) { setFields(previous => ({ ...previous, ...patch, path: effectivePath })); setErrors({}); } }}
         onUsePillar={changePillar} />

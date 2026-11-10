@@ -23,10 +23,11 @@ Module._load = function(id, ...args) {
   return original.call(this, id, ...args);
 };
 const { encryptSession } = require('../lib/auth/session.ts');
-const { resolveStrobiTipAccess } = require('../lib/db/repositories/strobi-tips.ts');
+const { resolveStrobiTipAccess, readStrobiChatChoices } = require('../lib/db/repositories/strobi-tips.ts');
 const service = require('../lib/ai/strobi-tips-service.ts'); generate = service.generateStrobiTip;
 const { getTraineePassportData } = require('../lib/db/repositories/trainee.ts');
 const { POST } = require('../app/api/trainee/strobi/route.ts');
+const { GET: contextGET } = require('../app/api/trainee/strobi/context/route.ts');
 const { createStrobiTipCacheKey } = require('../lib/ai/strobi-tips-store.ts');
 const domain = ['AdminUser','Trainee','MilestoneDefinition','TrainingPlan','PlanVersion','PlanNode','PlanEdge','TraineePlanAssignment','TraineeProgress','CourseMaterial','StampRevocation','StampNotificationRead','ReviewNotificationRead','TraineeContentView','LearningPath'];
 const operational = ['StrobiDailyQuota','StrobiRequestLease','StrobiActorRequestLease','StrobiTipCache','StrobiTipCacheLease'];
@@ -94,6 +95,20 @@ async function call(token, nodeId, questionId = 'EXPLAIN_MILESTONE', preserve = 
   }
   assert.equal((await call(await signed(empty),available.id)).result.code,'INACCESSIBLE_MILESTONE');
   assert.equal(providerCalls,0); assert.equal(await db.strobiDailyQuota.count(),0);
+  stage='read-only context endpoint'; cookieToken=tokenA;
+  const stateBefore=await snapshot();
+  const contextResponse=await contextGET(new Request('http://localhost/api/trainee/strobi/context'));
+  assert.equal(contextResponse.status,200);assert(contextResponse.headers.get('cache-control').includes('no-store'));
+  const chatState=await contextResponse.json();
+  assert.deepEqual(Object.keys(chatState).sort(),['assignmentKey','availability','expiresAt','milestones','sessionKey']);
+  assert.equal(chatState.milestones.find(node=>node.id===locked.id).status,'LOCKED');
+  assert(!chatState.milestones.some(node=>[other.id,older.id,archived.id].includes(node.id)));
+  for(const node of chatState.milestones) assert.deepEqual(Object.keys(node).sort(),['id','isArchived','pillar','revision','status','title']);
+  assert.equal((await readStrobiChatChoices(a.id,archived.id,db)).milestones.find(node=>node.id===archived.id).status,'ARCHIVED');
+  assert(!(await readStrobiChatChoices(a.id,other.id,db)).milestones.some(node=>node.id===other.id));
+  assert.equal((await contextGET(new Request('http://localhost/api/trainee/strobi/context',{headers:{'sec-fetch-site':'cross-site'}}))).status,403);
+  cookieToken=undefined;assert.equal((await contextGET(new Request('http://localhost/api/trainee/strobi/context'))).status,401);
+  assert.equal(await snapshot(),stateBefore);assert.equal(await db.strobiDailyQuota.count(),0);
   recordQueries=true; await resolveStrobiTipAccess(a.id,available.id,db); recordQueries=false;
   for (const field of ['"fullName"','"email"','"traineeNote"','"trainerNote"','"verificationHash"','CourseMaterial']) assert(!authQueries.join('\n').includes(field));
   const passport = await getTraineePassportData(a.id,db);

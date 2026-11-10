@@ -7,9 +7,9 @@ The complete agreed design is in [the implementation plan](strobi-trainee-tips-p
 Phase #56 defines pure contracts, instructions, prewritten tips and server-only
 availability. Phase #57 adds [shared accounting/cache primitives](strobi-trainee-tips-storage.md).
 Phase #58 adds the [trainee API and authorized provider service](strobi-trainee-tips-api.md).
-Phase #59 adds the [floating chat component](strobi-trainee-tips-ui.md), not yet
-mounted on trainee pages. Setting the flag alone does not expose it; route
-integration and final verification remain phases #60–#61.
+Phase #59 adds the [floating chat component](strobi-trainee-tips-ui.md).
+Phase #60 [integrates it across trainee routes](strobi-trainee-tips-integration.md),
+including prewritten guidance when AI is disabled. Final verification remains #61.
 
 ## Server setup
 
@@ -136,8 +136,8 @@ and the trainee/trainer workflow remain necessary.
 
 Client-safe copy includes a persistent Google/free-tier/accuracy notice, authoring
 guidance requiring nonconfidential milestone wording, attempt-accounting help and
-safe error messages for every known failure. These are defined for rendering in
-later UI/integration phases, not already visible in the current trainee pages.
+safe error messages for every known failure. Phases #59–#60 now render these in
+the chat and relevant milestone authoring forms.
 
 No personal or historical context is included in generation. A shared tip cache
 is not a confidentiality filter: authored milestone text must itself be suitable

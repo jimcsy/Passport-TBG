@@ -9,6 +9,7 @@ import { DevelopmentPath, DEVELOPMENT_PATHS } from "@/lib/types/models";
 import { customMilestoneSchema, type MilestoneCreationOutcome } from "@/lib/validations/milestones";
 
 import { AskStrobi } from "@/components/admin/strobi/AskStrobi";
+import { StrobiAuthorNotice } from "@/components/admin/strobi/StrobiAuthorNotice";
 import type { StrobiAssistantProps } from "@/components/admin/strobi/useStrobiAssistant";
 import { suggestCustomMilestoneCode } from "@/lib/milestones/custom-code";
 
@@ -213,6 +214,7 @@ function CustomMilestoneSession({ onClose, path, pathDisplayName, planId, strobi
             )}
           </div>
 
+          <StrobiAuthorNotice />
           {/* Description */}
           <div>
             <label htmlFor="milestoneDesc" className="block text-xs font-bold text-beat-maroon mb-1">

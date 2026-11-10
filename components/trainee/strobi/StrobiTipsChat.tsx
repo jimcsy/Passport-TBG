@@ -27,6 +27,8 @@ export interface StrobiTipsChatProps {
   milestones: StrobiChatMilestone[];
   availability: { available: true } | { available: false; reason: "disabled" | "unconfigured" };
   currentNodeId?: string | null;
+  navigationKey?: string;
+  hidden?: boolean;
   onSessionExpired?: () => void;
 }
 type SuccessfulTip = Extract<StrobiTipResult, { success: true }>;
@@ -48,7 +50,7 @@ export function StrobiTipsChat(props: StrobiTipsChatProps) {
   return props.sessionKey ? <StrobiTipsSession key={props.sessionKey} {...props} /> : null;
 }
 
-function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionExpired }: StrobiTipsChatProps) {
+function StrobiTipsSession({ milestones, availability, currentNodeId, navigationKey, hidden = false, onSessionExpired }: StrobiTipsChatProps) {
   const [open, setOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -62,6 +64,7 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
   const timeline = useRef<HTMLDivElement>(null);
   const active = useRef<{ id: number; milestone: StrobiChatMilestone; controller: AbortController } | null>(null);
   const sequence = useRef(0);
+  const previousNavigation = useRef(navigationKey);
   const latest = useRef({ milestones, availability }); latest.current = { milestones, availability };
   const titleId = useId(), noticeId = useId(), selectorId = useId();
   const selected = milestones.find(node => node.id === selection);
@@ -82,7 +85,7 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
   }, []);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
+    const media = window.matchMedia("(max-width: 767px), (max-width: 1023px) and (max-height: 500px)");
     const update = () => setMobile(media.matches);
     update(); media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
@@ -90,6 +93,10 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
   useEffect(() => {
     if (currentNodeId) setSelection(currentNodeId);
   }, [currentNodeId]);
+  useEffect(() => {
+    if (hidden || mobile && previousNavigation.current !== navigationKey) setOpen(false);
+    previousNavigation.current = navigationKey;
+  }, [navigationKey, mobile, hidden]);
   useEffect(() => () => { active.current?.controller.abort(); active.current = null; }, []);
   useEffect(() => {
     const current = active.current;
@@ -180,8 +187,8 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
     selected.isArchived || selected.status === "ARCHIVED" ? STROBI_TIP_ERROR_MESSAGES.ARCHIVED_MILESTONE :
     selected.status === "LOCKED" ? STROBI_TIP_ERROR_MESSAGES.LOCKED_MILESTONE : nodeBlock ? STROBI_TIP_ERROR_MESSAGES[nodeBlock] : undefined;
   return <>
-    <button ref={launcher} type="button" hidden={open} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}
-      className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 ${open ? "hidden" : "inline-flex"} min-h-12 items-center gap-2 rounded-full bg-beat-maroon px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-beat-maroon/90 motion-reduce:transition-none md:bottom-6 md:right-6 ${focusStyle}`}>
+    <button ref={launcher} type="button" hidden={open || hidden} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}
+      className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 ${open || hidden ? "hidden" : "inline-flex"} min-h-12 items-center gap-2 rounded-full bg-beat-maroon px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-beat-maroon/90 motion-reduce:transition-none md:bottom-6 md:right-6 ${focusStyle}`}>
       <MessageCircle aria-hidden="true" className="h-5 w-5 text-beat-gold" />Ask Strobi
     </button>
     <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={noticeId} aria-modal={mobile}
@@ -195,12 +202,12 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
       }}
       onCancel={event => { event.preventDefault(); setOpen(false); }}
       onClose={() => { if (!dialog.current?.open) { setOpen(false); requestAnimationFrame(() => launcher.current?.focus()); } }}
-      className="fixed inset-0 z-50 m-0 h-[100dvh] max-h-none w-full max-w-none flex-col overflow-hidden bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-black/30 md:inset-auto md:bottom-6 md:right-6 md:h-[min(42rem,calc(100dvh-3rem))] md:w-[26rem] md:rounded-xl [&[open]]:flex [&:not([open])]:hidden">
+      className={`strobi-chat-panel ${hidden ? "!hidden" : ""} fixed inset-0 z-50 m-0 h-[100dvh] max-h-none w-full max-w-none flex-col overflow-hidden bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-black/30 md:inset-auto md:bottom-6 md:right-6 md:h-[min(42rem,calc(100dvh-3rem))] md:w-[26rem] md:rounded-xl [&[open]]:flex [&:not([open])]:hidden`}>
       <header className="shrink-0 border-b border-beat-border p-4">
         <div className="flex items-center gap-3">
           <Image src={mascot.imagePath} alt={mascot.variantTitle} width={48} height={48} className="h-12 w-12 shrink-0 object-contain" />
-          <div className="min-w-0 flex-1"><h2 id={titleId} className="text-lg font-semibold">Strobi Tips</h2><p className="text-xs text-beat-maroon/75">A little guidance for your next step.</p></div>
-          <button ref={closeButton} type="button" onClick={() => setOpen(false)} aria-label="Close Strobi Tips" className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-beat-maroon/5 ${focusStyle}`}><X aria-hidden="true" className="h-5 w-5" /></button>
+          <div className="min-w-0 flex-1"><h2 id={titleId} className="text-lg font-semibold">Strobi Tips</h2><p className="strobi-chat-subtitle text-xs text-beat-maroon/75">A little guidance for your next step.</p></div>
+          <button ref={closeButton} type="button" onClick={() => setOpen(false)} aria-label="Close Strobi Tips" className={`strobi-chat-close flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-beat-maroon/5 ${focusStyle}`}><X aria-hidden="true" className="h-5 w-5" /></button>
         </div>
         <label htmlFor={selectorId} className="mt-3 block text-xs font-semibold">Current milestone</label>
         <div className="relative mt-1"><select id={selectorId} ref={selector} value={selection} onChange={event => setSelection(event.target.value)} disabled={!milestones.length}
@@ -237,7 +244,7 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, onSessionE
           <details className="mt-1"><summary className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-sm font-semibold ${focusStyle}`}><CircleHelp aria-hidden="true" className="h-4 w-4" />About daily limits</summary><p className="pb-3">{STROBI_TIPS_ALLOWANCE_HELP}</p></details>
         </div>
       </footer>
-      <p id={noticeId} className="shrink-0 border-t border-beat-border bg-beat-canvas px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[11px] leading-relaxed text-beat-maroon/80">{STROBI_TIPS_NOTICE}</p>
+      <p id={noticeId} className="strobi-chat-notice shrink-0 border-t border-beat-border bg-beat-canvas px-4 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-[11px] leading-relaxed text-beat-maroon/80">{STROBI_TIPS_NOTICE}</p>
     </dialog>
     <p role="status" aria-live="polite" aria-atomic="true" className="sr-only">{announcement}</p>
   </>;

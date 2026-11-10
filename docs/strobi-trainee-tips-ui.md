@@ -1,11 +1,12 @@
 # Strobi Tips chat component
 
 Phase [#59](https://github.com/jimcsy/Passport-TBG/issues/59) implements the reusable
-chat UI and client transport. It is **not mounted on trainee routes yet**; the
-authenticated layout host, current-module selection and route lifecycle wiring
-belong to #60. Backend contracts/authorization remain unchanged from #56–#58.
+chat UI and client transport. Phase #60 now mounts it across authenticated trainee
+routes with current-module selection and session lifecycle handling. See the
+[layout integration guide](strobi-trainee-tips-integration.md). Generation
+contracts/authorization remain unchanged from #56–#58.
 
-## Component and future host contract
+## Component and host contract
 
 `components/trainee/strobi/StrobiTipsChat.tsx` exports `StrobiTipsChat` and the
 typed `StrobiChatMilestone`/`StrobiTipsChatProps` interfaces.
@@ -28,7 +29,7 @@ typed `StrobiChatMilestone`/`StrobiTipsChatProps` interfaces.
 - `onSessionExpired`: optional host callback for returning to sign-in/refetching
   authentication. A 401 already clears conversation/usage and hides the widget.
 
-The #60 host should mount **one instance** under the persistent authenticated
+The #60 host mounts **one instance** under the persistent authenticated
 layout. Do not key it by route or selected milestone: that would discard the
 combined conversation. Clear its session on sign-out, expiry and identity changes,
 and refresh milestone props when assignments/content/access change. The component
@@ -146,7 +147,7 @@ fixes. The documenter confirmed existing tokens/assets and left pre-existing
 PRODUCT.md/DESIGN.md gaps unchanged. No redesign or system documentation rewrite
 was authorized.
 
-Actual trainee route mounting and integration regression are #60. Enabled live
+Actual trainee route mounting and integration regression are covered by [#60](strobi-trainee-tips-integration.md). Enabled live
 Gemini smoke and final rollout are #61; mocked UI success is not live verification.
 
 Recorded #59 result: all listed checks passed, including the final browser run

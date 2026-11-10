@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { strobiTipsDb } from "@/lib/ai/strobi-tips-db";
 import { strobiTipContextSchema, type StrobiTipContext } from "@/lib/validations/strobi-tips";
@@ -15,8 +16,8 @@ export type StrobiTipAccess = { allowed: true; snapshot: StrobiTipAccessSnapshot
 };
 
 /** Read-only, intentionally excludes profile, notes, verifier, materials and hashes. */
-export async function resolveStrobiTipAccess(traineeId: string, nodeId: string, db: PrismaClient = strobiTipsDb): Promise<StrobiTipAccess> {
-  const trainee = await db.trainee.findUnique({ where: { id: traineeId }, select: {
+async function readAssignment(traineeId: string, db: PrismaClient) {
+  return db.trainee.findUnique({ where: { id: traineeId }, select: {
     planAssignments: {
       where: { status: "ACTIVE" }, orderBy: { assignedAt: "desc" }, take: 1,
       select: { id: true, planVersionId: true, planVersion: { select: { nodes: { select: {
@@ -25,9 +26,11 @@ export async function resolveStrobiTipAccess(traineeId: string, nodeId: string, 
     },
     progressRecords: { select: {
       planNodeId: true, status: true, isArchived: true, archivedReason: true,
-      planNode: { select: { planVersionId: true, libraryMilestoneId: true, code: true } },
+      planNode: { select: { planVersionId: true, libraryMilestoneId: true, code: true, title: true, path: true } },
     } },
   } });
+}
+function accessFromAssignment(trainee: Awaited<ReturnType<typeof readAssignment>>, nodeId: string): StrobiTipAccess {
   if (!trainee) return { allowed: false, code: "UNAUTHORIZED" };
   const assignment = trainee.planAssignments[0];
   const node = assignment?.planVersion.nodes.find(item => item.id === nodeId);
@@ -52,4 +55,35 @@ export async function resolveStrobiTipAccess(traineeId: string, nodeId: string, 
   const parsed = strobiTipContextSchema.safeParse({ title: node.title, description: node.description, pillar: node.path });
   if (!parsed.success) return { allowed: false, code: "INACCESSIBLE_MILESTONE" };
   return { allowed: true, snapshot: { assignmentId: assignment.id, planVersionId: assignment.planVersionId, nodeId: node.id, context: parsed.data } };
+}
+
+export async function resolveStrobiTipAccess(traineeId: string, nodeId: string, db: PrismaClient = strobiTipsDb): Promise<StrobiTipAccess> {
+  return accessFromAssignment(await readAssignment(traineeId, db), nodeId);
+}
+
+/** Whitelisted client choices only; no descriptions, feedback or progress identities. */
+export async function readStrobiChatChoices(traineeId: string, currentNodeId?: string, db: PrismaClient = strobiTipsDb) {
+  const data = await readAssignment(traineeId, db);
+  if (!data) return null;
+  const assignment = data.planAssignments[0];
+  const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const milestones = (assignment?.planVersion.nodes || []).flatMap(node => {
+    const access = accessFromAssignment(data, node.id);
+    const parsed = strobiTipContextSchema.safeParse({ title: node.title, description: node.description, pillar: node.path });
+    if (!parsed.success || !access.allowed && access.code !== "LOCKED_MILESTONE") return [];
+    // Eligibility is resolved above using the same canonical status as the API.
+    const active = data.progressRecords.filter(item => !item.isArchived && item.planNode.planVersionId === assignment!.planVersionId);
+    const exact = active.find(item => item.planNodeId === node.id);
+    const library = node.libraryMilestoneId ? active.filter(item => item.planNode.libraryMilestoneId === node.libraryMilestoneId).at(-1) : undefined;
+    const code = active.filter(item => item.planNode.code === node.code).at(-1);
+    const status = access.allowed ? (exact || library || code)?.status || "IN_PROGRESS" : "LOCKED";
+    return [{ id: node.id, title: parsed.data.title, pillar: parsed.data.pillar, status,
+      isArchived: false, revision: hash([assignment!.id, assignment!.planVersionId, node.id, parsed.data]) }];
+  });
+  if (currentNodeId && !milestones.some(node => node.id === currentNodeId)) {
+    const archived = data.progressRecords.find(item => item.planNodeId === currentNodeId && item.isArchived && item.archivedReason === "REMOVED_FROM_UPDATED_PLAN");
+    if (archived && ["ONBOARDING", "COMMUNICATION", "TECHNICAL", "CULTURE", "LEADERSHIP"].includes(archived.planNode.path))
+      milestones.push({ id: currentNodeId, title: archived.planNode.title, pillar: archived.planNode.path as typeof milestones[number]["pillar"], status: "ARCHIVED", isArchived: true, revision: hash([archived.planNode.planVersionId, currentNodeId, "archive"]) });
+  }
+  return { assignmentKey: assignment ? `${assignment.id}:${assignment.planVersionId}` : "unassigned", milestones };
 }

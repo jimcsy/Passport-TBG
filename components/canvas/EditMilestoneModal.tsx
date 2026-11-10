@@ -1,4 +1,5 @@
 "use client";
+import { StrobiAuthorNotice } from "@/components/admin/strobi/StrobiAuthorNotice";
 
 import { MilestoneUsage } from "@/components/admin/MilestoneUsage";
 import { listMilestoneLibraryAction } from "@/lib/actions/plans";
@@ -222,6 +223,7 @@ export function EditMilestoneModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+          {!readOnly && <StrobiAuthorNotice />}
           {notice && <p role="status" className="text-sm leading-relaxed text-beat-maroon">{notice}</p>}
           <h4 className="text-sm font-semibold">Details</h4>
           {shared && <p className="text-xs leading-relaxed text-beat-maroon/75">Shared library definition{readOnly ? " · Read only in this published plan." : protectedDetails ? " · Canonical BEAT details are protected." : ` · Saving updates this definition and ${sharedSaveImpact}. Published snapshot metadata and trainee verification remain unchanged.`}</p>}

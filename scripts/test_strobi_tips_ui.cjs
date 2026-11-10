@@ -99,6 +99,11 @@ const screenshots='/tmp/passport-strobi-tips-ui';
   await select().selectOption('a');await ask('EXPLAIN_MILESTONE',{status:401,body:{success:false,code:'UNAUTHORIZED'}});await page.locator('dialog').waitFor({state:'detached'});assert.equal(await page.getByRole('dialog').count(),0);
   console.log('PASS identity-keyed isolation, late previous-user output rejection, sign-out/401 clearing, refresh clearing and no browser persistence');
 
+  stage='short landscape layout';await fresh(844,390);await open();await select().selectOption('a');await ask();await settled();await page.screenshot({path:path.join(screenshots,'landscape.png')});
+  assert.equal(await dialog().evaluate(element=>element.matches(':modal')),true);await fits();
+  const landscapeLog=await dialog().getByRole('log').boundingBox();assert(landscapeLog && landscapeLog.height>100);
+  const landscapeNotice=await dialog().getByText(/AI tips can be wrong/).boundingBox();assert(landscapeNotice && landscapeNotice.y+landscapeNotice.height<=390);
+
   stage='mobile focus and visual states';await fresh(390,844);await open();assert.equal(await dialog().evaluate(element=>element.matches(':modal')),true);assert.equal(await page.evaluate(()=>document.body.style.overflow),'hidden');
   await select().selectOption('a');await ask();await settled();await fits();await page.screenshot({path:path.join(screenshots,'mobile.png')});
   await page.setViewportSize({width:1280,height:900});await page.waitForFunction(()=>document.querySelector('dialog')?.open&&!document.querySelector('dialog').matches(':modal'));assert.equal(await page.evaluate(()=>document.body.style.overflow),'');

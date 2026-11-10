@@ -9,7 +9,7 @@ import { useStampNotifications } from "./StampNotificationProvider";
 import { openStampNotificationAction, type StampNotification } from "@/lib/actions/stamp-notifications";
 import { StampAwardModal } from "@/components/stamps/StampAwardModal";
 
-export function StampNotifications({ view = "popover" }: { view?: "popover" | "page" }) {
+export function StampNotifications({ view = "popover", onOverlayChange }: { view?: "popover" | "page"; onOverlayChange?: (open: boolean) => void }) {
   const router = useRouter();
   const desktop = useMediaQuery("(min-width: 768px)");
   const pathname = usePathname();
@@ -24,6 +24,7 @@ export function StampNotifications({ view = "popover" }: { view?: "popover" | "p
   const trigger = useRef<HTMLButtonElement>(null);
   const id = useId();
   const unread = notifications.filter(item => !item.read).length;
+  useEffect(() => { onOverlayChange?.(open && desktop || !!award); }, [open, desktop, award, onOverlayChange]);
 
   useEffect(() => {
     if (!open || !desktop) return;

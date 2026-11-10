@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { SignOutButton } from "@/components/navigation/SignOutButton";
 
-export function AccountMenu({ fullName, detail, label, signOut }: {
+export function AccountMenu({ fullName, detail, label, signOut, beforeSignOut }: {
   fullName: string;
   detail: ReactNode;
   label: string;
   signOut: () => Promise<void>;
+  beforeSignOut?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const container = useRef<HTMLDivElement>(null);
@@ -49,7 +50,7 @@ export function AccountMenu({ fullName, detail, label, signOut }: {
         <p className="break-words text-sm font-semibold">{fullName}</p>
         <p className="mt-1 break-words text-xs text-beat-maroon/70">{detail}</p>
       </div>
-      <form action={signOut} className="mt-1 [&>button]:w-full"><SignOutButton /></form>
+      <form action={signOut} onSubmit={beforeSignOut} className="mt-1 [&>button]:w-full"><SignOutButton /></form>
     </div>}
   </div>;
 }

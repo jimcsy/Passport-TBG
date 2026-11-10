@@ -6,7 +6,7 @@ Phase [#58](https://github.com/jimcsy/Passport-TBG/issues/58) of
 [shared accounting/cache](strobi-trainee-tips-storage.md) for prerequisites.
 
 The backend and phase #59's [floating chat component](strobi-trainee-tips-ui.md)
-are implemented; trainee-wide route integration is #60. This phase does not enable a saved feature flag, migrate more
+are implemented; [phase #60](strobi-trainee-tips-integration.md) adds trainee-wide route integration. This phase does not enable a saved feature flag, migrate more
 tables, deploy an app or perform live Gemini generation. Live smoke is #61.
 
 ## Endpoint
@@ -190,4 +190,4 @@ remains separate in #61; successful mocked generation is not a live smoke result
 
 All seven #58 acceptance criteria are covered. No saved environment/flag change,
 live Gemini request, new migration, app deployment, commit or push was performed.
-The UI is not yet present; next phase is #59.
+Subsequent phases #59–#60 implement the UI and authenticated layout integration. Final end-to-end/live verification remains #61.
