@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { strobiChatStateSchema, type StrobiChatState } from "@/lib/validations/strobi-chat";
 import { StrobiTipsChat, type StrobiChatMilestone } from "./StrobiTipsChat";
@@ -21,7 +21,7 @@ function moduleId(pathname: string) {
   try { return match ? decodeURIComponent(match[1]) : undefined; } catch { return undefined; }
 }
 
-export function StrobiChatHost({ initialState, children }: { initialState: StrobiChatState | null; children: React.ReactNode }) {
+export function StrobiChatHost({ initialState, children }: { initialState: StrobiChatState | null; children: ReactNode }) {
   const pathname = usePathname(), router = useRouter();
   const [state, setState] = useState(initialState);
   const [checking, setChecking] = useState(false);
