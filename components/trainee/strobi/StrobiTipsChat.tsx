@@ -30,6 +30,8 @@ export interface StrobiTipsChatProps {
   navigationKey?: string;
   hidden?: boolean;
   onSessionExpired?: () => void;
+  /** Incrementing counter; each change asks the panel to open (e.g. sidebar "Ask Strobi"). */
+  openRequest?: number;
 }
 type SuccessfulTip = Extract<StrobiTipResult, { success: true }>;
 interface Exchange {
@@ -50,8 +52,14 @@ export function StrobiTipsChat(props: StrobiTipsChatProps) {
   return props.sessionKey ? <StrobiTipsSession key={props.sessionKey} {...props} /> : null;
 }
 
-function StrobiTipsSession({ milestones, availability, currentNodeId, navigationKey, hidden = false, onSessionExpired }: StrobiTipsChatProps) {
+function StrobiTipsSession({ milestones, availability, currentNodeId, navigationKey, hidden = false, onSessionExpired, openRequest = 0 }: StrobiTipsChatProps) {
   const [open, setOpen] = useState(false);
+  const handledOpenRequest = useRef(openRequest);
+  useEffect(() => {
+    if (openRequest === handledOpenRequest.current) return;
+    handledOpenRequest.current = openRequest;
+    if (!hidden) setOpen(true);
+  }, [openRequest, hidden]);
   const [mobile, setMobile] = useState(false);
   const [expired, setExpired] = useState(false);
   const [selection, setSelection] = useState(currentNodeId || "");

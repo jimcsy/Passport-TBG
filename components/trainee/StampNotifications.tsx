@@ -77,13 +77,13 @@ export function StampNotifications({ view = "popover", onOverlayChange }: { view
     {celebration}
   </>;
 
-  return <div ref={root} className="relative w-full md:w-auto">
-    {desktop ? <button ref={trigger} type="button" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} aria-controls={id} onClick={() => { setOpen(value => !value); if (!open) void refresh(); }} className="relative flex h-11 w-11 items-center justify-center rounded-full text-beat-maroon hover:bg-beat-gold/10">
+  return <div ref={root} className="relative">
+    {desktop ? <button ref={trigger} type="button" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-expanded={open} aria-controls={id} onClick={() => { setOpen(value => !value); if (!open) void refresh(); }} className="relative flex h-10 w-10 items-center justify-center rounded-full text-beat-maroon hover:bg-beat-gold/10">
       <Bell aria-hidden="true" className="h-5 w-5" />
       {unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-4 rounded-full bg-beat-maroon px-1 text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
-    </button> : <Link href="/trainee/dashboard/notifications" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-current={isNotificationsPage ? "page" : undefined} title="Notifications" className={`relative flex min-h-16 w-full items-center justify-center border-t-[3px] text-beat-maroon ${isNotificationsPage ? "border-beat-gold" : "border-transparent"}`}>
+    </button> : <Link href="/trainee/dashboard/notifications" aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`} aria-current={isNotificationsPage ? "page" : undefined} title="Notifications" className={`relative flex h-11 w-11 items-center justify-center rounded-full text-beat-maroon hover:bg-beat-gold/10 ${isNotificationsPage ? "bg-beat-gold/15" : ""}`}>
       <Bell aria-hidden="true" className="h-5 w-5" />
-      {unread > 0 && <span aria-hidden="true" className="absolute right-[calc(50%-1.25rem)] top-2 min-w-4 rounded-full bg-beat-maroon px-1 text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
+      {unread > 0 && <span aria-hidden="true" className="absolute right-0 top-0 min-w-4 rounded-full bg-beat-maroon px-1 text-[10px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
     </Link>}
     <span role="status" className="sr-only">{unread ? `${unread} unread stamp notifications` : "No unread stamp notifications"}</span>
     {open && desktop && <section id={id} aria-label="Stamp notifications" className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-beat-gold/30 bg-white text-beat-maroon shadow-lg">{content}</section>}

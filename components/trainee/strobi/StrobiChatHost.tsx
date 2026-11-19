@@ -3,12 +3,19 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { strobiChatStateSchema, type StrobiChatState } from "@/lib/validations/strobi-chat";
-import { StrobiTipsChat } from "./StrobiTipsChat";
+import { StrobiTipsChat, type StrobiChatMilestone } from "./StrobiTipsChat";
 
 const Session = createContext<() => void>(() => undefined);
 const NotificationOverlay = createContext<(open: boolean) => void>(() => undefined);
+const OpenChat = createContext<() => void>(() => undefined);
+const Milestones = createContext<StrobiChatMilestone[]>([]);
 export const useClearStrobiSession = () => useContext(Session);
 export const useStrobiNotificationOverlay = () => useContext(NotificationOverlay);
+/** Opens the existing Strobi Tips panel from any trainee surface (sidebar, hero, etc.). */
+export const useOpenStrobiChat = () => useContext(OpenChat);
+/** Assigned milestones already loaded for the chat; reused for client-side module search. */
+export const useStrobiMilestones = () => useContext(Milestones);
+const EMPTY: StrobiChatMilestone[] = [];
 function moduleId(pathname: string) {
   const match = /^\/trainee\/dashboard\/modules\/([^/]+)$/.exec(pathname);
   try { return match ? decodeURIComponent(match[1]) : undefined; } catch { return undefined; }
@@ -19,6 +26,8 @@ export function StrobiChatHost({ initialState, children }: { initialState: Strob
   const [state, setState] = useState(initialState);
   const [checking, setChecking] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [openRequest, setOpenRequest] = useState(0);
+  const openChat = useCallback(() => setOpenRequest(value => value + 1), []);
   const stopped = useRef(false), sequence = useRef(0), request = useRef<AbortController | null>(null);
   const knownIdentity = useRef(initialState?.sessionKey);
   const knownAssignment = useRef(initialState?.assignmentKey);
@@ -93,10 +102,15 @@ export function StrobiChatHost({ initialState, children }: { initialState: Strob
 
   return <Session.Provider value={signOut}>
     <NotificationOverlay.Provider value={setNotificationsOpen}>
+    <OpenChat.Provider value={openChat}>
+    <Milestones.Provider value={state?.milestones || EMPTY}>
     {children}
     <StrobiTipsChat sessionKey={state ? `${state.sessionKey}:${state.assignmentKey}` : null}
       milestones={state?.milestones || []} availability={state?.availability || { available: false, reason: "unconfigured" }}
-      currentNodeId={nodeId} navigationKey={pathname} hidden={checking || notificationsOpen || pathname === "/trainee/dashboard/notifications"} onSessionExpired={expired} />
+      currentNodeId={nodeId} navigationKey={pathname} hidden={checking || notificationsOpen || pathname === "/trainee/dashboard/notifications"} onSessionExpired={expired}
+      openRequest={openRequest} />
+    </Milestones.Provider>
+    </OpenChat.Provider>
     </NotificationOverlay.Provider>
   </Session.Provider>;
 }

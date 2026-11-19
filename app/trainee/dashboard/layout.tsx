@@ -20,10 +20,11 @@ export default async function TraineeLayout({ children }: { children: React.Reac
     <div className="min-h-screen bg-beat-canvas">
       <StampNotificationProvider>
       <StrobiChatHost initialState={initialChat}>
-      <TraineeNavigation fullName={session.fullName} traineeCode={session.traineeCode} signOut={signOut} />
-      <main id="trainee-main" tabIndex={-1} className="mx-auto max-w-6xl px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6 outline-none sm:px-8 sm:pt-8 md:pb-8 xl:px-0">
-        {children}
-      </main>
+      <TraineeNavigation fullName={session.fullName} traineeCode={session.traineeCode} signOut={signOut}>
+        <main id="trainee-main" tabIndex={-1} className="mx-auto max-w-[80rem] px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 outline-none sm:px-6 sm:pt-6 lg:px-8 lg:pb-20 lg:pt-8 xl:px-10 xl:pb-24">
+          {children}
+        </main>
+      </TraineeNavigation>
       </StrobiChatHost>
       </StampNotificationProvider>
     </div>
