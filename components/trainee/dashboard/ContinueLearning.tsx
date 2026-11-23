@@ -29,7 +29,7 @@ export function ContinueLearning({ current, others, totalModules, complete }: {
   return <section aria-labelledby="continue-title" className="space-y-3">
     <h2 id="continue-title" className="text-[13px] font-semibold text-beat-maroon/70">Pick up where you left off</h2>
     <div className="overflow-hidden rounded-2xl border border-beat-gold/25 bg-white flex flex-col xl:grid xl:grid-cols-[minmax(0,1fr)_14.5rem] 2xl:grid-cols-[minmax(0,1fr)_15rem]">
-      <article className="p-5 sm:p-6">
+      <article className="p-4 sm:p-6">
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-beat-maroon/60">
           {mascot && <Image src={mascot.imagePath} alt="" width={20} height={20} unoptimized className="h-5 w-5 object-contain mix-blend-multiply" />}
           <span>Path {pathNumber(pathIndex)} · {path.title}</span>
@@ -42,14 +42,14 @@ export function ContinueLearning({ current, others, totalModules, complete }: {
           <span className="text-xs text-beat-maroon/60">{path.verified} of {path.total} verified in this path</span>
         </div>
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <Link href={moduleHref(milestone.id)} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-beat-maroon px-4 text-[13px] font-semibold text-white transition-colors hover:bg-beat-maroon-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-beat-gold">
+          <Link href={moduleHref(milestone.id)} className="inline-flex min-h-11 w-full min-[420px]:w-auto items-center justify-center gap-2 rounded-xl bg-beat-maroon px-4 text-[13px] font-semibold text-white transition-colors hover:bg-beat-maroon-light active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-beat-gold">
             <Play aria-hidden="true" className="h-3.5 w-3.5 fill-beat-gold text-beat-gold" />{ACTION[milestone.status]}
           </Link>
           <span className="text-xs text-beat-maroon/55">Status · {STATUS_LABEL[milestone.status]}</span>
         </div>
       </article>
 
-      <aside aria-label="Also in progress" className="flex flex-col border-t border-beat-gold/20 bg-[#FCFAF6] p-5 xl:border-l xl:border-t-0">
+      <aside aria-label="Also in progress" className="flex flex-col border-t border-beat-gold/20 bg-[#FCFAF6] p-4 sm:p-5 xl:border-l xl:border-t-0">
         <p className="text-[11px] font-semibold text-beat-maroon/60">Also in progress</p>
         {others.length ? <ul className="mt-3 divide-y divide-beat-gold/15 sm:grid sm:grid-cols-2 sm:gap-3 sm:divide-y-0 xl:block xl:space-y-0 xl:divide-y xl:divide-beat-gold/15">
           {others.map(item => <li key={item.milestone.id} className="py-2.5 first:pt-0 sm:py-0 sm:rounded-xl sm:border sm:border-beat-gold/20 sm:bg-white sm:p-3 xl:rounded-none xl:border-0 xl:bg-transparent xl:p-0 xl:py-3">

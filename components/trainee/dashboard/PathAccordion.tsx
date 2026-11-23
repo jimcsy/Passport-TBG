@@ -34,7 +34,7 @@ export function PathAccordion({ paths, initialOpen }: { paths: PathProgressSumma
         return <li key={path.path}>
           <h3>
             <button type="button" aria-expanded={expanded} aria-controls={panelId} onClick={() => toggle(path.path)}
-              className={`grid w-full grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3.5 text-left transition-colors hover:bg-beat-canvas/60 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:px-5 ${expanded ? "bg-[#FCFAF6]" : ""}`}>
+              className={`grid w-full grid-cols-[2.25rem_minmax(0,1fr)_auto] items-center gap-x-3 px-3.5 py-3.5 text-left transition-colors hover:bg-beat-canvas/60 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:px-5 ${expanded ? "bg-[#FCFAF6]" : ""}`}>
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-beat-canvas sm:h-10 sm:w-10">
                 {mascot && <Image src={mascot.imagePath} alt="" width={32} height={32} unoptimized className="h-7 w-7 object-contain mix-blend-multiply sm:h-8 sm:w-8" />}
               </span>
@@ -53,7 +53,7 @@ export function PathAccordion({ paths, initialOpen }: { paths: PathProgressSumma
           <div id={panelId} hidden={!expanded} className="border-t border-beat-gold/15 bg-white">
             {path.milestones.length ? <ul className="divide-y divide-beat-gold/10">
               {ordered(path.milestones).map(milestone => <li key={milestone.id}>
-                <Link href={moduleHref(milestone.id)} className="group flex items-center gap-3 px-4 py-2.5 sm:pl-12 md:pl-14 lg:pl-12 xl:pl-14 sm:pr-5">
+                <Link href={moduleHref(milestone.id)} className="group flex items-center gap-2.5 sm:gap-3 px-3.5 py-2.5 sm:pl-12 md:pl-14 lg:pl-12 xl:pl-14 sm:pr-5">
                   <StatusIcon status={milestone.status} className="h-4 w-4 shrink-0" />
                   <span className="hidden w-16 shrink-0 font-mono text-[11px] text-beat-maroon/50 sm:block">{milestone.code}</span>
                   <span className="min-w-0 flex-1">
@@ -66,7 +66,7 @@ export function PathAccordion({ paths, initialOpen }: { paths: PathProgressSumma
                 </Link>
               </li>)}
             </ul> : <p className="px-5 py-4 text-[13px] text-beat-maroon/60">Modules will appear here when this path is configured.</p>}
-            <div className="flex justify-end border-t border-beat-gold/10 px-4 py-2.5 sm:px-5">
+            <div className="flex justify-end border-t border-beat-gold/10 px-3.5 py-2.5 sm:px-5">
               <Link href={developmentPathHref(path.path)} aria-label={`Open ${mascot?.category ?? path.title}`} className="inline-flex items-center gap-1 text-xs font-semibold text-beat-maroon hover:underline hover:decoration-beat-gold hover:underline-offset-4">
                 Open path<ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 text-beat-gold" />
               </Link>

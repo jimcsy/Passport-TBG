@@ -196,8 +196,10 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, navigation
     selected.status === "LOCKED" ? STROBI_TIP_ERROR_MESSAGES.LOCKED_MILESTONE : nodeBlock ? STROBI_TIP_ERROR_MESSAGES[nodeBlock] : undefined;
   return <>
     <button ref={launcher} type="button" hidden={open || hidden} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}
-      className={`fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 ${open || hidden ? "hidden" : "inline-flex"} min-h-12 items-center gap-2 rounded-full bg-beat-maroon px-4 py-3 text-sm font-semibold text-white shadow-md transition-colors hover:bg-beat-maroon/90 motion-reduce:transition-none md:bottom-6 md:right-6 ${focusStyle}`}>
-      <MessageCircle aria-hidden="true" className="h-5 w-5 text-beat-gold" />Ask Strobi
+      aria-label="Ask Strobi tips and guidance"
+      className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-3.5 z-40 ${open || hidden ? "hidden" : "inline-flex"} h-12 w-12 sm:w-auto items-center justify-center sm:justify-start gap-2 rounded-full bg-beat-maroon p-0 sm:px-4 sm:py-3 text-sm font-semibold text-white shadow-lg border border-beat-gold/30 transition-all hover:bg-beat-maroon-light active:scale-95 motion-reduce:transition-none md:bottom-6 md:right-6 ${focusStyle}`}>
+      <MessageCircle aria-hidden="true" className="h-5 w-5 text-beat-gold shrink-0" />
+      <span className="hidden sm:inline">Ask Strobi</span>
     </button>
     <dialog ref={dialog} aria-labelledby={titleId} aria-describedby={noticeId} aria-modal={mobile}
       onKeyDown={event => {
@@ -211,7 +213,7 @@ function StrobiTipsSession({ milestones, availability, currentNodeId, navigation
       onCancel={event => { event.preventDefault(); setOpen(false); }}
       onClose={() => { if (!dialog.current?.open) { setOpen(false); requestAnimationFrame(() => launcher.current?.focus()); } }}
       className={`strobi-chat-panel ${hidden ? "!hidden" : ""} fixed inset-0 z-50 m-0 h-[100dvh] max-h-none w-full max-w-none flex-col overflow-hidden bg-white p-0 text-beat-maroon shadow-lg backdrop:bg-black/30 md:inset-auto md:bottom-6 md:right-6 md:h-[min(42rem,calc(100dvh-3rem))] md:w-[26rem] md:rounded-xl [&[open]]:flex [&:not([open])]:hidden`}>
-      <header className="shrink-0 border-b border-beat-border p-4">
+      <header className="shrink-0 border-b border-beat-border p-4 pt-[calc(1rem+env(safe-area-inset-top))] sm:pt-4">
         <div className="flex items-center gap-3">
           <Image src={mascot.imagePath} alt={mascot.variantTitle} width={48} height={48} className="h-12 w-12 shrink-0 object-contain" />
           <div className="min-w-0 flex-1"><h2 id={titleId} className="text-lg font-semibold">Strobi Tips</h2><p className="strobi-chat-subtitle text-xs text-beat-maroon/75">A little guidance for your next step.</p></div>

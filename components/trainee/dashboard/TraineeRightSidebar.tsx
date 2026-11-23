@@ -69,7 +69,7 @@ export function TraineeRightSidebar({
   return (
     <aside aria-label="Trainee profile and progress" className="space-y-4 pb-12 xl:pb-0">
       {/* 1. Trainee Profile Card */}
-      <section className="rounded-2xl border border-beat-gold/25 bg-white p-5 shadow-2xs">
+      <section className="rounded-2xl border border-beat-gold/25 bg-white p-4 sm:p-5 shadow-2xs">
         <div className="flex items-center gap-3.5">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-beat-maroon text-sm font-bold text-white shadow-xs">
             {initials}
@@ -103,7 +103,7 @@ export function TraineeRightSidebar({
       </section>
 
       {/* 2. Passport Progress Donut Card */}
-      <section className="rounded-2xl border border-beat-gold/25 bg-white p-5 shadow-2xs">
+      <section className="rounded-2xl border border-beat-gold/25 bg-white p-4 sm:p-5 shadow-2xs">
         <h3 className="text-xs font-bold text-beat-maroon">Passport progress</h3>
 
         <div className="mt-4 flex items-center gap-4">
@@ -183,7 +183,7 @@ export function TraineeRightSidebar({
       </section>
 
       {/* 3. Upcoming Milestones List */}
-      <section className="rounded-2xl border border-beat-gold/25 bg-white p-5 shadow-2xs">
+      <section className="rounded-2xl border border-beat-gold/25 bg-white p-4 sm:p-5 shadow-2xs">
         <h3 className="text-xs font-bold text-beat-maroon">Upcoming milestones</h3>
 
         {remainingPaths.length > 0 ? (
@@ -210,7 +210,7 @@ export function TraineeRightSidebar({
       </section>
 
       {/* 4. Strobi's Pit-Stop Tip */}
-      <section className="relative overflow-hidden rounded-2xl border border-beat-gold/25 bg-[#FAF7F0] p-4 shadow-2xs">
+      <section className="relative overflow-hidden rounded-2xl border border-beat-gold/25 bg-[#FAF7F0] p-4 sm:p-5 shadow-2xs">
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-xs font-bold text-beat-maroon">Strobi&apos;s pit-stop tip</h3>
           <button
